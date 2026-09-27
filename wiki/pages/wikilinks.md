@@ -10,9 +10,11 @@ See [[Structure]] for where pages live.
 
 What is inside the brackets is a name, not a path. `[[Structure]]`,
 `[[structure]]` and `[[  structure  ]]` are the same link, because a name is
-compared by folding case and collapsing punctuation. A page can also be named
-by an alias, so [[format specification]] reaches the same page as
-[[The format]].
+compared the way normalisation rewrites it: lowercased, with every run of
+anything that is not a letter, a digit, `+` or `#` reduced to a single hyphen.
+Keeping `+` and `#` is what stops `C` and `C++` from becoming one page. A page
+can also be named by an alias, so [[format specification]] reaches the same page
+as [[The format]].
 
 Names have to be unique across the whole KB, and a link matching two pages is a
 hard error rather than a guess. That is why the examples above are written in

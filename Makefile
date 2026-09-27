@@ -21,7 +21,9 @@ test:
 vet:
 	$(GO) vet ./...
 
-# What CI runs.
+# What CI runs. Further gates (the static site, the export) belong in this
+# target rather than in the workflow, so that a local run and a CI run check the
+# same things.
 check: build vet test lint-wiki
 
 # The documentation is a KB, so it has to lint clean under --strict. If the

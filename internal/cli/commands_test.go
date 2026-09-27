@@ -470,8 +470,7 @@ func TestTheCoreVerbsIntroduceNothingStructural(t *testing.T) {
 }
 
 // Archiving a page and removing the links to it is the ordinary thing to do. It
-// must not leave a KB that can never lint clean again, which is what the corpus
-// for this task found it did.
+// must not leave a KB that can never lint clean again.
 func TestArchivingAndUnlinkingStillLintsClean(t *testing.T) {
 	root := freshKB(t)
 	run("new", "--kb", root, "Old Thing", "--type", "note")

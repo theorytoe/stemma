@@ -83,7 +83,7 @@ becomes a KB document later, in Task 7.
 
 ## Task 3:
 
-Status: Not started
+Status: Done
 
 Page model and frontmatter parsing on `yaml.v3`. Parse, validate, and serialise
 without losing unknown fields or field order where avoidable. Round-trip fidelity

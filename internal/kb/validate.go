@@ -35,15 +35,22 @@ const (
 	CodeReservedField  = "reserved-field"
 )
 
-// Finding is one thing a page gets wrong.
+// Finding is one thing wrong with a page.
 //
-// Line is the line in the file, or 0 when the field is absent and so has no
-// line. A finding that depends on other pages — an unresolved link, a name
-// collision, an orphan — cannot be decided by looking at one page, and is
-// raised by lint rather than here.
+// Path is the page the finding is about. It is empty for the findings a single
+// page raises about itself, because the caller already knows which page it
+// asked about, and set for the findings made across a graph.
+//
+// Line is the line in the file, or 0 when the finding is about a field that is
+// absent and so has no line, or about a file as a whole.
+//
+// A finding that depends on other pages — an unresolved link, a name collision,
+// an orphan — cannot be decided by looking at one page, and is raised by the
+// graph rather than here.
 type Finding struct {
 	Severity Severity
 	Code     string
+	Path     string
 	Field    string
 	Line     int
 	Message  string

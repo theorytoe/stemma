@@ -92,7 +92,7 @@ unusual scalars, and assert byte-equivalence of the parts the tool does not own.
 
 ## Task 4:
 
-Status: Not started
+Status: Done
 
 Wikilink resolver. Extract links from a page body, resolve by title then slug then
 alias, and raise a hard error on ambiguity. Build the incrementally-updatable

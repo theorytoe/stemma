@@ -1,0 +1,131 @@
+package kb
+
+import (
+	"reflect"
+	"testing"
+)
+
+func pageWithBody(t *testing.T, body string) *Page {
+	t.Helper()
+	return mustParse(t, "---\ntitle: A\ntype: concept\n---\n"+body)
+}
+
+func targets(links []Link) []string {
+	out := make([]string, 0, len(links))
+	for _, l := range links {
+		out = append(out, l.Target)
+	}
+	return out
+}
+
+func TestLinksAreFoundInOrder(t *testing.T) {
+	p := pageWithBody(t, "See [[One]] and [[Two]], then [[One]] again.\n")
+	got := targets(p.Links())
+	want := []string{"One", "Two", "One"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("links = %q, want %q", got, want)
+	}
+}
+
+func TestLinkLineNumbersAreLinesInTheFile(t *testing.T) {
+	p := pageWithBody(t, "first\n\nthird [[X]]\n")
+	links := p.Links()
+	if len(links) != 1 {
+		t.Fatalf("links = %q", targets(links))
+	}
+	// The file is frontmatter on lines 1-4, so the body starts at line 5 and
+	// the link is on the third line of it.
+	if links[0].Line != 7 {
+		t.Errorf("line = %d, want 7", links[0].Line)
+	}
+}
+
+func TestLinkTargetsAreTrimmed(t *testing.T) {
+	p := pageWithBody(t, "[[  Some Page  ]]\n")
+	links := p.Links()
+	if len(links) != 1 {
+		t.Fatalf("links = %q", targets(links))
+	}
+	if links[0].Target != "Some Page" {
+		t.Errorf("target = %q", links[0].Target)
+	}
+	if links[0].Name != "some-page" {
+		t.Errorf("name = %q", links[0].Name)
+	}
+}
+
+// The specification writes `[[name]]` to describe the syntax. If code were read
+// as prose, the project's own documentation would fail its own link check.
+func TestLinksInsideCodeAreNotLinks(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		body string
+		want []string
+	}{
+		{"inline code span", "Write `[[X]]` to link.\n", nil},
+		{"inline span beside a real link", "Write `[[X]]` then [[Y]].\n", []string{"Y"}},
+		{"fenced block", "```\n[[X]]\n```\n", nil},
+		{"fenced block with info string", "```markdown\n[[X]]\n```\n", nil},
+		{"tilde fence", "~~~\n[[X]]\n~~~\n", nil},
+		{"after the fence closes", "```\n[[X]]\n```\n[[Y]]\n", []string{"Y"}},
+		{"indented fence", "  ```\n[[X]]\n  ```\n", nil},
+		{"a longer run closes a shorter fence", "```\n[[X]]\n````\n", nil},
+		{"an info string does not close a fence", "```\n[[X]]\n```go\n[[Y]]\n```\n", nil},
+		{"double backticks hold a single backtick", "``a ` b`` [[Y]]\n", []string{"Y"}},
+		// An unmatched backtick run is literal text, exactly as CommonMark says,
+		// so the links after it are still links. A missing closer is a typo, not
+		// an escape hatch.
+		{"unmatched backtick is literal", "`[[X]] and [[Y]]\n", []string{"X", "Y"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := targets(pageWithBody(t, tc.body).Links())
+			if len(got) != len(tc.want) {
+				t.Fatalf("links = %q, want %q", got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("links = %q, want %q", got, tc.want)
+				}
+			}
+		})
+	}
+}
+
+// A link is a line-level thing. Half of one is text.
+func TestUnterminatedLinkIsText(t *testing.T) {
+	p := pageWithBody(t, "[[open and never closed\n")
+	if got := p.Links(); len(got) != 0 {
+		t.Errorf("links = %q, want none", targets(got))
+	}
+}
+
+func TestNoLinksInPlainProse(t *testing.T) {
+	p := pageWithBody(t, "Brackets [one] and [[not closed and ] alone.\n")
+	if got := p.Links(); len(got) != 0 {
+		t.Errorf("links = %q, want none", targets(got))
+	}
+}
+
+func TestEmptyLinkIsFound(t *testing.T) {
+	p := pageWithBody(t, "[[]] and [[   ]]\n")
+	links := p.Links()
+	if len(links) != 2 {
+		t.Fatalf("links = %d, want 2", len(links))
+	}
+	for _, l := range links {
+		if l.Target != "" || l.Name != "" {
+			t.Errorf("target = %q, name = %q", l.Target, l.Name)
+		}
+	}
+}
+
+func TestLinksInAFileWithNoFrontmatter(t *testing.T) {
+	p := mustParse(t, "see [[X]]\n")
+	links := p.Links()
+	if len(links) != 1 {
+		t.Fatalf("links = %q", targets(links))
+	}
+	if links[0].Line != 1 {
+		t.Errorf("line = %d, want 1", links[0].Line)
+	}
+}

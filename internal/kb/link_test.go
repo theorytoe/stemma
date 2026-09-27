@@ -129,3 +129,31 @@ func TestLinksInAFileWithNoFrontmatter(t *testing.T) {
 		t.Errorf("line = %d, want 1", links[0].Line)
 	}
 }
+
+// The scanner reads the source rather than a markdown tree, which is what lets
+// it report the line a link is on. The cost is three things markdown recognises
+// as not-prose and this does not. They are pinned here so the behaviour is a
+// decision on the record rather than an accident.
+//
+// The indented case is deliberate. A four-space indent is only a code block
+// when it is not a list continuation, and guessing wrong the other way would
+// hide real links, which is worse than reporting links that are not there.
+func TestScannerTreatsSomeNonProseAsProse(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		body string
+		want []string
+	}{
+		{"indented code block", "para\n\n    [[X]]\n", []string{"X"}},
+		{"raw html block", "<div>\n[[X]]\n</div>\n", []string{"X"}},
+		{"fence inside a blockquote", "> ```\n> [[X]]\n> ```\n", []string{"X"}},
+		{"prose inside a blockquote", "> see [[X]]\n", []string{"X"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := targets(pageWithBody(t, tc.body).Links())
+			if len(got) != len(tc.want) {
+				t.Fatalf("links = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}

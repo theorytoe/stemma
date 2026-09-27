@@ -375,10 +375,10 @@ page.
 | **ambiguous wikilink**                        | **error**      | **error**      |
 | unreadable or non-UTF-8 file                  | error (exit 2) | error (exit 2) |
 
-`index` pages are exempt from the orphan check, as are virtual source pages. A
-page linking to itself does not stop it being an orphan, and `index` needs no
-misuse rule of its own: an index page on disk is legitimate, and the tool simply
-never writes one on an author's behalf.
+`index` pages are exempt from the orphan check, as are virtual source pages and
+archived pages. A page linking to itself does not stop it being an orphan, and
+`index` needs no misuse rule of its own: an index page on disk is legitimate,
+and the tool simply never writes one on an author's behalf.
 
 A row in that table is a page the tool can still read, show and repair. Some
 files are not, and they fail with exit code `2` instead:

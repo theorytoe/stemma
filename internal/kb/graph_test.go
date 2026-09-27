@@ -343,3 +343,32 @@ func BenchmarkGraphBuild(b *testing.B) {
 		}
 	}
 }
+
+// Retiring a page is exactly when the links to it are removed, so an archived
+// page with no inbound links is the expected end state and not a problem.
+// Without this, archiving a page and unlinking it would leave a KB that could
+// never lint clean again.
+func TestArchivedPagesAreNotOrphans(t *testing.T) {
+	g := NewGraph()
+	g.Add("pages/index.md", page(t, "Index", "type: index", ""))
+	g.Add("pages/retired.md", page(t, "Retired", "type: note\nstatus: archived", ""))
+	g.Add("pages/live.md", page(t, "Live", "type: concept", ""))
+
+	got := g.Orphans()
+	if len(got) != 1 || got[0] != "pages/live.md" {
+		t.Errorf("orphans = %q, want only pages/live.md", got)
+	}
+}
+
+// An archived page is still a page: it just is not complained about for being
+// unlinked.
+func TestArchivedPagesAreStillInTheGraph(t *testing.T) {
+	g := NewGraph()
+	g.Add("pages/retired.md", page(t, "Retired", "type: note\nstatus: archived", ""))
+	if got := g.Len(); got != 1 {
+		t.Errorf("Len = %d", got)
+	}
+	if r := g.Resolve("Retired"); r.Kind != Resolved {
+		t.Errorf("an archived page does not resolve: %+v", r)
+	}
+}

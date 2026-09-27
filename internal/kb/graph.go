@@ -185,12 +185,19 @@ func (g *Graph) Backlinks(path string) []string {
 	return sortedKeys(found)
 }
 
-// Orphans returns the pages nothing links to, sorted. Index pages are left out:
-// they are navigation, and being pointed at is not what they are for.
+// Orphans returns the pages nothing links to, sorted.
+//
+// Index pages are left out, because being pointed at is not what navigation is
+// for. So are archived pages: retiring a page is exactly when the links to it
+// are removed, so an archived page with no inbound links is the expected end
+// state rather than a problem to fix. Without this, archiving a page and
+// unlinking it — the ordinary thing to do — would leave a KB that never lints
+// clean again.
 func (g *Graph) Orphans() []string {
 	var out []string
 	for _, path := range g.Paths() {
-		if g.pages[path].Type() == TypeIndex {
+		p := g.pages[path]
+		if p.Type() == TypeIndex || p.Status() == StatusArchived {
 			continue
 		}
 		if len(g.Backlinks(path)) == 0 {

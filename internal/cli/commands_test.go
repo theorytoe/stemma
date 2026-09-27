@@ -442,17 +442,18 @@ func TestTheCoreVerbsIntroduceNothingStructural(t *testing.T) {
 		}
 	}
 
-	// Everything reported is an orphan, and nothing else. A fresh KB has no
-	// links yet, so two pages and an index give exactly two.
+	// Everything reported is an orphan, and nothing else. The archived page is
+	// exempt, so a fresh KB with two pages and an index gives exactly one: the
+	// live page nothing links to yet.
 	code, stdout, _ := run("lint", "--kb", root, "--strict")
 	if code != ExitFindings {
 		t.Fatalf("exit = %d, want %d\n%s", code, ExitFindings, stdout)
 	}
-	if got := strings.Count(stdout, "no page links here"); got != 2 {
-		t.Errorf("orphans = %d, want 2:\n%s", got, stdout)
+	if got := strings.Count(stdout, "no page links here"); got != 1 {
+		t.Errorf("orphans = %d, want 1:\n%s", got, stdout)
 	}
-	if others := strings.Count(stdout, ": error:") - 2; others != 0 {
-		t.Errorf("%d findings that are not orphans:\n%s", others, stdout)
+	if others := strings.Count(stdout, ": error:"); others != 1 {
+		t.Errorf("%d findings, want only the one orphan:\n%s", others, stdout)
 	}
 
 	// Now the author links the pages in, which is the only thing standing
@@ -465,5 +466,34 @@ func TestTheCoreVerbsIntroduceNothingStructural(t *testing.T) {
 
 	if code, stdout, stderr := run("lint", "--kb", root, "--strict"); code != ExitOK {
 		t.Fatalf("the KB is not clean once its pages are linked: exit %d\n%s\n%s", code, stdout, stderr)
+	}
+}
+
+// Archiving a page and removing the links to it is the ordinary thing to do. It
+// must not leave a KB that can never lint clean again, which is what the corpus
+// for this task found it did.
+func TestArchivingAndUnlinkingStillLintsClean(t *testing.T) {
+	root := freshKB(t)
+	run("new", "--kb", root, "Old Thing", "--type", "note")
+	run("new", "--kb", root, "Live Thing", "--type", "concept")
+	index := page("Demo", "type: index", "see [[Old Thing]] and [[Live Thing]]\n")
+	if err := os.WriteFile(filepath.Join(root, "pages", "index.md"), []byte(index), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, stderr := run("lint", "--kb", root, "--strict"); code != ExitOK {
+		t.Fatalf("the KB does not start clean: %s", stderr)
+	}
+
+	if code, _, stderr := run("archive", "--kb", root, "Old Thing", "--reason", "superseded"); code != ExitOK {
+		t.Fatalf("archive: %s", stderr)
+	}
+	// The author now unlinks the retired page, which is what retiring it means.
+	unlinked := page("Demo", "type: index", "see [[Live Thing]]\n")
+	if err := os.WriteFile(filepath.Join(root, "pages", "index.md"), []byte(unlinked), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if code, stdout, stderr := run("lint", "--kb", root, "--strict"); code != ExitOK {
+		t.Errorf("the KB is not clean after archiving and unlinking: exit %d\n%s\n%s", code, stdout, stderr)
 	}
 }

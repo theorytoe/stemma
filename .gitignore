@@ -1,0 +1,10 @@
+# Working context for the project. Untracked by design.
+.ctx/
+
+# Generated artifacts: Tier-1 index, scratch area, and anything else the tool
+# derives. Nothing generated is ever committed (D23, P8). Matches at any depth,
+# so the example wiki's artifacts are covered too.
+.stemma/
+
+# Build output from `make build`.
+bin/

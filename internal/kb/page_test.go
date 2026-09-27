@@ -307,3 +307,55 @@ func contains(haystack []string, needle string) bool {
 	}
 	return false
 }
+
+// A write that cannot be completed must leave the page as it was. The tool
+// refuses rather than half-writes, because a page it has rewritten into
+// something it can no longer read is worse than one it declined to touch: the
+// next command cannot even open it to fix it.
+func TestAFailedSetLeavesThePageAlone(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   string
+		edit func(*Page) error
+	}{
+		{
+			// "-foo" is a valid YAML key that the line-based key scanner does
+			// not recognise, so writing it appends a second copy and the block
+			// stops parsing as a mapping with a key defined twice.
+			"Set over a key it did not recognise",
+			"---\n-foo: 1\nstatus: active\n---\nbody\n",
+			func(p *Page) error { return p.Set("-foo", 2) },
+		},
+		{
+			// An alias needs the anchor it names, so removing the field that
+			// carries the anchor leaves the rest of the block unresolvable.
+			"Delete an anchor another field aliases",
+			"---\ntitle: A\ntype: concept\nbase: &b\n  x: 1\nderived: *b\n---\nbody\n",
+			func(p *Page) error { return p.Delete("base") },
+		},
+	} {
+		p := mustParse(t, tc.in)
+		before := string(p.Bytes())
+		if err := tc.edit(p); err == nil {
+			t.Fatalf("%s: expected the write to fail", tc.name)
+		}
+		if after := string(p.Bytes()); after != before {
+			t.Errorf("%s: the page changed:\n--- was ---\n%s\n--- now ---\n%s", tc.name, before, after)
+		}
+		if _, err := ParsePage(p.Bytes()); err != nil {
+			t.Errorf("%s: the tool can no longer read the page it just wrote: %v", tc.name, err)
+		}
+	}
+}
+
+// Deleting a field that is not there is not a failure, and changes nothing.
+func TestDeletingAnAbsentFieldDoesNotFail(t *testing.T) {
+	p := mustParse(t, "---\ntitle: A\ntype: concept\n---\nbody\n")
+	before := string(p.Bytes())
+	if err := p.Delete("nothing_here"); err != nil {
+		t.Errorf("Delete: %v", err)
+	}
+	if after := string(p.Bytes()); after != before {
+		t.Errorf("the page changed:\n%s", after)
+	}
+}

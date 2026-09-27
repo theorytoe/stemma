@@ -187,21 +187,44 @@ func (p *Page) Key() string { return p.String(FieldKey) }
 // including unknown fields, key order, comments and the whole body, is left
 // untouched. Setting a field the page does not have appends it.
 //
+// A write that cannot be completed leaves the page exactly as it was. Refusing
+// is the only safe outcome: a page mutated into something the tool can no
+// longer parse is worse than one it declined to touch, because the next command
+// cannot open it to repair it.
+//
 // A comment written inside the field's own lines goes with it, because those
 // lines are what is being replaced.
 func (p *Page) Set(name string, value any) error {
-	if err := p.doc.setField(name, value); err != nil {
-		return err
-	}
-	return p.load()
+	return p.edit(func() error { return p.doc.setField(name, value) })
 }
 
 // Delete removes a top-level frontmatter field and its value.
 func (p *Page) Delete(name string) error {
-	if err := p.doc.deleteField(name); err != nil {
-		return err
+	return p.edit(func() error { return p.doc.deleteField(name) })
+}
+
+// edit runs a change to the document and re-reads the frontmatter, putting back
+// the bytes and the parsed values it started from if either step fails.
+//
+// The line slice is copied rather than shared with the document, so that the
+// snapshot stays valid however the change goes about its work.
+func (p *Page) edit(change func() error) error {
+	doc := p.doc
+	doc.lines = append([]line(nil), p.doc.lines...)
+	fields, keys := p.fields, p.keys
+
+	if err := change(); err != nil {
+		return p.undo(doc, fields, keys, err)
 	}
-	return p.load()
+	if err := p.load(); err != nil {
+		return p.undo(doc, fields, keys, err)
+	}
+	return nil
+}
+
+func (p *Page) undo(doc document, fields map[string]*yaml.Node, keys []string, cause error) error {
+	p.doc, p.fields, p.keys = doc, fields, keys
+	return cause
 }
 
 // line converts a node's line within the frontmatter block to a line in the

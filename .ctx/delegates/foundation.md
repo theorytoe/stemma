@@ -120,7 +120,7 @@ code `1` on findings and `2` on operational failure.
 
 ## Task 7:
 
-Status: Not started
+Status: Done
 
 Core CLI verbs: `init`, `new`, `list`, `show`, `move`, `archive`. `init` scaffolds
 a KB root with manifest, entry document, `pages/`, `inbox/`, and a bibliography

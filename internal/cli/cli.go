@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/theorytoe/stemma/internal/kb"
 )
@@ -36,12 +37,20 @@ const usage = `stemma is a tool for authoring and maintaining a knowledge base.
 usage: stemma <command> [flags]
 
 commands:
-  lint    report everything wrong with the KB
-  help    show this message
+  init      create a KB root
+  new       create a page, or a draft in the inbox
+  list      list the pages
+  show      show one page with its links and citations resolved
+  move      move a page to another directory
+  archive   archive a page, recording why
+  lint      report everything wrong with the KB
+  help      show this message
 
 Every command accepts:
-  --kb <path>   the KB root. Discovered when not given.
   --json        write output as JSON.
+
+Commands that work on an existing KB also accept:
+  --kb <path>   the KB root. Discovered when not given.
   --strict      treat warnings as errors.
 
 The KB root is found from --kb, then $` + EnvKB + `, then by walking up from the
@@ -57,6 +66,18 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	}
 	command, rest := args[0], args[1:]
 	switch command {
+	case "init":
+		return runInit(rest, stdout, stderr)
+	case "new":
+		return runNew(rest, stdout, stderr)
+	case "list":
+		return runList(rest, stdout, stderr)
+	case "show":
+		return runShow(rest, stdout, stderr)
+	case "move":
+		return runMove(rest, stdout, stderr)
+	case "archive":
+		return runArchive(rest, stdout, stderr)
 	case "lint":
 		return runLint(rest, stdout, stderr)
 	case "help", "-h", "--help":
@@ -67,6 +88,77 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprint(stderr, usage)
 		return ExitError
 	}
+}
+
+// resolve turns a page name given on the command line into a path in the KB.
+//
+// A name that matches nothing, or matches more than one page, is a failure of
+// the command rather than a finding about the KB: the tool was asked for one
+// page and cannot produce it.
+func resolve(k *kb.KB, name string) (string, error) {
+	switch r := k.Graph.Resolve(name); r.Kind {
+	case kb.Resolved:
+		return r.Path, nil
+	case kb.Ambiguous:
+		return "", fmt.Errorf("%q could be %s", name, strings.Join(r.Matches, " or "))
+	default:
+		return "", fmt.Errorf("no page is called %q", name)
+	}
+}
+
+// fail writes a message the way every command writes one, so that a failure
+// always looks the same whatever it was that failed.
+func fail(stderr io.Writer, err error) int {
+	fmt.Fprintf(stderr, "stemma: %v\n", err)
+	return ExitError
+}
+
+// parse parses a command's arguments, letting flags and positional arguments
+// appear in any order.
+func parse(fs *flag.FlagSet, args []string) error {
+	return fs.Parse(permute(fs, args))
+}
+
+// permute moves flags ahead of positional arguments.
+//
+// The standard library stops at the first argument that is not a flag, which
+// would make `stemma new "A Title" --draft` read --draft as part of a title
+// and quietly create a page rather than a draft. Nothing the project allows
+// itself to depend on parses interspersed flags, so the arguments are
+// rearranged before the parser sees them.
+//
+// Whether a flag takes a value is asked of the flag itself rather than guessed,
+// because guessing wrong would either swallow a title or leave a value behind.
+func permute(fs *flag.FlagSet, args []string) []string {
+	var flags, positional []string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--" {
+			return append(append(flags, positional...), args[i+1:]...)
+		}
+		if len(arg) < 2 || arg[0] != '-' {
+			positional = append(positional, arg)
+			continue
+		}
+		flags = append(flags, arg)
+		name := strings.TrimLeft(arg, "-")
+		if strings.ContainsRune(name, '=') {
+			continue
+		}
+		if f := fs.Lookup(name); f != nil && takesValue(f) && i+1 < len(args) {
+			i++
+			flags = append(flags, args[i])
+		}
+	}
+	return append(flags, positional...)
+}
+
+// takesValue reports whether a flag consumes the argument after it. A boolean
+// flag does not, which is what the standard library asks of a flag's value.
+func takesValue(f *flag.Flag) bool {
+	type boolFlag interface{ IsBoolFlag() bool }
+	bf, ok := f.Value.(boolFlag)
+	return !ok || !bf.IsBoolFlag()
 }
 
 // options are the flags every command accepts. Keeping them in one place is

@@ -19,7 +19,7 @@ func runLint(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	var opts options
 	opts.register(fs)
-	if err := fs.Parse(args); err != nil {
+	if err := parse(fs, args); err != nil {
 		return ExitError
 	}
 	if fs.NArg() > 0 {

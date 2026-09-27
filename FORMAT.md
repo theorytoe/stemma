@@ -72,7 +72,9 @@ The bibliography is BibTeX. A single `bibliography.bib` in the KB root is the
 default form; a `bibliography/` directory of `.bib` files is the equivalent form
 for a KB large enough to want one. Both are first-class, and citation keys are
 unique across whichever form is in use. Two entries sharing a key is a finding;
-the tool does not silently pick one.
+the tool does not silently pick one. Both forms may be present at once and are
+then read together, so a key defined in each of them is a duplicate like any
+other.
 
 The bibliography is the source of truth for sources. Pages are the origin of
 their own content: a source is cited from a page, never the reverse, and a page
@@ -317,6 +319,9 @@ not a CSL style ID, and no CSL processor is involved.
 
 A path matching `ignore` is outside the KB: not read, not indexed, not linted,
 and not exported. It is the general form of what `inbox/` does by convention.
+Patterns are written with forward slashes. `*` matches within one path segment
+and `**` matches across segments, so `pages/attic/**` covers everything under
+that directory while `pages/attic` covers only that directory itself.
 
 ### Discovery
 
@@ -326,6 +331,10 @@ One KB per invocation, resolved in this order:
 2. the `STEMMA_KB` environment variable;
 3. walking up from the working directory looking for `stemma.toml`, then for a
    directory containing `pages/`.
+
+A manifest is preferred over a directory that merely holds `pages/`, however
+near that directory is: a KB configured by hand beats one that only looks like
+one. A directory holding neither is not a KB root.
 
 If none of these finds a KB root, the command fails with exit code `2`. There is
 no registry and no daemon.

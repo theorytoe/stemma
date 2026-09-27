@@ -77,7 +77,7 @@ any link or citation dangling.
 
 ## Task 1:
 
-Status: Not started
+Status: Done
 
 Foundation. Format specification, page model, frontmatter handling, wikilink
 resolution, citation-key resolution, lint, and the create/read/rename core of the

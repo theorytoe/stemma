@@ -271,9 +271,15 @@ A citation is written in pandoc's inline syntax:
 | `@key`          | narrative citation                  |
 | `[-@key]`       | citation with the author suppressed |
 
-`key` is a BibTeX citation key. A key that is cited but absent from the
-bibliography is a warning by default and an error under `--strict`, and a key
-that exists but is never cited is the same.
+`key` is a BibTeX citation key. Citations, like links, are read from prose and
+not from code, so a citation written inside a code span or a fenced block means
+nothing. A key that is cited but absent from the bibliography is a warning by
+default and an error under `--strict`, and a key that exists but is never cited
+is the same. A key that the bibliography defines twice is the same again.
+
+Keys are matched exactly, including case. A citation key is an identifier rather
+than prose, so unlike a page title it is not folded for comparison, and
+`[@Vaswani2017]` does not find an entry called `vaswani2017`.
 
 A citation resolves to the entry's virtual source page. Wikilinks do not: a
 source page is not part of the authored name space, so `[[key]]` does not
@@ -359,7 +365,8 @@ files are not, and they fail with exit code `2` instead:
 - a file that begins with a byte-order mark;
 - a frontmatter block that is opened and never closed;
 - a frontmatter block that is not valid YAML, that is not a mapping, or that
-  defines the same key twice.
+  defines the same key twice;
+- a bibliography entry that is opened and never closed.
 
 In each of those the tool cannot tell what it would be rewriting, so it refuses
 rather than guessing. Everything else is a finding, not a refusal, and a page

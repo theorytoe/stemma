@@ -80,8 +80,8 @@ The bibliography is the source of truth for sources. Pages are the origin of
 their own content: a source is cited from a page, never the reverse, and a page
 that cites nothing is still a complete page.
 
-Every source is recorded by pointer -- a DOI, an arXiv identifier, a URL, an
-ISBN, or a path to a local file -- together with the date it was retrieved and a
+Every source is recorded by pointer — a DOI, an arXiv identifier, a URL, an
+ISBN, or a path to a local file — together with the date it was retrieved and a
 hash of what was retrieved. Both are carried as fields on the BibTeX entry, and
 they have to be, because the bibliography is committed and is the only place a
 source's record can live. A source page is generated and never committed, so it
@@ -223,6 +223,10 @@ the format has no way to disambiguate.
 
 An **alias** is an additional name the author declares in `aliases`.
 
+A title has to leave a slug behind. A title that normalises to nothing — only
+punctuation, or only whitespace — names nothing, and a name nothing can point
+at is not a name: such a title is treated as a missing one.
+
 The slug is not a second identity. It is the same name as the title, spelled in
 a form that is forgiving to type. Comparing a name means comparing its
 normalisation, so resolving a link "by title" and resolving it "by slug" are the
@@ -348,6 +352,7 @@ page.
 | Finding                                       | Default        | `--strict`     |
 | --------------------------------------------- | -------------- | -------------- |
 | missing or empty `title` or `type`            | warning        | error          |
+| a `title` that names nothing                  | warning        | error          |
 | a field holding the wrong shape for its value | warning        | error          |
 | unknown type                                  | warning        | error          |
 | invalid `status`                              | warning        | error          |
@@ -394,7 +399,10 @@ destroys content it does not understand. Concretely:
   than re-emitting it. Key order, comments, and quoting style outside the edited
   field are therefore not disturbed, and a page the tool has nothing to change
   comes back byte-identical.
-- The tool never deletes a page.
+- A write either happens or does not. The new bytes go to a temporary file
+  beside the target and are renamed into place, so an interrupted or failed
+  write leaves the page exactly as it was rather than half of a new one.
+- The tool never deletes a page, and never replaces one without being asked to.
 
 Round-trip fidelity is a tested property, not an aspiration.
 

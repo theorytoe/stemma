@@ -204,22 +204,30 @@ func isNotAnEntry(entryType string) bool {
 
 // entryEnd returns the offset of the delimiter that closes an entry, or -1.
 //
-// Quoted values are stepped over rather than counted, because a brace inside
-// one is part of a value and not part of the structure around it.
+// A quoted value is stepped over rather than counted, because a brace inside
+// one is part of a value and not part of the structure around it. A quote only
+// begins such a value at the entry's own level, though: inside a braced value a
+// double quote is an ordinary character, and reading it as punctuation would
+// send the scan looking for a closing quote that is not there. Inch marks and
+// quoted words in titles are ordinary enough that a real bibliography contains
+// them.
 func entryEnd(raw []byte, from int, open, closing byte) int {
 	depth := 1
+	quoted := false
 	for i := from; i < len(raw); i++ {
-		switch raw[i] {
-		case '\\':
+		c := raw[i]
+		if c == '\\' {
 			i++ // an escaped character is never structural
-		case '"':
-			i++
-			for i < len(raw) && raw[i] != '"' {
-				if raw[i] == '\\' {
-					i++
-				}
-				i++
-			}
+			continue
+		}
+		if c == '"' && depth == 1 {
+			quoted = !quoted
+			continue
+		}
+		if quoted {
+			continue
+		}
+		switch c {
 		case open:
 			depth++
 		case closing:

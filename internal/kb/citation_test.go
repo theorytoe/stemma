@@ -301,3 +301,54 @@ func TestReplacingAPageUpdatesItsCitations(t *testing.T) {
 		t.Errorf("cited keys = %q, want none", got)
 	}
 }
+
+// Inside a braced value a double quote is an ordinary character. Reading it as
+// the start of a quoted string sends the scan hunting for a closing quote that
+// is not there, and a valid bibliography is then refused as an entry that is
+// never closed. Inch marks and quoted words in titles are ordinary, so this
+// refuses real files.
+func TestAQuoteInsideABracedValueIsNotAQuote(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		entry string
+		want  []string
+	}{
+		{"an inch mark",
+			"@article{key1,\n  title = {A 12\" telescope},\n  year = {1957},\n}\n",
+			[]string{"key1"}},
+		{"an unbalanced quote",
+			"@article{key1,\n  note = {He said \"yes and left},\n}\n",
+			[]string{"key1"}},
+		{"a quote in a later entry",
+			"@article{key1,\n  title = {5\" of rain},\n}\n\n@article{key2,\n  title = {Ordinary},\n}\n",
+			[]string{"key1", "key2"}},
+	} {
+		b, err := ParseBibliography("bibliography.bib", []byte(tc.entry))
+		if err != nil {
+			t.Errorf("%s: %v", tc.name, err)
+			continue
+		}
+		if got := b.Keys(); !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s: keys = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+// A quoted value is still a quoted value: braces inside it are literal, and the
+// quote that ends it is the one that ends the entry's value, not the entry.
+func TestAQuotedValueIsStillQuoted(t *testing.T) {
+	b, err := ParseBibliography("b.bib", []byte("@article{key1,\n  title = \"A {brace} inside\",\n  year = \"1957\",\n}\n\n@article{key2,\n  title = {Second},\n}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !b.Has("key1") || !b.Has("key2") {
+		t.Errorf("keys = %q, want key1 and key2", b.Keys())
+	}
+}
+
+// An entry whose quoted value really is never closed is still refused.
+func TestAnUnclosedQuoteIsStillRefused(t *testing.T) {
+	if _, err := ParseBibliography("b.bib", []byte("@article{key1,\n  title = \"never closed,\n}\n")); err == nil {
+		t.Error("an unterminated quoted value was accepted")
+	}
+}

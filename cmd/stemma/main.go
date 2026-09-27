@@ -1,17 +1,16 @@
 // Command stemma is the universal surface for a knowledge base: the one
-// interface that every other surface falls back to (D8, D56).
+// interface that every other surface falls back to.
 //
-// The command tree is not built yet. This is the scaffolding from Task 1 of
-// delegates/foundation.md; the core verbs arrive with Task 7 of that delegate
-// and the rest of the surface with delegates/cli-surface.md.
+// The command tree is still growing. This is the plumbing from the foundation
+// delegate; the core verbs arrive next and the rest of the surface after that.
 package main
 
 import (
-	"fmt"
 	"os"
+
+	"github.com/theorytoe/stemma/internal/cli"
 )
 
 func main() {
-	fmt.Fprintln(os.Stderr, "stemma: not implemented yet")
-	os.Exit(2)
+	os.Exit(cli.Run(os.Args[1:], os.Stdout, os.Stderr))
 }

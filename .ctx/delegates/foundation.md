@@ -111,7 +111,7 @@ but absent and keys that exist but are never cited. Full BibTeX handling belongs
 
 ## Task 6:
 
-Status: Not started
+Status: Done
 
 `lint`. Implement every invariant: required frontmatter fields, unknown types,
 reserved-type misuse, unresolved and ambiguous links, orphan pages, citation-key

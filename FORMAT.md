@@ -232,6 +232,14 @@ a form that is forgiving to type. Comparing a name means comparing its
 normalisation, so resolving a link "by title" and resolving it "by slug" are the
 same operation, differing in appearance and not in identity.
 
+A title can be changed, and doing so retires the old one: the page stops
+answering to it. The old name is not quietly kept as an alias, because two names
+for one page is the ambiguity this section exists to avoid. Every link that
+named the page by its title is rewritten to the new one, since it would
+otherwise stop resolving. A link that named the page by an alias is left alone:
+the alias still names it, and rewriting working prose would be editing something
+that was not broken.
+
 ### Wikilinks
 
 An internal link is written `[[name]]`, where `name` is a title, a slug, or an

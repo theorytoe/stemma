@@ -129,7 +129,7 @@ and citations resolved, and supports `--path` and `--raw` for scripts.
 
 ## Task 8:
 
-Status: Not started
+Status: Done
 
 `rename`. Retitle a page and rewrite every inbound link, then verify by re-running
 resolution. Handle the pathological cases explicitly: a page renamed to a title

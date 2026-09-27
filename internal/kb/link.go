@@ -44,10 +44,11 @@ func (p *Page) Links() []Link {
 }
 
 // proseLine is one body line that is outside every fenced block, with the line
-// number it has in the file.
+// number it has in the file and its index among the body's lines.
 type proseLine struct {
-	text string
-	line int
+	text  string
+	line  int
+	index int
 }
 
 // proseLines returns the body lines that are outside fenced code blocks.
@@ -71,21 +72,37 @@ func (p *Page) proseLines() []proseLine {
 			}
 			continue
 		}
-		out = append(out, proseLine{text: l.text, line: p.doc.bodyStart + i + 1})
+		out = append(out, proseLine{text: l.text, line: p.doc.bodyStart + i + 1, index: p.doc.bodyStart + i})
 	}
 	return out
 }
 
+// textSpan is a half-open byte range within one line.
+type textSpan struct {
+	start, end int
+}
+
 // findWikilinks returns the targets of the wikilinks in one run of prose.
 func findWikilinks(s string) []string {
-	var out []string
+	spans := wikilinkSpans(s)
+	out := make([]string, 0, len(spans))
+	for _, sp := range spans {
+		out = append(out, s[sp.start+2:sp.end-2])
+	}
+	return out
+}
+
+// wikilinkSpans returns the byte ranges of the "[[...]]" in one run of prose,
+// each range covering both pairs of brackets.
+func wikilinkSpans(s string) []textSpan {
+	var out []textSpan
 	for i := 0; i < len(s); {
 		if strings.HasPrefix(s[i:], "[[") {
 			end := strings.Index(s[i+2:], "]]")
 			if end < 0 {
 				return out
 			}
-			out = append(out, s[i+2:i+2+end])
+			out = append(out, textSpan{i, i + 2 + end + 2})
 			i += 2 + end + 2
 			continue
 		}
@@ -101,7 +118,17 @@ func findWikilinks(s string) []string {
 // in the middle of something really does separate the two halves, and glueing
 // them would invent a link or a citation that the page does not contain.
 func proseRuns(s string) []string {
-	var out []string
+	spans := proseSpans(s)
+	out := make([]string, 0, len(spans))
+	for _, sp := range spans {
+		out = append(out, s[sp.start:sp.end])
+	}
+	return out
+}
+
+// proseSpans returns the ranges of a line that are outside inline code spans.
+func proseSpans(s string) []textSpan {
+	var out []textSpan
 	start := 0
 	for i := 0; i < len(s); {
 		if s[i] != '`' {
@@ -118,10 +145,70 @@ func proseRuns(s string) []string {
 			i += n
 			continue
 		}
-		out = append(out, s[start:i])
+		out = append(out, textSpan{start, i})
 		start, i = end, end
 	}
-	return append(out, s[start:])
+	return append(out, textSpan{start, len(s)})
+}
+
+// RewriteLinks replaces the text inside the brackets of wikilinks in the body.
+//
+// rewrite is offered every link in prose, with the page's aliases and the
+// page's links available through the ordinary accessors, and returns the text
+// to put in place of the target, or false to leave that link alone. Links
+// inside code are not links and are not offered.
+//
+// Everything else in the page comes back unchanged: no line is added, removed
+// or reordered, so the frontmatter and the rest of the body are untouched byte
+// for byte. The return value reports whether anything changed, so that a caller
+// can leave a file it has no reason to write alone.
+func (p *Page) RewriteLinks(rewrite func(Link) (string, bool)) bool {
+	changed := false
+	for _, pl := range p.proseLines() {
+		text, rewritten := rewriteLinksInLine(pl.text, func(target string) (string, bool) {
+			target = strings.TrimSpace(target)
+			return rewrite(Link{Target: target, Name: Normalize(target), Line: pl.line})
+		})
+		if !rewritten {
+			continue
+		}
+		p.doc.lines[pl.index].text = text
+		changed = true
+	}
+	return changed
+}
+
+// rewriteLinksInLine replaces the targets of the wikilinks in one line,
+// leaving the code spans and every other byte of the line as they were.
+func rewriteLinksInLine(text string, rewrite func(string) (string, bool)) (string, bool) {
+	if !strings.Contains(text, "[[") {
+		return text, false
+	}
+	var b strings.Builder
+	changed := false
+	last := 0
+	for _, run := range proseSpans(text) {
+		b.WriteString(text[last:run.start])
+		segment := text[run.start:run.end]
+		at := 0
+		for _, link := range wikilinkSpans(segment) {
+			b.WriteString(segment[at:link.start])
+			if replacement, ok := rewrite(segment[link.start+2 : link.end-2]); ok {
+				b.WriteString("[[" + replacement + "]]")
+				changed = true
+			} else {
+				b.WriteString(segment[link.start:link.end])
+			}
+			at = link.end
+		}
+		b.WriteString(segment[at:])
+		last = run.end
+	}
+	b.WriteString(text[last:])
+	if !changed {
+		return text, false
+	}
+	return b.String(), true
 }
 
 // closeBackticks finds the end of an inline code span opened by a run of n

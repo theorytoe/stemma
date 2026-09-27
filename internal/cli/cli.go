@@ -42,6 +42,7 @@ commands:
   list      list the pages
   show      show one page with its links and citations resolved
   move      move a page to another directory
+  rename    retitle a page and rewrite every link that named it
   archive   archive a page, recording why
   lint      report everything wrong with the KB
   help      show this message
@@ -76,6 +77,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runShow(rest, stdout, stderr)
 	case "move":
 		return runMove(rest, stdout, stderr)
+	case "rename":
+		return runRename(rest, stdout, stderr)
 	case "archive":
 		return runArchive(rest, stdout, stderr)
 	case "lint":
@@ -95,7 +98,16 @@ func Run(args []string, stdout, stderr io.Writer) int {
 // A name that matches nothing, or matches more than one page, is a failure of
 // the command rather than a finding about the KB: the tool was asked for one
 // page and cannot produce it.
+//
+// A path is accepted as well as a name, and takes priority. That matters when
+// two pages claim one name: every link to it is then a hard error, and without
+// this there would be no way to say which page a command meant, so the tool
+// would be unable to repair a collision it had found. A name never contains a
+// slash, so there is no doubt about which of the two was given.
 func resolve(k *kb.KB, name string) (string, error) {
+	if _, ok := k.Graph.Page(name); ok {
+		return name, nil
+	}
 	switch r := k.Graph.Resolve(name); r.Kind {
 	case kb.Resolved:
 		return r.Path, nil

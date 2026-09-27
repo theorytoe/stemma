@@ -55,15 +55,23 @@ type Graph struct {
 	// keyed by name rather than by path so that a page can be added before the
 	// page it links to exists, and the backlink is still found once it does.
 	linked map[string]map[string]bool
+
+	// citations maps a path to the citations in its body, in order, and cited
+	// maps a citation key to the paths citing it. It is keyed by key for the
+	// same reason linked is keyed by name.
+	citations map[string][]Citation
+	cited     map[string]map[string]bool
 }
 
 // NewGraph returns an empty graph.
 func NewGraph() *Graph {
 	return &Graph{
-		pages:  map[string]*Page{},
-		claims: map[string]map[string]bool{},
-		links:  map[string][]Link{},
-		linked: map[string]map[string]bool{},
+		pages:     map[string]*Page{},
+		claims:    map[string]map[string]bool{},
+		links:     map[string][]Link{},
+		linked:    map[string]map[string]bool{},
+		citations: map[string][]Citation{},
+		cited:     map[string]map[string]bool{},
 	}
 }
 
@@ -80,6 +88,13 @@ func (g *Graph) Add(path string, p *Page) {
 	for _, l := range links {
 		insertInto(g.linked, l.Name, path)
 	}
+
+	citations := p.Citations()
+	g.citations[path] = citations
+	for _, c := range citations {
+		insertInto(g.cited, c.Key, path)
+	}
+
 	for _, name := range pageNames(p) {
 		insertInto(g.claims, name, path)
 	}
@@ -99,6 +114,11 @@ func (g *Graph) Remove(path string) {
 		removeFrom(g.linked, l.Name, path)
 	}
 	delete(g.links, path)
+
+	for _, c := range g.citations[path] {
+		removeFrom(g.cited, c.Key, path)
+	}
+	delete(g.citations, path)
 }
 
 // Len returns the number of pages in the graph.
@@ -115,6 +135,15 @@ func (g *Graph) Page(path string) (*Page, bool) {
 
 // Links returns a page's outgoing links, in the order they appear.
 func (g *Graph) Links(path string) []Link { return g.links[path] }
+
+// Citations returns a page's citations, in the order they appear.
+func (g *Graph) Citations(path string) []Citation { return g.citations[path] }
+
+// CitedKeys returns every citation key used anywhere in the graph, sorted.
+func (g *Graph) CitedKeys() []string { return sortedKeys(g.cited) }
+
+// CitedBy returns the pages citing a key, sorted.
+func (g *Graph) CitedBy(key string) []string { return sortedKeys(g.cited[key]) }
 
 // Names returns every name claimed in the graph, sorted.
 func (g *Graph) Names() []string { return sortedKeys(g.claims) }

@@ -102,7 +102,7 @@ Tier 0 real (`P1`).
 
 ## Task 5:
 
-Status: Not started
+Status: Done
 
 Citation key resolution, minimal scope. Read a bibliography file far enough to know
 which keys exist, extract `[@key]` from page bodies, and report keys that are cited

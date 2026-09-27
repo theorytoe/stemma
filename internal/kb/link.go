@@ -28,6 +28,36 @@ type Link struct {
 // mean is that something was typed by accident.
 func (p *Page) Links() []Link {
 	var out []Link
+	for _, pl := range p.proseLines() {
+		for _, run := range proseRuns(pl.text) {
+			for _, target := range findWikilinks(run) {
+				target = strings.TrimSpace(target)
+				out = append(out, Link{
+					Target: target,
+					Name:   Normalize(target),
+					Line:   pl.line,
+				})
+			}
+		}
+	}
+	return out
+}
+
+// proseLine is one body line that is outside every fenced block, with the line
+// number it has in the file.
+type proseLine struct {
+	text string
+	line int
+}
+
+// proseLines returns the body lines that are outside fenced code blocks.
+//
+// Fences are the one form of code decided a line at a time rather than a span
+// at a time, so the decision is made once here and shared by everything that
+// reads prose: links and citations both need it, and so will the renderer.
+// Deciding it twice would be how lint and rendering come to disagree.
+func (p *Page) proseLines() []proseLine {
+	var out []proseLine
 	fence := ""
 	for i, l := range p.doc.body() {
 		if fence == "" {
@@ -41,35 +71,15 @@ func (p *Page) Links() []Link {
 			}
 			continue
 		}
-		for _, target := range scanLine(l.text) {
-			target = strings.TrimSpace(target)
-			out = append(out, Link{
-				Target: target,
-				Name:   Normalize(target),
-				Line:   p.doc.bodyStart + i + 1,
-			})
-		}
+		out = append(out, proseLine{text: l.text, line: p.doc.bodyStart + i + 1})
 	}
 	return out
 }
 
-// scanLine returns the targets of the wikilinks on one line of markdown,
-// ignoring anything inside an inline code span.
-func scanLine(s string) []string {
+// findWikilinks returns the targets of the wikilinks in one run of prose.
+func findWikilinks(s string) []string {
 	var out []string
 	for i := 0; i < len(s); {
-		if s[i] == '`' {
-			n := 0
-			for i+n < len(s) && s[i+n] == '`' {
-				n++
-			}
-			if end, ok := closeBackticks(s, i+n, n); ok {
-				i = end
-				continue
-			}
-			i += n
-			continue
-		}
 		if strings.HasPrefix(s[i:], "[[") {
 			end := strings.Index(s[i+2:], "]]")
 			if end < 0 {
@@ -82,6 +92,36 @@ func scanLine(s string) []string {
 		i++
 	}
 	return out
+}
+
+// proseRuns splits a line into the runs of text that are outside inline code
+// spans.
+//
+// The runs are returned separately and never joined back together: a code span
+// in the middle of something really does separate the two halves, and glueing
+// them would invent a link or a citation that the page does not contain.
+func proseRuns(s string) []string {
+	var out []string
+	start := 0
+	for i := 0; i < len(s); {
+		if s[i] != '`' {
+			i++
+			continue
+		}
+		n := 0
+		for i+n < len(s) && s[i+n] == '`' {
+			n++
+		}
+		end, ok := closeBackticks(s, i+n, n)
+		if !ok {
+			// An unmatched run is literal text, so what follows it is prose.
+			i += n
+			continue
+		}
+		out = append(out, s[start:i])
+		start, i = end, end
+	}
+	return append(out, s[start:])
 }
 
 // closeBackticks finds the end of an inline code span opened by a run of n

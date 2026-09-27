@@ -241,8 +241,11 @@ func continuesField(text string) bool {
 
 // topLevelKey reports whether a line opens an unindented mapping key, and
 // returns that key.
+//
+// This works on bytes, not runes: every character that decides the answer is
+// ASCII, and a lead byte of anything else is not one of them.
 func topLevelKey(text string) (key string, ok bool) {
-	if text == "" || strings.ContainsRune(" \t#-", rune(text[0])) {
+	if text == "" || strings.IndexByte(" \t#-", text[0]) >= 0 {
 		return "", false
 	}
 	i := strings.IndexByte(text, ':')

@@ -41,6 +41,16 @@ func TestValidatePerPageRules(t *testing.T) {
 			want: []string{CodeMissingField},
 		},
 		{
+			name: "a title that names nothing",
+			raw:  "---\ntitle: \"!!!\"\ntype: concept\n---\n",
+			want: []string{CodeMissingField},
+		},
+		{
+			name: "a title of only punctuation",
+			raw:  "---\ntitle: \"...\"\ntype: concept\n---\n",
+			want: []string{CodeMissingField},
+		},
+		{
 			name: "title is not a string",
 			raw:  "---\ntitle: [a, b]\ntype: concept\n---\n",
 			want: []string{CodeMalformedField},

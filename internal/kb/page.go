@@ -61,6 +61,25 @@ func ParsePage(raw []byte) (*Page, error) {
 	return p, nil
 }
 
+// NewPage returns a page with the frontmatter the format requires and an empty
+// body.
+//
+// It writes no prose. A page's body is the author's, and a tool that filled it
+// in would be inventing content rather than scaffolding it.
+func NewPage(title, typ string) (*Page, error) {
+	p, err := ParsePage(nil)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.Set(FieldTitle, title); err != nil {
+		return nil, err
+	}
+	if err := p.Set(FieldType, typ); err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
 // load parses the frontmatter block into fields, replacing whatever was there.
 func (p *Page) load() error {
 	p.fields, p.keys = nil, nil

@@ -154,6 +154,10 @@ func (p *Page) Validate(v Vocabulary, mode Mode) []Finding {
 	}
 
 	// title is the page's identity, so it is required and it must be a string.
+	//
+	// A title that normalises to nothing is treated as absent rather than as
+	// present-but-odd, because a page nobody can name is a page nobody can link
+	// to, which is what a title is for.
 	title, ok := p.fields[FieldTitle]
 	switch {
 	case !ok:
@@ -161,8 +165,9 @@ func (p *Page) Validate(v Vocabulary, mode Mode) []Finding {
 	case title.Kind != yaml.ScalarNode:
 		add(soft, CodeMalformedField, FieldTitle,
 			"title must be a string, found "+kindName(title.Kind))
-	case strings.TrimSpace(title.Value) == "":
-		add(soft, CodeMissingField, FieldTitle, "title is empty")
+	case Normalize(title.Value) == "":
+		add(soft, CodeMissingField, FieldTitle,
+			"title names nothing: no link could ever point here")
 	}
 
 	// type is required, and must be one the KB knows.

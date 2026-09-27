@@ -201,13 +201,11 @@ func (o *options) mode() kb.Mode {
 func (o *options) load(stderr io.Writer) (*kb.KB, int) {
 	root, err := discover(o.kb)
 	if err != nil {
-		fmt.Fprintf(stderr, "stemma: %v\n", err)
-		return nil, ExitError
+		return nil, fail(stderr, err)
 	}
 	k, err := kb.Load(root)
 	if err != nil {
-		fmt.Fprintf(stderr, "stemma: %v\n", err)
-		return nil, ExitError
+		return nil, fail(stderr, err)
 	}
 	return k, ExitOK
 }

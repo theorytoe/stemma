@@ -314,3 +314,50 @@ func TestRenameNeedsAPageThatExists(t *testing.T) {
 		t.Error("rename with one argument was accepted")
 	}
 }
+
+// The check at the end of a rename compares the links that resolved before
+// against the links that resolve after. A dangling link is a warning rather
+// than an error, so a KB may have them, and renaming a page that carries one
+// must not be reported as having broken it.
+//
+// The comparison is keyed by page and line, and the renamed page's own path
+// changes when its file moves, so the page has to be named by where it was
+// before for its links to compare equal to themselves.
+func TestRenameSurvivesADanglingLinkInThePageBeingRenamed(t *testing.T) {
+	root := freshKB(t)
+	write := func(name, body string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(name)), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("pages/index.md", page("Demo", "type: index", "[[Alpha]] and [[Beta]].\n"))
+	write("pages/alpha.md", page("Alpha", "type: concept", "A pre-existing dangling link to [[Nowhere]].\n"))
+	write("pages/beta.md", page("Beta", "type: concept", "Back to [[Alpha]].\n"))
+
+	// Renaming to a title that slugs differently moves the file, which is what
+	// changes the path the dangling link is reported under.
+	code, stdout, stderr := run("rename", "--kb", root, "Alpha", "Alpha Renamed")
+	if code != ExitOK {
+		t.Fatalf("exit = %d, want %d\n%s\n%s", code, ExitOK, stdout, stderr)
+	}
+	if _, err := os.Stat(filepath.Join(root, "pages", "alpha-renamed.md")); err != nil {
+		t.Errorf("the page did not move: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "pages", "alpha.md")); err == nil {
+		t.Error("the old file is still there")
+	}
+
+	// The link that was already dangling is still dangling, and it is still the
+	// only thing wrong: the rename added nothing.
+	code, stdout, _ = run("lint", "--kb", root)
+	if code != ExitFindings {
+		t.Fatalf("exit = %d, want %d for the one pre-existing warning", code, ExitFindings)
+	}
+	if got := strings.Count(stdout, "no page is called"); got != 1 {
+		t.Errorf("unresolved links = %d, want 1:\n%s", got, stdout)
+	}
+	if strings.Contains(stdout, ": error:") {
+		t.Errorf("the rename introduced an error:\n%s", stdout)
+	}
+}

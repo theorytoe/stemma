@@ -75,7 +75,7 @@ func runRename(args []string, stdout, stderr io.Writer) int {
 	// Anything that resolved before must still resolve afterwards. Collecting
 	// this first is what makes the check at the end a comparison rather than a
 	// guess.
-	brokenBefore := unresolvedLinks(k)
+	brokenBefore := unresolvedLinks(k, start, destination)
 
 	// 1. Move the file, unless the name it wants is already taken by another
 	// page, in which case the file keeps its name: nothing depends on it.
@@ -150,7 +150,7 @@ func runRename(args []string, stdout, stderr io.Writer) int {
 	if r := after.Graph.Resolve(newTitle); r.Kind != kb.Resolved || r.Path != destination {
 		return fail(stderr, fmt.Errorf("%q does not resolve to %s now that it is renamed", newTitle, destination))
 	}
-	if broke := difference(unresolvedLinks(after), brokenBefore); len(broke) > 0 {
+	if broke := difference(unresolvedLinks(after, start, destination), brokenBefore); len(broke) > 0 {
 		return fail(stderr, fmt.Errorf("renaming broke %s", strings.Join(broke, ", ")))
 	}
 
@@ -185,12 +185,22 @@ func checkNewTitle(k *kb.KB, start, newTitle string) error {
 // unresolvedLinks is the set of links that resolve to nothing, as a set so that
 // two runs can be compared. The page and line are enough to identify one: a
 // rewrite never changes how many lines a file has.
-func unresolvedLinks(k *kb.KB) map[string]bool {
+//
+// The page is named by where it was before the rename for the one page whose
+// path the rename changes, so that a link it already had dangling compares
+// equal to itself. Without that, the moved page's own unresolved links look
+// like new ones wherever the rename is reported.
+func unresolvedLinks(k *kb.KB, renamedFrom, renamedTo string) map[string]bool {
 	out := map[string]bool{}
 	for _, f := range k.Graph.Findings(kb.Lenient) {
-		if f.Code == kb.CodeUnresolvedLink {
-			out[fmt.Sprintf("%s:%d", f.Path, f.Line)] = true
+		if f.Code != kb.CodeUnresolvedLink {
+			continue
 		}
+		at := f.Path
+		if at == renamedTo {
+			at = renamedFrom
+		}
+		out[fmt.Sprintf("%s:%d", at, f.Line)] = true
 	}
 	return out
 }

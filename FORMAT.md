@@ -325,25 +325,39 @@ The tool is lenient by default and `--strict` turns warnings into errors. The
 only non-negotiable failure is a link that cannot be resolved to exactly one
 page.
 
-| Finding                                    | Default        | `--strict`     |
-| ------------------------------------------ | -------------- | -------------- |
-| missing `title` or `type`                  | warning        | error          |
-| unknown type                               | warning        | error          |
-| invalid `status`                           | warning        | error          |
-| latent name collision                      | warning        | error          |
-| unresolved wikilink                        | warning        | error          |
-| cited key absent from the bibliography     | warning        | error          |
-| duplicate citation key in the bibliography | warning        | error          |
-| bibliography key never cited               | warning        | error          |
-| orphan page, with no inbound links         | warning        | error          |
-| committed page declaring `type: source`    | warning        | error          |
-| `key` on a page that is not a source page  | warning        | error          |
-| **ambiguous wikilink**                     | **error**      | **error**      |
-| unreadable or non-UTF-8 file               | error (exit 2) | error (exit 2) |
+| Finding                                       | Default        | `--strict`     |
+| --------------------------------------------- | -------------- | -------------- |
+| missing or empty `title` or `type`            | warning        | error          |
+| a field holding the wrong shape for its value | warning        | error          |
+| unknown type                                  | warning        | error          |
+| invalid `status`                              | warning        | error          |
+| latent name collision                         | warning        | error          |
+| unresolved wikilink                           | warning        | error          |
+| cited key absent from the bibliography        | warning        | error          |
+| duplicate citation key in the bibliography    | warning        | error          |
+| bibliography key never cited                  | warning        | error          |
+| orphan page, with no inbound links            | warning        | error          |
+| committed page declaring `type: source`       | warning        | error          |
+| `key` on a page that is not a source page     | warning        | error          |
+| **ambiguous wikilink**                        | **error**      | **error**      |
+| unreadable or non-UTF-8 file                  | error (exit 2) | error (exit 2) |
 
 `index` pages are exempt from the orphan check, as are virtual source pages.
 `index` needs no misuse rule of its own: an index page on disk is legitimate,
 and the tool simply never writes one on an author's behalf.
+
+A row in that table is a page the tool can still read, show and repair. Some
+files are not, and they fail with exit code `2` instead:
+
+- a file that is not valid UTF-8;
+- a file that begins with a byte-order mark;
+- a frontmatter block that is opened and never closed;
+- a frontmatter block that is not valid YAML, that is not a mapping, or that
+  defines the same key twice.
+
+In each of those the tool cannot tell what it would be rewriting, so it refuses
+rather than guessing. Everything else is a finding, not a refusal, and a page
+with something wrong in it can still be read and repaired.
 
 ### Preservation
 

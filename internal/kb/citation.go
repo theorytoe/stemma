@@ -100,11 +100,28 @@ func isKeyByte(b byte) bool {
 	return strings.IndexByte(":.#$%&-+?<>~/", b) >= 0
 }
 
-// Bibliography is the set of citation keys a KB's bibliography defines.
+// Bibliography is the set of citation keys a KB defines, and which file defined
+// each one. A KB may keep its bibliography in one file or in a directory of
+// them, so a key has to remember where it came from for a finding to point at
+// the file a reader would have to open.
 type Bibliography struct {
-	keys       map[string]bool
-	order      []string
-	duplicates map[string]bool
+	keys  map[string]bool
+	order []string
+
+	// counts is how many times a key is defined, and from is the first file that
+	// defined it. Two files defining one key is a duplicate, exactly as two
+	// entries in one file would be.
+	counts map[string]int
+	from   map[string]string
+}
+
+// NewBibliography returns an empty bibliography.
+func NewBibliography() *Bibliography {
+	return &Bibliography{
+		keys:   map[string]bool{},
+		counts: map[string]int{},
+		from:   map[string]string{},
+	}
 }
 
 // ParseBibliography reads a BibTeX file far enough to know which keys it
@@ -115,17 +132,17 @@ type Bibliography struct {
 // and answering that needs entry headers and nothing else. Fields, values,
 // macros and everything else are the bibliography subsystem's business.
 //
+// name is the path the file was read from, recorded against each key it defines
+// so that a finding can name the file rather than the KB.
+//
 // It fails on bytes that are not UTF-8 and on an entry that is never closed. In
 // both, the tool cannot tell where one entry ends and the next begins, so the
 // keys after that point cannot be trusted.
-func ParseBibliography(raw []byte) (*Bibliography, error) {
+func ParseBibliography(name string, raw []byte) (*Bibliography, error) {
 	if !utf8.Valid(raw) {
 		return nil, fmt.Errorf("bibliography is not valid UTF-8")
 	}
-	b := &Bibliography{
-		keys:       map[string]bool{},
-		duplicates: map[string]bool{},
-	}
+	b := NewBibliography()
 	for i := 0; ; {
 		at := bytes.IndexByte(raw[i:], '@')
 		if at < 0 {
@@ -162,11 +179,11 @@ func ParseBibliography(raw []byte) (*Bibliography, error) {
 		}
 		if !isNotAnEntry(entryType) {
 			if key := entryKey(raw[body:end]); key != "" {
-				if b.keys[key] {
-					b.duplicates[key] = true
-				} else {
+				b.counts[key]++
+				if !b.keys[key] {
 					b.keys[key] = true
 					b.order = append(b.order, key)
+					b.from[key] = name
 				}
 			}
 		}
@@ -237,19 +254,45 @@ func (b *Bibliography) Has(key string) bool { return b.keys[key] }
 // Keys returns every key the bibliography defines, in the order first seen.
 func (b *Bibliography) Keys() []string { return append([]string(nil), b.order...) }
 
-// Duplicates returns the keys the bibliography defines more than once, sorted.
-func (b *Bibliography) Duplicates() []string { return sortedKeys(b.duplicates) }
+// PathOf returns the file a key was first defined in.
+func (b *Bibliography) PathOf(key string) string { return b.from[key] }
+
+// Duplicates returns the keys defined more than once, sorted.
+func (b *Bibliography) Duplicates() []string {
+	var out []string
+	for key, n := range b.counts {
+		if n > 1 {
+			out = append(out, key)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
 
 // Len returns the number of distinct keys.
 func (b *Bibliography) Len() int { return len(b.keys) }
+
+// Add merges another bibliography into this one, keeping the first file that
+// defined each key.
+func (b *Bibliography) Add(other *Bibliography) {
+	for _, key := range other.order {
+		b.counts[key] += other.counts[key]
+		if !b.keys[key] {
+			b.keys[key] = true
+			b.order = append(b.order, key)
+			b.from[key] = other.from[key]
+		}
+	}
+}
 
 // CitationFindings reports what is wrong between the pages and the
 // bibliography: keys cited that it does not define, keys it defines that
 // nothing cites, and keys it defines twice.
 //
-// biblioPath is the path of the bibliography file, and is used for the findings
-// that are about the bibliography itself rather than about any page.
-func (g *Graph) CitationFindings(biblioPath string, b *Bibliography, mode Mode) []Finding {
+// A finding about the bibliography itself is attributed to the file that
+// actually defines the key, because a KB may keep its bibliography in a
+// directory and "the bibliography" is then not one place.
+func (g *Graph) CitationFindings(b *Bibliography, mode Mode) []Finding {
 	soft := Warning
 	if mode == Strict {
 		soft = Error
@@ -275,7 +318,7 @@ func (g *Graph) CitationFindings(biblioPath string, b *Bibliography, mode Mode) 
 			out = append(out, Finding{
 				Severity: soft,
 				Code:     CodeCitationUncited,
-				Path:     biblioPath,
+				Path:     b.PathOf(key),
 				Message:  quote(key) + " is never cited",
 			})
 		}
@@ -285,20 +328,12 @@ func (g *Graph) CitationFindings(biblioPath string, b *Bibliography, mode Mode) 
 		out = append(out, Finding{
 			Severity: soft,
 			Code:     CodeCitationDuplicate,
-			Path:     biblioPath,
+			Path:     b.PathOf(key),
 			Message:  quote(key) + " is defined more than once",
 		})
 	}
 
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Path != out[j].Path {
-			return out[i].Path < out[j].Path
-		}
-		if out[i].Line != out[j].Line {
-			return out[i].Line < out[j].Line
-		}
-		return out[i].Code < out[j].Code
-	})
+	sortFindings(out)
 	return out
 }
 

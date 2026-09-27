@@ -8,7 +8,7 @@ import (
 
 func bibKeys(t *testing.T, raw string) []string {
 	t.Helper()
-	b, err := ParseBibliography([]byte(raw))
+	b, err := ParseBibliography("bibliography.bib", []byte(raw))
 	if err != nil {
 		t.Fatalf("ParseBibliography: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestParseBibliographyFindsKeys(t *testing.T) {
 }
 
 func TestParseBibliographyReportsDuplicates(t *testing.T) {
-	b, err := ParseBibliography([]byte("@article{k,}\n@book{k,}\n@misc{other,}\n"))
+	b, err := ParseBibliography("bibliography.bib", []byte("@article{k,}\n@book{k,}\n@misc{other,}\n"))
 	if err != nil {
 		t.Fatalf("ParseBibliography: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestParseBibliographyReportsDuplicates(t *testing.T) {
 }
 
 func TestBibliographyHasIsCaseSensitive(t *testing.T) {
-	b, err := ParseBibliography([]byte("@article{Vaswani2017,}\n"))
+	b, err := ParseBibliography("bibliography.bib", []byte("@article{Vaswani2017,}\n"))
 	if err != nil {
 		t.Fatalf("ParseBibliography: %v", err)
 	}
@@ -147,7 +147,7 @@ func TestParseBibliographyRefusesUnreadableFiles(t *testing.T) {
 		{"entry never closed with a nested brace", "@article{k, title = {x}\n@book{j,}\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, err := ParseBibliography([]byte(tc.raw)); err == nil {
+			if _, err := ParseBibliography("bibliography.bib", []byte(tc.raw)); err == nil {
 				t.Errorf("ParseBibliography accepted %q", tc.raw)
 			}
 		})
@@ -211,7 +211,7 @@ func TestCitationsCarryTheirLine(t *testing.T) {
 
 func TestCitationFindings(t *testing.T) {
 	raw := "@article{present,}\n@article{uncited,}\n@article{present,}\n"
-	b, err := ParseBibliography([]byte(raw))
+	b, err := ParseBibliography("bibliography.bib", []byte(raw))
 	if err != nil {
 		t.Fatalf("ParseBibliography: %v", err)
 	}
@@ -219,7 +219,7 @@ func TestCitationFindings(t *testing.T) {
 	g := NewGraph()
 	g.Add("pages/a.md", page(t, "A", "type: concept", "cites [@present] and [@absent]\n"))
 
-	got := g.CitationFindings("bibliography.bib", b, Lenient)
+	got := g.CitationFindings(b, Lenient)
 	want := []string{CodeCitationMissing, CodeCitationUncited, CodeCitationDuplicate}
 
 	have := map[string]bool{}
@@ -250,14 +250,14 @@ func TestCitationFindings(t *testing.T) {
 }
 
 func TestCitationFindingsUnderStrict(t *testing.T) {
-	b, err := ParseBibliography([]byte("@article{uncited,}\n"))
+	b, err := ParseBibliography("bibliography.bib", []byte("@article{uncited,}\n"))
 	if err != nil {
 		t.Fatalf("ParseBibliography: %v", err)
 	}
 	g := NewGraph()
 	g.Add("pages/a.md", page(t, "A", "type: concept", ""))
 
-	got := withCode(g.CitationFindings("bibliography.bib", b, Strict), CodeCitationUncited)
+	got := withCode(g.CitationFindings(b, Strict), CodeCitationUncited)
 	if len(got) != 1 {
 		t.Fatalf("findings = %+v", got)
 	}
@@ -267,14 +267,14 @@ func TestCitationFindingsUnderStrict(t *testing.T) {
 }
 
 func TestCleanCitationsProduceNoFindings(t *testing.T) {
-	b, err := ParseBibliography([]byte("@article{key,}\n"))
+	b, err := ParseBibliography("bibliography.bib", []byte("@article{key,}\n"))
 	if err != nil {
 		t.Fatalf("ParseBibliography: %v", err)
 	}
 	g := NewGraph()
 	g.Add("pages/a.md", page(t, "A", "type: concept", "cites [@key]\n"))
 
-	if got := g.CitationFindings("bibliography.bib", b, Strict); len(got) != 0 {
+	if got := g.CitationFindings(b, Strict); len(got) != 0 {
 		t.Errorf("findings = %+v, want none", got)
 	}
 }

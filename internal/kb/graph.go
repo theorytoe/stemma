@@ -258,15 +258,7 @@ func (g *Graph) Findings(mode Mode) []Finding {
 		})
 	}
 
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Path != out[j].Path {
-			return out[i].Path < out[j].Path
-		}
-		if out[i].Line != out[j].Line {
-			return out[i].Line < out[j].Line
-		}
-		return out[i].Code < out[j].Code
-	})
+	sortFindings(out)
 	return out
 }
 

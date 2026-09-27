@@ -140,7 +140,7 @@ tests for each case.
 
 ## Task 9:
 
-Status: Not started
+Status: Done
 
 Gate. Prove or disprove `U5`. State plainly whether `rename` rewriting inbound
 links is reliable enough to justify `D19`. If it is not, stop and raise it before

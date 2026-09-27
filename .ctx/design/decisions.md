@@ -164,6 +164,60 @@ be discovered during implementation, recorded so they are not mistaken for settl
 
 ---
 
+## Resolved during implementation
+
+### U5 — rewriting inbound links. `D19` stands.
+
+**Verdict: rewriting inbound links is reliable enough to justify title-based links.** No
+fallback to path-qualified links is needed, and no link-rewriting pass belongs on every
+operation.
+
+The reason it holds is not that the string matching is careful. It is that the set of links
+to rewrite is *defined by resolution*: a link is rewritten when it currently resolves to the
+page in question, by a name derived from that page's title. Everything hard follows from that
+definition rather than from a rule about text. A link by an alias resolves too, but through a
+name the rename does not change, so it is excluded by construction. A link whose target was
+ambiguous never resolved to this page, so rewriting it is excluded for the same reason. There
+is no list of special cases to keep in step with the resolver, because there is no second
+notion of what a link means.
+
+The cost is small and paid once. Measured on a KB of 1000 referrers and 2000 links, a rename
+rewrites all of them in **92 ms**, leaving the KB clean under `--strict` on both sides. The
+command also checks itself: it collects the links that resolved to nothing before the rename,
+reloads afterwards, and fails if that set grew, so a rewrite that broke a link is an error
+rather than a silent corruption.
+
+The pathological cases the delegate named are all covered by tests, not by argument: renaming
+to a title another page holds or answers to as an alias is refused; a page with no inbound
+links is the trivial case; links by alias are left alone; a link whose target was ambiguous is
+left alone and reported, because such a link did not mean this page and must not be quietly
+retargeted at it; and an interrupted run resumes. The last of these works because the steps
+are ordered links-first and each step is skipped when already done, so the same command
+finishes the job instead of needing hand repair. Resumption is verified from both points a
+run can stop.
+
+**Where the guarantee stops.** These are bounded and known, which is the difference between a
+cost and a defect:
+
+- Content outside the KB as the format defines it — inbox drafts, and anything a manifest
+  ignores — is not read, so its links are not rewritten. Such a link is not lost and not
+  silent: promoting the draft makes it a page, and lint reports the stale link at once. The
+  limit is a delay, not a corruption.
+- A link inside an *indented* code block is treated as prose, by lint and by rename alike,
+  because the scanner decides code by fences and inline spans. The two agree, which is what
+  matters for consistency; the disagreement is with a markdown renderer, and it is the known
+  approximation recorded in the scanner's own tests.
+- Repairing a collision needs a path rather than a name, since while two pages claim one name
+  no name identifies either. Paths are accepted wherever names are for exactly this reason.
+
+**Why the alternatives were not taken.** Path-qualified links do not avoid the rewrite, they
+relocate it: every link would break on `move` instead of on `rename`, and moving files is far
+more frequent than retitling. Move would then need the same machinery this delegate built, so
+the cost is not saved, only moved — and it is moved onto the operation that happens
+constantly, while giving up the property that reorganising `pages/` is free. A rewriting pass
+on every operation is worse still: it pays this cost on every command rather than once, for
+the same result.
+
 ## Naming collision log
 
 **Chosen:** `stemma` — accepted despite collision. `stemma-sh/stemma` exists (CLI `stemma` on crates.io, plus an agent-facing MCP server). Accepted because D9 means git/local install, so the only costs are `PATH` shadowing and search noise.

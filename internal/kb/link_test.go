@@ -157,3 +157,38 @@ func TestScannerTreatsSomeNonProseAsProse(t *testing.T) {
 		})
 	}
 }
+
+// A closing fence may be longer than the one that opened the block, and
+// markdown renders the block as closed when it is. Reading it as still-open
+// code would swallow everything after it: a link below would go unseen, and the
+// page it names would be reported as an orphan instead — a finding about the
+// wrong file.
+func TestALongerFenceClosesTheBlock(t *testing.T) {
+	for _, tc := range []struct{ open, close string }{
+		{"```", "````"},
+		{"````", "`````"},
+		{"~~~", "~~~~"},
+	} {
+		body := tc.open + "\ncode\n" + tc.close + "\n\nsee [[Target]]\n"
+		p := pageWithBody(t, body)
+		if got := targets(p.Links()); !reflect.DeepEqual(got, []string{"Target"}) {
+			t.Errorf("opened %q and closed %q: links = %q, want [Target]", tc.open, tc.close, got)
+		}
+	}
+}
+
+// The run may be longer, but it may not be shorter, and nothing but whitespace
+// may follow it.
+func TestAShorterOrTrailingFenceDoesNotCloseTheBlock(t *testing.T) {
+	for _, tc := range []struct{ open, close string }{
+		{"````", "```"},
+		{"````", "```` ```"},
+		{"~~~", "~~~ not a close"},
+	} {
+		body := tc.open + "\ncode\n" + tc.close + "\n\nsee [[Target]]\n"
+		p := pageWithBody(t, body)
+		if got := targets(p.Links()); len(got) != 0 {
+			t.Errorf("opened %q and closed %q: links = %q, want none", tc.open, tc.close, got)
+		}
+	}
+}

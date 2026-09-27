@@ -259,6 +259,10 @@ func fenceMarker(text string) (string, bool) {
 // closesFence reports whether a line closes a block opened with fence. The
 // closing run must be at least as long as the opening one and carry nothing but
 // whitespace after it, so an info string inside the block does not close it.
+//
+// It may be longer. Markdown allows a closing fence to be any run of the same
+// character that is at least as long as the opening one, and reading a longer
+// run as still-inside-the-block would silently swallow every line after it.
 func closesFence(text, fence string) bool {
 	trimmed := strings.TrimLeft(text, " ")
 	if len(text)-len(trimmed) > 3 {
@@ -267,5 +271,6 @@ func closesFence(text, fence string) bool {
 	if !strings.HasPrefix(trimmed, fence) {
 		return false
 	}
-	return strings.TrimSpace(trimmed[len(fence):]) == ""
+	rest := strings.TrimLeft(trimmed[len(fence):], string(fence[0]))
+	return strings.TrimSpace(rest) == ""
 }

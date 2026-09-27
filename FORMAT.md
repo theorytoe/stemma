@@ -232,6 +232,11 @@ An internal link is written `[[name]]`, where `name` is a title, a slug, or an
 alias. There is no other syntax: no path, no anchor, no transclusion, and no
 embed.
 
+Link syntax applies to prose and not to code. A `[[name]]` inside an inline code
+span or a fenced block is text, not a link, which is what lets a page describe
+the syntax without linking to a page called `name`. A link also does not span
+lines: a `[[` with no matching `]]` on its line is ordinary text.
+
 Resolution compares normalisations. `[[Attention Is All You Need]]`,
 `[[attention is all you need]]`, and `[[attention-is-all-you-need]]` are the
 same link and resolve to the same page. Aliases are compared the same way.
@@ -342,9 +347,10 @@ page.
 | **ambiguous wikilink**                        | **error**      | **error**      |
 | unreadable or non-UTF-8 file                  | error (exit 2) | error (exit 2) |
 
-`index` pages are exempt from the orphan check, as are virtual source pages.
-`index` needs no misuse rule of its own: an index page on disk is legitimate,
-and the tool simply never writes one on an author's behalf.
+`index` pages are exempt from the orphan check, as are virtual source pages. A
+page linking to itself does not stop it being an orphan, and `index` needs no
+misuse rule of its own: an index page on disk is legitimate, and the tool simply
+never writes one on an author's behalf.
 
 A row in that table is a page the tool can still read, show and repair. Some
 files are not, and they fail with exit code `2` instead:

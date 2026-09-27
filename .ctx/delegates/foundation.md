@@ -150,7 +150,7 @@ decided deliberately rather than discovered.
 
 ## Task 10:
 
-Status: Not started
+Status: Done
 
 Golden corpus. Seed the example wiki with a first slice as a test fixture, wire
 `lint --strict` over it into CI, and add golden-file tests for parsing and

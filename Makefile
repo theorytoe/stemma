@@ -4,7 +4,11 @@
 GO     ?= go
 BIN    ?= bin/stemma
 
-.PHONY: all build test vet check tidy fmt clean
+# The example wiki: the project's own documentation, written in the format the
+# tool defines and checked by the tool itself.
+WIKI   ?= wiki
+
+.PHONY: all build test vet check lint-wiki tidy fmt clean
 
 all: build
 
@@ -17,9 +21,14 @@ test:
 vet:
 	$(GO) vet ./...
 
-# What CI runs (foundation Task 1). The four gates from delegates/docs.md are
-# added to this target, not to the workflow.
-check: build vet test
+# What CI runs.
+check: build vet test lint-wiki
+
+# The documentation is a KB, so it has to lint clean under --strict. If the
+# project's own documentation cannot pass its own checks, the release is not
+# shippable. Raising the findings is not enough: this has to fail the build.
+lint-wiki: build
+	$(BIN) lint --kb $(WIKI) --strict
 
 tidy:
 	$(GO) mod tidy

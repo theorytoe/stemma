@@ -347,9 +347,9 @@ scoped export takes when the command line does not say, and it is `1` unless the
 manifest changes it; `all` is asked for on the command line rather than written
 here.
 
-| Key                       | Type    | Default | Meaning                          |
-| ------------------------- | ------- | ------- | -------------------------------- |
-| `export.default_depth`    | integer | `1`     | hops a scoped export takes       |
+| Key                    | Type    | Default | Meaning                    |
+| ---------------------- | ------- | ------- | -------------------------- |
+| `export.default_depth` | integer | `1`     | hops a scoped export takes |
 
 ```toml
 title = "Stemma"

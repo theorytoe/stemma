@@ -24,12 +24,14 @@ const (
 const DefaultCitationStyle = "author-date"
 
 // DefaultExportDepth is how many hops a scoped extract reaches when neither the
-// command line nor the manifest says otherwise (D29).
+// command line nor the manifest says otherwise (D29). A manifest may set
+// [export] default_depth = 0 to ask for no limit at all.
 const DefaultExportDepth = 1
 
 // Export is the manifest's [export] table: defaults for the export family.
 type Export struct {
 	// DefaultDepth is the depth `export page` uses when --depth is not given.
+	// It is a hop count, and 0 means no limit: the whole reachable set.
 	DefaultDepth int
 }
 
@@ -126,7 +128,13 @@ func ParseManifest(rootName string, raw []byte) (Manifest, error) {
 	if keys.CitationStyle != "" {
 		m.CitationStyle = keys.CitationStyle
 	}
-	if keys.Export.DefaultDepth > 0 {
+	// default_depth is overridden only when the manifest actually says it, so
+	// that an explicit 0 can mean "no limit" rather than being read as absent.
+	if md.IsDefined("export", "default_depth") {
+		if keys.Export.DefaultDepth < 0 {
+			return Manifest{}, fmt.Errorf("%s: export.default_depth is %d; it is a hop count of zero or more, and zero means no limit",
+				ManifestName, keys.Export.DefaultDepth)
+		}
 		m.Export.DefaultDepth = keys.Export.DefaultDepth
 	}
 	m.Types = keys.Types

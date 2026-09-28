@@ -346,13 +346,13 @@ discovery marker. Unknown keys are preserved verbatim.
 | `ignore`         | list of strings | empty                        | path globs, relative to the KB root       |
 
 One table holds the export family's defaults. `default_depth` is how many hops a
-scoped export takes when the command line does not say, and it is `1` unless the
-manifest changes it; `all` is asked for on the command line rather than written
-here.
+scoped export takes when the command line does not say. It is `1` unless the
+manifest changes it; `0` means no limit, so the export is the whole reachable
+set. `--depth all` on the command line means the same thing.
 
-| Key                    | Type    | Default | Meaning                    |
-| ---------------------- | ------- | ------- | -------------------------- |
-| `export.default_depth` | integer | `1`     | hops a scoped export takes |
+| Key                    | Type    | Default | Meaning                                     |
+| ---------------------- | ------- | ------- | ------------------------------------------- |
+| `export.default_depth` | integer | `1`     | hops a scoped export takes; `0` is no limit |
 
 ```toml
 title = "Stemma"

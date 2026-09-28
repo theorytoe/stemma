@@ -56,6 +56,24 @@ func TestParseManifestReadsDescriptionAndExportDepth(t *testing.T) {
 	}
 }
 
+// Zero is a value, not an absent key: it asks for no limit, which is the whole
+// reachable set rather than the default of one hop.
+func TestParseManifestReadsZeroExportDepth(t *testing.T) {
+	m, err := ParseManifest("my-kb", []byte("[export]\ndefault_depth = 0\n"))
+	if err != nil {
+		t.Fatalf("ParseManifest: %v", err)
+	}
+	if m.Export.DefaultDepth != 0 {
+		t.Errorf("Export.DefaultDepth = %d, want 0", m.Export.DefaultDepth)
+	}
+}
+
+func TestParseManifestRefusesANegativeExportDepth(t *testing.T) {
+	if _, err := ParseManifest("my-kb", []byte("[export]\ndefault_depth = -1\n")); err == nil {
+		t.Error("a negative depth was accepted")
+	}
+}
+
 // A key under [export] that this version does not read is as unknown as a
 // top-level one, and is reported by its full path.
 func TestParseManifestRecordsUnknownNestedKeys(t *testing.T) {

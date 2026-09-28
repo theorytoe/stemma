@@ -74,7 +74,7 @@ types = []
 # A built-in formatter. Not a CSL style.
 citation_style = %s
 
-# The export family's defaults. Depth is hops, and one is the default.
+# The export family's defaults. Depth is hops; 0 means no limit.
 [export]
 default_depth = %d
 `, tomlString(title), tomlString(DefaultCitationStyle), DefaultExportDepth))

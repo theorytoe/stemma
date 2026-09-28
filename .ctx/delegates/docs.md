@@ -68,13 +68,19 @@ delegate closed too early, and should be raised rather than patched here.
 
 ## Task 1:
 
-Status: Not started
+Status: Partly done by foundation Task 10
 
 Structure the example wiki. Decide the page set and the type of each page —
 rationale, format specification, command reference, and worked examples — then
 place and link them. Per page, choose a type from the vocabulary, link it into the
 graph, and keep the wiki lint-clean as it grows. This is also the first real
 exercise of the authoring workflow, so record friction as it appears.
+
+Already in place at `wiki/`: seven pages (an index, a rationale page using a
+manifest-added type, two concept pages, a note, a drafts page, and an archived page
+with an unknown nested field), a manifest, and a bibliography with one citation.
+It lints clean under `--strict`. What is missing is the specification, the command
+reference, and the worked examples.
 
 ## Task 2:
 
@@ -98,13 +104,17 @@ what the dependency allowlist contains and why it is small.
 
 ## Task 4:
 
-Status: Not started
+Status: Gate 1 already in place
 
 CI gates. Add the four gates above plus the tier-parity tests to the workflow
 established in foundation Task 1, and confirm each one actually fails when it
 should — a gate that cannot fail is decoration. Verify the failure output is
 actionable, since a lint failure on the documentation is the first thing a
 contributor will see.
+
+Gate 1 is done: `make lint-wiki` lints `wiki/` under `--strict` and `make check`
+depends on it, so CI runs it. It was confirmed to fail on both an unresolved link
+and an unknown type. Gates 2, 3, and 4 need surfaces that do not exist yet.
 
 ## Task 5:
 

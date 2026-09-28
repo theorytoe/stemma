@@ -37,10 +37,12 @@ plain directory and must not require a repository.
 
 Dependencies are a small pinned allowlist: `gopkg.in/yaml.v3` for frontmatter,
 `github.com/BurntSushi/toml` for the manifest, `github.com/russross/blackfriday/v2`
-for markdown rendering, and `modernc.org/sqlite` for the Tier-1 index. Only
-`yaml.v3` is in the local module cache; the others fetch on first build. CLI
-dispatch is hand-rolled on the standard library so that `--json` and exit-code
-handling stay uniform across roughly twenty verbs.
+for markdown rendering, and `modernc.org/sqlite` for the Tier-1 index. All four are
+pinned in `go.mod` and present in the module cache, so a build works offline.
+`yaml.v3` and `toml` are in real use; `blackfriday/v2` and `sqlite` are held in
+`go.mod` by a no-op import behind a build tag in `internal/deps` until Tasks 5 and
+6 need them. CLI dispatch is hand-rolled on the standard library so that `--json`
+and exit-code handling stay uniform across roughly twenty verbs.
 
 Blackfriday is a deliberate choice despite gogs, gitea, and Hugo having migrated
 to goldmark: the project needs a custom renderer to turn `[[wikilinks]]` and
@@ -62,9 +64,13 @@ directory. The only committed entry point is a hand-written document.
 
 Tasks are ordered by dependency, not by importance. Foundation blocks everything.
 Sources and bibliography unblocks both extraction and rendering. Skills, docs, and
-MCP come last because they consume the finished surface. Schema and CLI shapes may
-move between delegates during foundation; treat interface churn before the
-foundation delegate closes as expected rather than as rework.
+MCP come last because they consume the finished surface.
+
+The foundation delegate is closed, so the format, the page model, and the core CLI
+shape are settled rather than in flight. `internal/kb` and `internal/cli` are a
+library the remaining delegates build on: changing them is normal, but an interface
+change that another delegate depends on is a decision to raise rather than a step
+to take quietly.
 
 ## Definition of done for the project
 
@@ -84,6 +90,11 @@ resolution, citation-key resolution, lint, and the create/read/rename core of th
 CLI. Also the de-risking spike that decides whether `rename` can reliably rewrite
 inbound links, which is the load-bearing assumption behind `[[wikilink]]`.
 See `delegates/foundation.md`.
+
+It closed with `U5` resolved in favour of title-based links, a golden corpus that
+holds the preservation guarantee over both a crafted set of awkward files and the
+example wiki itself, and `lint --strict` wired over that wiki as a build gate.
+Everything after this task builds on the two packages it produced.
 
 ## Task 2:
 
@@ -155,3 +166,7 @@ Documentation and CI. The example wiki as the project's own documentation,
 `FORMAT.md` restructured as a wiki document, the README, the four CI gates, and the
 residual unknowns.
 See `delegates/docs.md`.
+
+Scope that already exists: foundation Task 10 seeded the example wiki with a first
+slice and wired gate 1 (`lint --strict` over it) into `make check`. This task grows
+that wiki rather than creating it, and adds three gates rather than four.

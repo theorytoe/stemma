@@ -4,6 +4,11 @@
 GO     ?= go
 BIN    ?= bin/stemma
 
+# The version the build reports and sends in its user agent. A release
+# overrides it; a working tree gets the commit it was built from.
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+LDFLAGS  = -X github.com/theorytoe/stemma/internal/version.Version=$(VERSION)
+
 # The example wiki: the project's own documentation, written in the format the
 # tool defines and checked by the tool itself.
 WIKI   ?= wiki
@@ -13,7 +18,7 @@ WIKI   ?= wiki
 all: build
 
 build:
-	$(GO) build -o $(BIN) ./cmd/stemma
+	$(GO) build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/stemma
 
 test:
 	$(GO) test ./...

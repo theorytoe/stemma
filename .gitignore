@@ -5,3 +5,6 @@
 
 # Build output from `make build`.
 bin/
+
+# Bytecode from running the extraction script's own tests.
+__pycache__/

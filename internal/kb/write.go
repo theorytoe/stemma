@@ -26,7 +26,7 @@ func PagePath(dir, title string) string {
 // rather than half of a new one. A tool whose central promise is that it never
 // destroys what it does not understand cannot afford a write that can truncate.
 func (k *KB) WritePage(name string, p *Page) error {
-	return writeFileAtomic(k.Path(name), p.Bytes())
+	return WriteFileAtomic(k.Path(name), p.Bytes())
 }
 
 // CreatePage writes a new page, refusing to replace anything. A page is
@@ -40,7 +40,7 @@ func (k *KB) CreatePage(name string, p *Page) error {
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		return err
 	}
-	return writeFileAtomic(full, p.Bytes())
+	return WriteFileAtomic(full, p.Bytes())
 }
 
 // MovePage moves a page to another KB-relative path.
@@ -75,9 +75,11 @@ func mustNotExist(full, name string) error {
 	}
 }
 
-// writeFileAtomic writes a file by way of a temporary neighbour, so that no
-// reader ever sees a partial page and no failed write costs a page.
-func writeFileAtomic(full string, data []byte) error {
+// WriteFileAtomic writes a file by way of a temporary neighbour, so that no
+// reader ever sees a partial file and no failed write costs one. It is exported
+// because the generated artifacts outside this package — the extraction script —
+// are written the same way.
+func WriteFileAtomic(full string, data []byte) error {
 	mode := os.FileMode(0o644)
 	if info, err := os.Stat(full); err == nil {
 		mode = info.Mode().Perm()

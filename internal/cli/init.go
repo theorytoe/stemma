@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/theorytoe/stemma/internal/extract"
 	"github.com/theorytoe/stemma/internal/kb"
 )
 
@@ -27,6 +28,14 @@ var initCommand = &command{
 			}
 
 			if err := kb.Init(root, *title); err != nil {
+				return w.fail(err)
+			}
+
+			// The extraction script is generated rather than authored, and a new KB
+			// should have its whole shape at once, so init writes it too. It is
+			// re-derived on use, so nothing downstream has to care whether this
+			// particular copy survived.
+			if _, err := extract.Materialize(root); err != nil {
 				return w.fail(err)
 			}
 

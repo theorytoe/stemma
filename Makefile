@@ -13,7 +13,7 @@ LDFLAGS  = -X github.com/theorytoe/stemma/internal/version.Version=$(VERSION)
 # tool defines and checked by the tool itself.
 WIKI   ?= wiki
 
-.PHONY: all build test vet check lint-wiki tidy fmt clean
+.PHONY: all build test test-shim vet check lint-wiki tidy fmt clean
 
 all: build
 
@@ -23,13 +23,23 @@ build:
 test:
 	$(GO) test ./...
 
+# The extraction script's own tests, run with plain python3: no framework, and
+# skipped rather than failed when there is no interpreter, because the core has
+# to build and test without Python.
+test-shim:
+	@if command -v python3 >/dev/null 2>&1; then \
+		python3 internal/extract/extract_test.py; \
+	else \
+		echo "test-shim: no python3, skipped"; \
+	fi
+
 vet:
 	$(GO) vet ./...
 
 # What CI runs. Further gates (the static site, the export) belong in this
 # target rather than in the workflow, so that a local run and a CI run check the
 # same things.
-check: build vet test lint-wiki
+check: build vet test test-shim lint-wiki
 
 # The documentation is a KB, so it has to lint clean under --strict. If the
 # project's own documentation cannot pass its own checks, the release is not

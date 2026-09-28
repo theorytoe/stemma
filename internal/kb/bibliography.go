@@ -54,7 +54,7 @@ func (k *KB) WriteBibliography(name string, f *BibFile) error {
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		return err
 	}
-	return writeFileAtomic(full, f.Bytes())
+	return WriteFileAtomic(full, f.Bytes())
 }
 
 // BibliographyFor returns the file a new entry should be written to, read when

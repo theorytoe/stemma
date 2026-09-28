@@ -48,7 +48,7 @@ func Init(root, title string) error {
 		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 			return err
 		}
-		if err := writeFileAtomic(full, f.data); err != nil {
+		if err := WriteFileAtomic(full, f.data); err != nil {
 			return err
 		}
 	}

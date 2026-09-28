@@ -15,6 +15,7 @@ const (
 	FieldType          = "type"
 	FieldStatus        = "status"
 	FieldAliases       = "aliases"
+	FieldTags          = "tags"
 	FieldArchiveReason = "archive_reason"
 	FieldKey           = "key"
 )
@@ -177,8 +178,47 @@ func (p *Page) Aliases() []string {
 	return out
 }
 
+// Tags returns the page's tags exactly as the author wrote them. It returns
+// nothing unless the field is a sequence of scalars.
+//
+// A tag is a free-form label, not a name: it never takes part in link
+// resolution, and the tool keeps no vocabulary of them. Two pages carrying the
+// same tag are related to each other, and nothing more.
+func (p *Page) Tags() []string {
+	n, ok := p.fields[FieldTags]
+	if !ok || n.Kind != yaml.SequenceNode {
+		return nil
+	}
+	out := make([]string, 0, len(n.Content))
+	for _, item := range n.Content {
+		if item.Kind != yaml.ScalarNode {
+			return nil
+		}
+		out = append(out, item.Value)
+	}
+	return out
+}
+
 // ArchiveReason returns the reason recorded when the page was archived.
 func (p *Page) ArchiveReason() string { return p.String(FieldArchiveReason) }
+
+// AnswersTo reports whether a name is one the page answers to: its normalised
+// title, or one of its normalised aliases.
+func (p *Page) AnswersTo(name string) bool {
+	n := Normalize(name)
+	if n == "" {
+		return false
+	}
+	if Normalize(p.Title()) == n {
+		return true
+	}
+	for _, alias := range p.Aliases() {
+		if Normalize(alias) == n {
+			return true
+		}
+	}
+	return false
+}
 
 // Key returns the citation key of a virtual source page.
 func (p *Page) Key() string { return p.String(FieldKey) }

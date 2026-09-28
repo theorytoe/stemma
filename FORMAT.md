@@ -153,6 +153,7 @@ Two fields are mandatory. Everything else is optional.
 | `type`           | yes      | a type from the vocabulary       | author                                  |
 | `status`         | no       | `active` (default) or `archived` | author                                  |
 | `aliases`        | no       | list of strings                  | author                                  |
+| `tags`           | no       | list of strings                  | author                                  |
 | `archive_reason` | no       | string                           | `archive`                               |
 | `key`            | no       | string                           | tool, and only on a virtual source page |
 
@@ -160,8 +161,30 @@ Any other field is an **unknown field**. Unknown fields are preserved verbatim
 and never interpreted. They are not an error, not a warning, and not a reason to
 refuse to write a file.
 
-There is no `tags` field, no date field, and no identifier field. A page is
-identified by its title.
+There is no date field and no identifier field. A page is identified by its
+title.
+
+### Tags
+
+`tags` is optional and holds free-form labels:
+
+```yaml
+tags: [transformers, attention, architecture]
+```
+
+A tag is not a name. It takes no part in link resolution and no link resolves to
+one: a page is identified by its title alone. A tag says what a page is *about*;
+it does not say what the page is *called*.
+
+There is no vocabulary of tags and no manifest key that declares one. This is the
+opposite of `type`, and it is deliberate: a type is a closed set the tool reasons
+about, while a tag is a judgement the author makes, and the author owns anything
+requiring judgement. A tag is never unknown and never warns.
+
+Tags are compared by their normalised form, so `Machine-Learning`,
+`machine learning` and `machine_learning` are one tag; the spelling the author
+wrote is what is kept. A tag filter, a per-tag index and a per-tag count are all
+built on this and nothing else in the format depends on tags.
 
 ### Types
 

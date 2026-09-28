@@ -216,6 +216,27 @@ func (p *Page) Validate(v Vocabulary, mode Mode) []Finding {
 		}
 	}
 
+	// tags is optional and, when present, is a list of free-form labels. There
+	// is no vocabulary to be unknown to, so the only thing to get wrong is the
+	// shape, or a tag that names nothing.
+	if node, ok := p.fields[FieldTags]; ok {
+		if node.Kind != yaml.SequenceNode {
+			add(soft, CodeMalformedField, FieldTags,
+				"tags must be a list, found "+kindName(node.Kind))
+		} else {
+			for _, item := range node.Content {
+				switch {
+				case item.Kind != yaml.ScalarNode:
+					add(soft, CodeMalformedField, FieldTags,
+						"tags must be a list of strings, found "+kindName(item.Kind)+" in it")
+				case Normalize(item.Value) == "":
+					add(soft, CodeMalformedField, FieldTags,
+						"a tag is empty, so nothing could filter on it")
+				}
+			}
+		}
+	}
+
 	// archive_reason is written by `archive` and is optional everywhere else.
 	if node, ok := p.fields[FieldArchiveReason]; ok && node.Kind != yaml.ScalarNode {
 		add(soft, CodeMalformedField, FieldArchiveReason,

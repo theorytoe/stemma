@@ -299,6 +299,48 @@ func TestAliasesGivesUpOnAMalformedValue(t *testing.T) {
 	}
 }
 
+// Tags keep the author's spelling, because the spelling is what a reader sees;
+// matching is the tool's problem and happens through Normalize.
+func TestTagsKeepTheAuthorsSpelling(t *testing.T) {
+	p := mustParse(t, "---\ntitle: A\ntype: concept\ntags: [Machine-Learning, attention]\n---\n")
+	got := p.Tags()
+	if len(got) != 2 || got[0] != "Machine-Learning" || got[1] != "attention" {
+		t.Errorf("Tags = %q", got)
+	}
+}
+
+func TestTagsGivesUpOnAMalformedValue(t *testing.T) {
+	for _, raw := range []string{
+		"---\ntitle: A\ntype: concept\ntags: not a list\n---\n",
+		"---\ntitle: A\ntype: concept\ntags:\n  - a\n  - [b]\n---\n",
+	} {
+		if got := mustParse(t, raw).Tags(); got != nil {
+			t.Errorf("Tags(%q) = %q, want nil", raw, got)
+		}
+	}
+}
+
+// A draft is promoted by naming it the way it would be linked, so the same
+// normalised comparison a link uses has to find its title and its aliases.
+func TestAnswersTo(t *testing.T) {
+	p := mustParse(t, "---\ntitle: Attention Is All You Need\ntype: concept\naliases: [the transformer paper]\n---\n")
+	for _, tc := range []struct {
+		name string
+		want bool
+	}{
+		{"Attention Is All You Need", true},
+		{"attention-is-all-you-need", true},
+		{"the transformer paper", true},
+		{"The Transformer Paper", true},
+		{"something else", false},
+		{"", false},
+	} {
+		if got := p.AnswersTo(tc.name); got != tc.want {
+			t.Errorf("AnswersTo(%q) = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
 func contains(haystack []string, needle string) bool {
 	for _, s := range haystack {
 		if s == needle {

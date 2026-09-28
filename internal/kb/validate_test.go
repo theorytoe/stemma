@@ -86,6 +86,26 @@ func TestValidatePerPageRules(t *testing.T) {
 			want: []string{CodeMalformedField},
 		},
 		{
+			name: "tags is not a list",
+			raw:  "---\ntitle: A\ntype: concept\ntags: a\n---\n",
+			want: []string{CodeMalformedField},
+		},
+		{
+			name: "tags holds something other than strings",
+			raw:  "---\ntitle: A\ntype: concept\ntags:\n  - a\n  - {b: c}\n---\n",
+			want: []string{CodeMalformedField},
+		},
+		{
+			name: "a tag that normalises to nothing",
+			raw:  "---\ntitle: A\ntype: concept\ntags: [\"!!!\"]\n---\n",
+			want: []string{CodeMalformedField},
+		},
+		{
+			name: "free-form tags are never unknown",
+			raw:  "---\ntitle: A\ntype: concept\ntags: [anything, at, all]\n---\n",
+			want: nil,
+		},
+		{
 			name: "archive_reason is not a string",
 			raw:  "---\ntitle: A\ntype: concept\narchive_reason: [x]\n---\n",
 			want: []string{CodeMalformedField},

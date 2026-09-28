@@ -21,6 +21,8 @@ The few things the tool gives meaning to are fixed:
 - `title` and `type` are required.
 - `status` is `active` or `archived`. It defaults to `active`.
 - `aliases` lists other names the page answers to.
+- `tags` lists free-form labels. They group pages for filtering and indexes,
+  and they never act as names.
 - `archive_reason` records why a page was retired.
 
 Anything else is yours. An unknown field is preserved verbatim and never

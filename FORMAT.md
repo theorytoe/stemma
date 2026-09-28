@@ -179,11 +179,14 @@ it does not say what the page is *called*.
 There is no vocabulary of tags and no manifest key that declares one. This is the
 opposite of `type`, and it is deliberate: a type is a closed set the tool reasons
 about, while a tag is a judgement the author makes, and the author owns anything
-requiring judgement. A tag is never unknown and never warns.
+requiring judgement. A tag is never unknown, because there is nothing for it to
+be unknown to.
 
 Tags are compared by their normalised form, so `Machine-Learning`,
 `machine learning` and `machine_learning` are one tag; the spelling the author
-wrote is what is kept. A tag filter, a per-tag index and a per-tag count are all
+wrote is what is kept. Listing the same tag twice, by any spellings that
+normalise the same, says the same thing twice and is a warning by default and an
+error under `--strict`. A tag filter, a per-tag index and a per-tag count are all
 built on this and nothing else in the format depends on tags.
 
 ### Types
@@ -401,6 +404,7 @@ page.
 | a field holding the wrong shape for its value | warning        | error          |
 | unknown type                                  | warning        | error          |
 | invalid `status`                              | warning        | error          |
+| `tags` listing the same tag twice             | warning        | error          |
 | latent name collision                         | warning        | error          |
 | unresolved wikilink                           | warning        | error          |
 | cited key absent from the bibliography        | warning        | error          |

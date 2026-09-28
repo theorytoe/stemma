@@ -106,6 +106,16 @@ func TestValidatePerPageRules(t *testing.T) {
 			want: nil,
 		},
 		{
+			name: "a tag listed twice by different spellings",
+			raw:  "---\ntitle: A\ntype: concept\ntags: [Machine-Learning, machine learning]\n---\n",
+			want: []string{CodeDuplicateTag},
+		},
+		{
+			name: "a tag listed twice exactly",
+			raw:  "---\ntitle: A\ntype: concept\ntags: [go, go]\n---\n",
+			want: []string{CodeDuplicateTag},
+		},
+		{
 			name: "archive_reason is not a string",
 			raw:  "---\ntitle: A\ntype: concept\narchive_reason: [x]\n---\n",
 			want: []string{CodeMalformedField},

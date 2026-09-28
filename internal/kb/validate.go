@@ -33,6 +33,7 @@ const (
 	CodeInvalidStatus  = "invalid-status"
 	CodeReservedType   = "reserved-type"
 	CodeReservedField  = "reserved-field"
+	CodeDuplicateTag   = "duplicate-tag"
 )
 
 // Finding is one thing wrong with a page.
@@ -217,22 +218,33 @@ func (p *Page) Validate(v Vocabulary, mode Mode) []Finding {
 	}
 
 	// tags is optional and, when present, is a list of free-form labels. There
-	// is no vocabulary to be unknown to, so the only thing to get wrong is the
-	// shape, or a tag that names nothing.
+	// is no vocabulary to be unknown to, so the shape and the spelling are the
+	// only things to get wrong. Two spellings that normalise the same are one
+	// tag, so listing both says the same thing twice.
 	if node, ok := p.fields[FieldTags]; ok {
 		if node.Kind != yaml.SequenceNode {
 			add(soft, CodeMalformedField, FieldTags,
 				"tags must be a list, found "+kindName(node.Kind))
 		} else {
+			seen := map[string]string{}
 			for _, item := range node.Content {
-				switch {
-				case item.Kind != yaml.ScalarNode:
+				if item.Kind != yaml.ScalarNode {
 					add(soft, CodeMalformedField, FieldTags,
 						"tags must be a list of strings, found "+kindName(item.Kind)+" in it")
-				case Normalize(item.Value) == "":
+					continue
+				}
+				n := Normalize(item.Value)
+				if n == "" {
 					add(soft, CodeMalformedField, FieldTags,
 						"a tag is empty, so nothing could filter on it")
+					continue
 				}
+				if first, dup := seen[n]; dup {
+					add(soft, CodeDuplicateTag, FieldTags,
+						"the tag "+quote(first)+" is listed more than once")
+					continue
+				}
+				seen[n] = item.Value
 			}
 		}
 	}

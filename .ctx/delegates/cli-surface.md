@@ -51,7 +51,7 @@ consumes the generated CLI reference, so keep it accurate rather than handwritte
 
 ## Task 1:
 
-Status: Not started
+Status: Done
 
 Dispatch and help. A hand-rolled dispatcher over the standard library, with a
 uniform shape for verb, noun families (`cite`, `export`), flags, and usage text.
@@ -60,7 +60,7 @@ without reading the source.
 
 ## Task 2:
 
-Status: Not started
+Status: Done
 
 KB discovery. Implement the three-step resolution order, make it available to every
 command, and cover the failure modes: no KB found, several candidate roots on the
@@ -68,7 +68,7 @@ walk up, an explicit path that is not a KB, and a KB root that is read-only.
 
 ## Task 3:
 
-Status: Not started
+Status: Done
 
 Manifest load and save. Parse `stemma.toml` on `BurntSushi/toml`, apply defaults for
 every absent key, and preserve unknown keys verbatim on write. Define the keys:
@@ -78,7 +78,7 @@ formatters only, and is not a CSL style identifier.
 
 ## Task 4:
 
-Status: Not started
+Status: Done
 
 `--json` and exit codes, applied uniformly across every verb from both delegates.
 Define the envelope shape once and use it everywhere; do not let each command
@@ -86,7 +86,7 @@ invent its own. Audit Task 1's verbs and bring them into line.
 
 ## Task 5:
 
-Status: Not started
+Status: Done
 
 `status`. A health summary: page counts by type, orphans, uncited sources,
 ambiguous titles, index freshness, and inbox size. Read-only and fast. It must be
@@ -95,7 +95,7 @@ should use the index when one exists.
 
 ## Task 6:
 
-Status: Not started
+Status: Done
 
 `list` filters and `show` modes. `list` filters by type, tag, directory, and status,
 and supports `--json`. `show` supports default rendering, `--path` for scripts, and
@@ -103,7 +103,7 @@ and supports `--json`. `show` supports default rendering, `--path` for scripts, 
 
 ## Task 7:
 
-Status: Not started
+Status: Done
 
 `archive` and `promote`. `archive` sets `status: archived` and appends the reason
 to the document; the tool never deletes a page (`D47`). `promote` is the single
@@ -113,7 +113,7 @@ changed. Everything the inbox permits must become an error at promotion.
 
 ## Task 8:
 
-Status: Not started
+Status: Done
 
 `doctor`. Detect and report the optional environment: Go runtime, the Python
 interpreter, whether a PDF extractor is importable, and whether SQLite is
@@ -123,7 +123,7 @@ stays small; if it grows into a dependency manager, cut it (`U4`).
 
 ## Task 9:
 
-Status: Not started
+Status: Done
 
 Generate the CLI reference. Emit a single markdown document describing every verb,
 flag, exit code, and JSON envelope, generated from the command definitions so it
@@ -131,7 +131,7 @@ cannot drift. Task 7 of the project copies this into the umbrella skill.
 
 ## Task 10:
 
-Status: Not started
+Status: Done
 
 Command-level tests. Table-driven tests for dispatch, discovery, manifest round
 trips, exit codes, and every `--json` envelope. Assert that a KB in a plain

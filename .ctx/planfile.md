@@ -98,12 +98,17 @@ Everything after this task builds on the two packages it produced.
 
 ## Task 2:
 
-Status: Not started
+Status: Done
 
 CLI surface. Dispatch, KB discovery, manifest loading, uniform `--json` and exit
 codes, and the remaining non-source commands including `status`, `archive`,
 `promote`, and `doctor`.
 See `delegates/cli-surface.md`.
+
+It closed with the whole surface described once, in a command table that
+dispatch, help and the generated CLI reference are all derived from, and with
+one `--json` envelope used by every verb. It also added `tags` to the format, a
+decision recorded in the register as `D63`.
 
 ## Task 3:
 

@@ -66,6 +66,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D20 | Citations use **pandoc-style `[@key]`**.                                                                                            | Q16(b)    |
 | D46 | Default types are **`topic`, `concept`, `note`**; `stemma.toml` **extends** the set.                                                | Q34       |
 | D52 | The name is **`stemma`**, accepting an existing name collision.                                                                     | Q32, Q37  |
+| D63 | Pages may carry free-form **`tags`**, compared by normalised form. Tags label; they never name, and never resolve a link.           | review    |
 
 ### Layout
 
@@ -165,6 +166,41 @@ be discovered during implementation, recorded so they are not mistaken for settl
 ---
 
 ## Resolved during implementation
+
+### Tags — a labelling axis, not a naming one. `D63` added.
+
+**Decision.** A page may carry `tags`, a list of free-form labels. There is no
+vocabulary of tags and no manifest key that declares one. Tags are compared by
+their normalised form, so `Machine-Learning`, `machine learning` and
+`machine_learning` are one tag; the spelling the author wrote is kept. Tags never
+take part in link resolution: a page is identified by its title and aliases
+alone, and a link never resolves to a tag.
+
+**Why.** `type` is a closed, manifest-extensible classification with exactly one
+value per page. It answers "what kind of page is this", and it cannot answer
+"what is this page about" across types, which is what a tag filter, a per-tag
+index and a later `search --tag` need. The alternative considered was a
+manifest-declared tag vocabulary mirroring `types`, and it was rejected: a tag is
+a judgement and the author owns judgement (`D60`), so a second closed set is
+maintenance the tool would be imposing rather than a rule the format needs.
+
+**Provenance.** The cli-surface delegate assumed a tag filter; `FORMAT.md` had
+settled that there is no `tags` field. On review the tool author chose to add the
+field rather than drop the filter. This section records that the settled line in
+`FORMAT.md` was deliberately reopened, and `FORMAT.md` now documents the field.
+
+### `description` and `[export] default_depth` manifest keys
+
+The cli-surface delegate defined two keys `FORMAT.md` did not list. `description`
+is free text that nothing but a person reads. `[export] default_depth` is the
+default hop count for scoped extraction (`D29`), which the render/export delegate
+reads. Both are parsed with defaults, and both are now in `FORMAT.md`.
+
+The manifest is still never re-emitted: it keeps its raw bytes, and unknown keys
+survive because the file is not rewritten. "Preserve unknown keys verbatim on
+write" is therefore a property held by never writing, not by a writer that knows
+how to splice. If a command ever needs to change a manifest key, that command
+adds the writer and the tests it needs.
 
 ### U5 — rewriting inbound links. `D19` stands.
 

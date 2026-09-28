@@ -1,8 +1,8 @@
 // Command stemma is the universal surface for a knowledge base: the one
 // interface that every other surface falls back to.
 //
-// The command tree is still growing. This is the plumbing from the foundation
-// delegate; the core verbs arrive next and the rest of the surface after that.
+// The command table, the help text and the generated reference all live in
+// internal/cli. This is the entry point and nothing else.
 package main
 
 import (

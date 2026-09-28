@@ -19,6 +19,53 @@ func TestManifestDefaults(t *testing.T) {
 	if len(m.Ignore) != 0 || len(m.Types) != 0 {
 		t.Errorf("a default manifest should list nothing: %+v", m)
 	}
+	if m.Export.DefaultDepth != DefaultExportDepth {
+		t.Errorf("Export.DefaultDepth = %d, want %d", m.Export.DefaultDepth, DefaultExportDepth)
+	}
+}
+
+// Every absent key falls back to its default, including the ones in the
+// [export] table, which is the only place an absent key could hide.
+func TestParseManifestAppliesDefaultsForKeyItOmits(t *testing.T) {
+	m, err := ParseManifest("my-kb", []byte("title = \"X\"\n[export]\n"))
+	if err != nil {
+		t.Fatalf("ParseManifest: %v", err)
+	}
+	if m.Description != "" {
+		t.Errorf("Description = %q, want empty", m.Description)
+	}
+	if m.Export.DefaultDepth != DefaultExportDepth {
+		t.Errorf("Export.DefaultDepth = %d, want the default %d", m.Export.DefaultDepth, DefaultExportDepth)
+	}
+}
+
+func TestParseManifestReadsDescriptionAndExportDepth(t *testing.T) {
+	raw := []byte("title = \"X\"\ndescription = \"about things\"\n[export]\ndefault_depth = 3\n")
+	m, err := ParseManifest("my-kb", raw)
+	if err != nil {
+		t.Fatalf("ParseManifest: %v", err)
+	}
+	if m.Description != "about things" {
+		t.Errorf("Description = %q", m.Description)
+	}
+	if m.Export.DefaultDepth != 3 {
+		t.Errorf("Export.DefaultDepth = %d, want 3", m.Export.DefaultDepth)
+	}
+	if len(m.Unknown) != 0 {
+		t.Errorf("Unknown = %q, want none", m.Unknown)
+	}
+}
+
+// A key under [export] that this version does not read is as unknown as a
+// top-level one, and is reported by its full path.
+func TestParseManifestRecordsUnknownNestedKeys(t *testing.T) {
+	m, err := ParseManifest("my-kb", []byte("[export]\ndefault_depth = 1\nfuture = true\n"))
+	if err != nil {
+		t.Fatalf("ParseManifest: %v", err)
+	}
+	if !reflect.DeepEqual(m.Unknown, []string{"export.future"}) {
+		t.Errorf("Unknown = %q", m.Unknown)
+	}
 }
 
 func TestParseManifestOverridesDefaults(t *testing.T) {

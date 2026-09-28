@@ -336,17 +336,31 @@ discovery marker. Unknown keys are preserved verbatim.
 | Key              | Type            | Default                      | Meaning                                   |
 | ---------------- | --------------- | ---------------------------- | ----------------------------------------- |
 | `title`          | string          | the KB root's directory name | the KB's title                            |
+| `description`    | string          | empty                        | a sentence or two about the KB            |
 | `default_type`   | string          | `topic`                      | the type `new` applies when none is given |
 | `types`          | list of strings | empty                        | types added to the built-in three         |
 | `citation_style` | string          | `author-date`                | a built-in formatter                      |
 | `ignore`         | list of strings | empty                        | path globs, relative to the KB root       |
 
+One table holds the export family's defaults. `default_depth` is how many hops a
+scoped export takes when the command line does not say, and it is `1` unless the
+manifest changes it; `all` is asked for on the command line rather than written
+here.
+
+| Key                       | Type    | Default | Meaning                          |
+| ------------------------- | ------- | ------- | -------------------------------- |
+| `export.default_depth`    | integer | `1`     | hops a scoped export takes       |
+
 ```toml
 title = "Stemma"
+description = "Notes on attention and architecture."
 default_type = "concept"
 types = ["person", "project", "question"]
 citation_style = "author-date"
 ignore = ["pages/attic/**"]
+
+[export]
+default_depth = 1
 ```
 
 `citation_style` selects from the built-in formatters and nothing else. It is

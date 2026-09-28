@@ -65,12 +65,19 @@ func manifestFor(title string) []byte {
 	return []byte(fmt.Sprintf(`# The manifest. Optional: a KB with no stemma.toml gets these defaults.
 title = %s
 
+# A sentence or two about the KB. Free text; nothing reads it but a person.
+description = ""
+
 # Added to the built-in types: topic, concept and note.
 types = []
 
 # A built-in formatter. Not a CSL style.
 citation_style = %s
-`, tomlString(title), tomlString(DefaultCitationStyle)))
+
+# The export family's defaults. Depth is hops, and one is the default.
+[export]
+default_depth = %d
+`, tomlString(title), tomlString(DefaultCitationStyle), DefaultExportDepth))
 }
 
 const bibliographyHeader = `% The bibliography for this KB, as BibTeX.

@@ -23,6 +23,16 @@ const (
 // DefaultCitationStyle is used when a manifest does not name one.
 const DefaultCitationStyle = "author-date"
 
+// DefaultExportDepth is how many hops a scoped extract reaches when neither the
+// command line nor the manifest says otherwise (D29).
+const DefaultExportDepth = 1
+
+// Export is the manifest's [export] table: defaults for the export family.
+type Export struct {
+	// DefaultDepth is the depth `export page` uses when --depth is not given.
+	DefaultDepth int
+}
+
 // Manifest is a KB's stemma.toml.
 //
 // It is optional: a KB with no manifest is fully usable and gets the defaults
@@ -31,6 +41,10 @@ const DefaultCitationStyle = "author-date"
 type Manifest struct {
 	// Title is the KB's title. It defaults to the name of the KB root.
 	Title string
+
+	// Description is a sentence or two about the KB. Optional, and read by
+	// nothing but a person.
+	Description string
 
 	// DefaultType is what `new` applies when an author does not choose.
 	DefaultType string
@@ -43,6 +57,9 @@ type Manifest struct {
 
 	// Ignore lists paths, relative to the KB root, that are outside the KB.
 	Ignore []string
+
+	// Export holds the defaults for the export family.
+	Export Export
 
 	// Unknown holds the keys this version of the tool does not read. They are
 	// recorded so that a writer knows what it must not drop.
@@ -59,6 +76,7 @@ func DefaultManifest(rootName string) Manifest {
 		Title:         rootName,
 		DefaultType:   DefaultType,
 		CitationStyle: DefaultCitationStyle,
+		Export:        Export{DefaultDepth: DefaultExportDepth},
 	}
 }
 
@@ -66,11 +84,18 @@ func DefaultManifest(rootName string) Manifest {
 // so that the exported type carries the defaults and the raw bytes, and this
 // one carries only what the file can say.
 type manifestKeys struct {
-	Title         string   `toml:"title"`
-	DefaultType   string   `toml:"default_type"`
-	Types         []string `toml:"types"`
-	CitationStyle string   `toml:"citation_style"`
-	Ignore        []string `toml:"ignore"`
+	Title         string     `toml:"title"`
+	Description   string     `toml:"description"`
+	DefaultType   string     `toml:"default_type"`
+	Types         []string   `toml:"types"`
+	CitationStyle string     `toml:"citation_style"`
+	Ignore        []string   `toml:"ignore"`
+	Export        exportKeys `toml:"export"`
+}
+
+// exportKeys is the shape of the [export] table.
+type exportKeys struct {
+	DefaultDepth int `toml:"default_depth"`
 }
 
 // ParseManifest reads a manifest, falling back to the defaults for everything
@@ -92,11 +117,17 @@ func ParseManifest(rootName string, raw []byte) (Manifest, error) {
 	if keys.Title != "" {
 		m.Title = keys.Title
 	}
+	if keys.Description != "" {
+		m.Description = keys.Description
+	}
 	if keys.DefaultType != "" {
 		m.DefaultType = keys.DefaultType
 	}
 	if keys.CitationStyle != "" {
 		m.CitationStyle = keys.CitationStyle
+	}
+	if keys.Export.DefaultDepth > 0 {
+		m.Export.DefaultDepth = keys.Export.DefaultDepth
 	}
 	m.Types = keys.Types
 	m.Ignore = keys.Ignore

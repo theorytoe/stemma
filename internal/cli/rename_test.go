@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -289,9 +288,7 @@ func TestRenameJSON(t *testing.T) {
 		Rewritten int    `json:"links_rewritten"`
 		Files     int    `json:"files_rewritten"`
 	}
-	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
-		t.Fatalf("not JSON: %v\n%s", err, stdout)
-	}
+	decodeData(t, stdout, &got)
 	if got.From != "pages/alpha.md" || got.To != "pages/self-attention.md" {
 		t.Errorf("got %+v", got)
 	}

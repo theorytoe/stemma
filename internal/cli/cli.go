@@ -5,14 +5,17 @@
 // the core library, and a command here does little more than find a KB, call
 // the library, and decide an exit code. Run returns that code rather than
 // calling os.Exit, so the whole surface is testable without a subprocess.
+//
+// The surface is described once, in the command table below, and everything
+// else about it is derived from that description: dispatch, the help text, and
+// the generated reference. A verb that is not in the table does not exist.
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/theorytoe/stemma/internal/kb"
@@ -32,65 +35,169 @@ const (
 // path is given on the command line.
 const EnvKB = "STEMMA_KB"
 
-const usage = `stemma is a tool for authoring and maintaining a knowledge base.
+// command is one verb on the surface.
+//
+// A command either runs (setup and its returned closure) or is a noun family
+// with members (sub). The two are exclusive: `export` and `cite` are families
+// whose members are the actual verbs, and a family itself does nothing.
+type command struct {
+	// name is how the verb is invoked.
+	name string
 
-usage: stemma <command> [flags]
+	// summary is one line for the command list, with no trailing period.
+	summary string
 
-commands:
-  init      create a KB root
-  new       create a page, or a draft in the inbox
-  list      list the pages
-  show      show one page with its links and citations resolved
-  move      move a page to another directory
-  rename    retitle a page and rewrite every link that named it
-  archive   archive a page, recording why
-  lint      report everything wrong with the KB
-  help      show this message
+	// args names the positional arguments, for the usage line. Empty means the
+	// command takes none.
+	args string
 
-Every command accepts:
-  --json        write output as JSON.
+	// setup registers the command's own flags and returns the closure that runs
+	// it. The universal --json flag is registered by the dispatcher, and a
+	// command that works on a KB asks for --kb and --strict by calling
+	// registerKB. Keeping the flags here is what lets help and the reference be
+	// generated rather than written by hand.
+	setup func(fs *flag.FlagSet, o *options) runFunc
 
-Commands that work on an existing KB also accept:
-  --kb <path>   the KB root. Discovered when not given.
-  --strict      treat warnings as errors.
+	// sub holds the members of a noun family, and is empty for everything else.
+	sub []*command
+}
 
-The KB root is found from --kb, then $` + EnvKB + `, then by walking up from the
-working directory looking for a ` + kb.ManifestName + `, and failing that for a
-directory holding ` + kb.PagesDir + `/.
-`
+// runFunc runs one command once its arguments have been parsed. args holds the
+// positional arguments with all flags removed.
+type runFunc func(c *command, w *output, args []string) int
+
+// commands is the whole surface, in the order help lists it. It is filled in
+// init so that the help command, which reads this table to build its own help,
+// does not form an initialization cycle with it.
+var commands []*command
+
+func init() {
+	commands = []*command{
+		initCommand,
+		newCommand,
+		listCommand,
+		showCommand,
+		moveCommand,
+		renameCommand,
+		archiveCommand,
+		lintCommand,
+		helpCommand,
+	}
+}
 
 // Run executes one invocation and returns the process exit code.
 func Run(args []string, stdout, stderr io.Writer) int {
+	c, rest, err := lookup(commands, args)
+	if err != nil {
+		fmt.Fprintf(stderr, "stemma: %v\n\n", err)
+		fmt.Fprint(stderr, topUsage())
+		return ExitError
+	}
+	return c.invoke(rest, stdout, stderr)
+}
+
+// lookup finds the command an argument list names.
+//
+// A noun family is matched by its first two arguments: `stemma export json`
+// runs the `json` member of the `export` family. Naming a family without one of
+// its members is a usage error rather than a guess.
+func lookup(cmds []*command, args []string) (*command, []string, error) {
 	if len(args) == 0 {
-		fmt.Fprint(stderr, usage)
-		return ExitError
+		return nil, nil, errors.New("no command given")
 	}
-	command, rest := args[0], args[1:]
-	switch command {
-	case "init":
-		return runInit(rest, stdout, stderr)
-	case "new":
-		return runNew(rest, stdout, stderr)
-	case "list":
-		return runList(rest, stdout, stderr)
-	case "show":
-		return runShow(rest, stdout, stderr)
-	case "move":
-		return runMove(rest, stdout, stderr)
-	case "rename":
-		return runRename(rest, stdout, stderr)
-	case "archive":
-		return runArchive(rest, stdout, stderr)
-	case "lint":
-		return runLint(rest, stdout, stderr)
-	case "help", "-h", "--help":
-		fmt.Fprint(stdout, usage)
+	for _, c := range cmds {
+		if c.name != args[0] {
+			continue
+		}
+		if len(c.sub) == 0 {
+			return c, args[1:], nil
+		}
+		if len(args) < 2 {
+			return nil, nil, fmt.Errorf("%s needs one of: %s", c.name, subNames(c))
+		}
+		for _, s := range c.sub {
+			if s.name == args[1] {
+				return s, args[2:], nil
+			}
+		}
+		return nil, nil, fmt.Errorf("%s has no %q; it has %s", c.name, args[1], subNames(c))
+	}
+	return nil, nil, fmt.Errorf("unknown command %q", args[0])
+}
+
+// invoke parses a command's arguments and runs it.
+func (c *command) invoke(args []string, stdout, stderr io.Writer) int {
+	if wantsHelp(args) {
+		fmt.Fprint(stdout, commandHelp(c))
 		return ExitOK
-	default:
-		fmt.Fprintf(stderr, "stemma: unknown command %q\n\n", command)
-		fmt.Fprint(stderr, usage)
-		return ExitError
 	}
+
+	fs := flag.NewFlagSet("stemma "+c.name, flag.ContinueOnError)
+	// The errors flag returns are turned into one uniform message by output.fail
+	// rather than printed here, so that a --json run stays parseable.
+	fs.SetOutput(io.Discard)
+
+	var o options
+	o.registerJSON(fs)
+	run := c.setup(fs, &o)
+	if err := parse(fs, args); err != nil {
+		w := &output{cmd: c.name, json: o.json || wantsJSON(args), stdout: stdout, stderr: stderr}
+		return w.fail(err)
+	}
+	w := &output{cmd: c.name, json: o.json, stdout: stdout, stderr: stderr}
+	return run(c, w, fs.Args())
+}
+
+// find returns the command with a name, or nil.
+func find(name string) *command {
+	for _, c := range commands {
+		if c.name == name {
+			return c
+		}
+	}
+	return nil
+}
+
+// options are the flags every command accepts. Keeping them in one place is
+// what makes --json and --strict uniform across the surface instead of a
+// property of whichever command remembered to add them.
+type options struct {
+	kb     string
+	json   bool
+	strict bool
+}
+
+// registerJSON is the one flag no command has to ask for.
+func (o *options) registerJSON(fs *flag.FlagSet) {
+	fs.BoolVar(&o.json, "json", false, "write output as JSON")
+}
+
+// registerKB adds the flags a command needs to find and read a KB.
+func (o *options) registerKB(fs *flag.FlagSet) {
+	fs.StringVar(&o.kb, "kb", "", "the KB root; discovered when not given")
+	fs.BoolVar(&o.strict, "strict", false, "treat warnings as errors")
+}
+
+// mode is the leniency the flags ask for.
+func (o *options) mode() kb.Mode {
+	if o.strict {
+		return kb.Strict
+	}
+	return kb.Lenient
+}
+
+// load finds and reads the KB, reporting the failure itself. A nil KB means the
+// caller should return the code alongside it.
+func (o *options) load(w *output) (*kb.KB, int) {
+	root, err := discover(o.kb)
+	if err != nil {
+		return nil, w.fail(err)
+	}
+	k, err := kb.Load(root)
+	if err != nil {
+		return nil, w.fail(err)
+	}
+	return k, ExitOK
 }
 
 // resolve turns a page name given on the command line into a path in the KB.
@@ -116,13 +223,6 @@ func resolve(k *kb.KB, name string) (string, error) {
 	default:
 		return "", fmt.Errorf("no page is called %q", name)
 	}
-}
-
-// fail writes a message the way every command writes one, so that a failure
-// always looks the same whatever it was that failed.
-func fail(stderr io.Writer, err error) int {
-	fmt.Fprintf(stderr, "stemma: %v\n", err)
-	return ExitError
 }
 
 // parse parses a command's arguments, letting flags and positional arguments
@@ -173,92 +273,51 @@ func takesValue(f *flag.Flag) bool {
 	return !ok || !bf.IsBoolFlag()
 }
 
-// options are the flags every command accepts. Keeping them in one place is
-// what makes --json and --strict uniform across the surface instead of a
-// property of whichever command remembered to add them.
-type options struct {
-	kb     string
-	json   bool
-	strict bool
-}
-
-func (o *options) register(fs *flag.FlagSet) {
-	fs.StringVar(&o.kb, "kb", "", "the KB root; discovered when not given")
-	fs.BoolVar(&o.json, "json", false, "write output as JSON")
-	fs.BoolVar(&o.strict, "strict", false, "treat warnings as errors")
-}
-
-// mode is the leniency the flags ask for.
-func (o *options) mode() kb.Mode {
-	if o.strict {
-		return kb.Strict
-	}
-	return kb.Lenient
-}
-
-// load finds and reads the KB, reporting the failure itself. A nil KB means the
-// caller should return the code alongside it.
-func (o *options) load(stderr io.Writer) (*kb.KB, int) {
-	root, err := discover(o.kb)
-	if err != nil {
-		return nil, fail(stderr, err)
-	}
-	k, err := kb.Load(root)
-	if err != nil {
-		return nil, fail(stderr, err)
-	}
-	return k, ExitOK
-}
-
-// discover finds the KB root.
-//
-// The order is fixed: an explicit path, then the environment, then walking up
-// from the working directory. Walking up prefers a directory holding a
-// manifest, and falls back to the nearest one holding pages/, so a KB
-// configured by hand beats a directory that merely looks like one.
-func discover(explicit string) (string, error) {
-	if explicit != "" {
-		return asDirectory(explicit, "")
-	}
-	if env := os.Getenv(EnvKB); env != "" {
-		return asDirectory(env, EnvKB+" is set to ")
-	}
-
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	fallback := ""
-	for {
-		if _, err := os.Stat(filepath.Join(dir, kb.ManifestName)); err == nil {
-			return dir, nil
-		}
-		if fallback == "" {
-			if info, err := os.Stat(filepath.Join(dir, kb.PagesDir)); err == nil && info.IsDir() {
-				fallback = dir
-			}
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
+// wantsHelp reports whether an argument list asks for help rather than a run.
+func wantsHelp(args []string) bool {
+	for _, a := range args {
+		if a == "--" {
 			break
 		}
-		dir = parent
+		switch a {
+		case "-h", "-help", "--help":
+			return true
+		}
 	}
-	if fallback != "" {
-		return fallback, nil
-	}
-	return "", fmt.Errorf("no KB found: pass --kb, set %s, or run inside one", EnvKB)
+	return false
 }
 
-// asDirectory checks that a named KB root is a directory, and gives the failure
-// a message that says where the name came from.
-func asDirectory(name, prefix string) (string, error) {
-	info, err := os.Stat(name)
-	if err != nil {
-		return "", fmt.Errorf("%s%s: %w", prefix, name, err)
+// wantsJSON reports whether an argument list asks for JSON output. It is used
+// only when parsing failed, because after a successful parse the flag itself
+// knows the answer.
+func wantsJSON(args []string) bool {
+	for _, a := range args {
+		if a == "--" {
+			break
+		}
+		if a == "-json" || a == "--json" {
+			return true
+		}
 	}
-	if !info.IsDir() {
-		return "", fmt.Errorf("%s%s is not a directory", prefix, name)
-	}
-	return name, nil
+	return false
+}
+
+// stringList collects a repeatable flag. Each use appends one value.
+type stringList []string
+
+func (s *stringList) String() string { return strings.Join(*s, ",") }
+
+func (s *stringList) Set(value string) error {
+	*s = append(*s, value)
+	return nil
+}
+
+// Get lets the help generator name the flag's type.
+func (s *stringList) Get() any { return []string(*s) }
+
+// listFlag registers a repeatable string flag.
+func listFlag(fs *flag.FlagSet, name, usage string) *stringList {
+	var out stringList
+	fs.Var(&out, name, usage)
+	return &out
 }

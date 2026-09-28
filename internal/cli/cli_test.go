@@ -39,6 +39,38 @@ func run(args ...string) (int, string, string) {
 	return code, stdout.String(), stderr.String()
 }
 
+// envelope is the --json response shape. Tests decode the payload out of Data
+// rather than reading the whole document, so the envelope is asserted in one
+// place and a change to it is felt in one place.
+type envelope struct {
+	Command  string          `json:"command"`
+	OK       bool            `json:"ok"`
+	Data     json.RawMessage `json:"data"`
+	Findings []jsonFinding   `json:"findings"`
+	Error    string          `json:"error"`
+}
+
+func decodeJSON(t *testing.T, out string) envelope {
+	t.Helper()
+	var e envelope
+	if err := json.Unmarshal([]byte(out), &e); err != nil {
+		t.Fatalf("not JSON: %v\n%s", err, out)
+	}
+	return e
+}
+
+func decodeData(t *testing.T, out string, v any) envelope {
+	t.Helper()
+	e := decodeJSON(t, out)
+	if len(e.Data) == 0 {
+		t.Fatalf("the envelope carries no data:\n%s", out)
+	}
+	if err := json.Unmarshal(e.Data, v); err != nil {
+		t.Fatalf("data is not %T: %v\n%s", v, err, out)
+	}
+	return e
+}
+
 func cleanKB(t *testing.T) string {
 	t.Helper()
 	return writeTree(t, map[string]string{
@@ -91,32 +123,29 @@ func TestLintJSONOutput(t *testing.T) {
 		t.Errorf("stderr = %q: the JSON stream has to stay clean", stderr)
 	}
 
-	var report struct {
+	var summary struct {
 		Strict   bool `json:"strict"`
 		Clean    bool `json:"clean"`
 		Warnings int  `json:"warnings"`
 		Errors   int  `json:"errors"`
-		Findings []struct {
-			Severity string `json:"severity"`
-			Code     string `json:"code"`
-			Path     string `json:"path"`
-			Line     int    `json:"line"`
-			Message  string `json:"message"`
-		} `json:"findings"`
 	}
-	if err := json.Unmarshal([]byte(stdout), &report); err != nil {
-		t.Fatalf("the output is not JSON: %v\n%s", err, stdout)
+	e := decodeData(t, stdout, &summary)
+	if e.Command != "lint" {
+		t.Errorf("command = %q", e.Command)
 	}
-	if report.Strict || report.Clean {
-		t.Errorf("report = %+v", report)
+	if e.OK {
+		t.Error("a run with findings is marked ok")
 	}
-	if report.Warnings+report.Errors != len(report.Findings) {
-		t.Errorf("the counts do not match the findings: %+v", report)
+	if summary.Strict || summary.Clean {
+		t.Errorf("summary = %+v", summary)
 	}
-	if len(report.Findings) == 0 {
+	if summary.Warnings+summary.Errors != len(e.Findings) {
+		t.Errorf("the counts do not match the findings: %+v", e)
+	}
+	if len(e.Findings) == 0 {
 		t.Fatal("no findings")
 	}
-	for _, f := range report.Findings {
+	for _, f := range e.Findings {
 		if f.Code == "" || f.Path == "" || f.Message == "" {
 			t.Errorf("a finding is missing a field: %+v", f)
 		}
@@ -130,11 +159,15 @@ func TestLintJSONOnACleanKB(t *testing.T) {
 	if code != ExitOK {
 		t.Errorf("exit = %d, want %d", code, ExitOK)
 	}
-	if !strings.Contains(stdout, `"findings": []`) {
-		t.Errorf("findings is not an empty list:\n%s", stdout)
+	var summary struct {
+		Clean bool `json:"clean"`
 	}
-	if !strings.Contains(stdout, `"clean": true`) {
-		t.Errorf("a clean run is not marked clean:\n%s", stdout)
+	e := decodeData(t, stdout, &summary)
+	if !e.OK || !summary.Clean {
+		t.Errorf("a clean run is not marked clean: %+v", e)
+	}
+	if len(e.Findings) != 0 {
+		t.Errorf("a clean run reports findings: %+v", e.Findings)
 	}
 }
 

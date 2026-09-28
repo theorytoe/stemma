@@ -3,7 +3,6 @@ package cli
 import (
 	"flag"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/theorytoe/stemma/internal/kb"
@@ -29,81 +28,91 @@ type showReport struct {
 	Type          string         `json:"type"`
 	Status        string         `json:"status"`
 	Aliases       []string       `json:"aliases,omitempty"`
+	Tags          []string       `json:"tags,omitempty"`
 	ArchiveReason string         `json:"archive_reason,omitempty"`
 	Body          string         `json:"body"`
 	Links         []showLink     `json:"links"`
 	Citations     []showCitation `json:"citations"`
 }
 
-// runShow implements `stemma show`.
+// showCommand implements `stemma show`.
 //
 // The page is named the way a link names it, so show is also the way to ask
 // where a link goes. --path and --raw exist for scripts: each prints one thing
-// and nothing else, so neither needs parsing.
-func runShow(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("stemma show", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var opts options
-	opts.register(fs)
-	asPath := fs.Bool("path", false, "print only the page's path")
-	raw := fs.Bool("raw", false, "print the page exactly as it is on disk")
-	if err := parse(fs, args); err != nil {
-		return ExitError
-	}
-	if fs.NArg() != 1 {
-		return fail(stderr, fmt.Errorf("show takes one page name"))
-	}
-	if *asPath && *raw {
-		return fail(stderr, fmt.Errorf("--path and --raw print different things; ask for one"))
-	}
+// and nothing else, so neither needs parsing. Under --json each of them emits
+// the one thing as a value instead.
+var showCommand = &command{
+	name:    "show",
+	summary: "show one page with its links and citations resolved",
+	args:    "PAGE",
+	setup: func(fs *flag.FlagSet, o *options) runFunc {
+		asPath := fs.Bool("path", false, "print only the page's path")
+		raw := fs.Bool("raw", false, "print the page exactly as it is on disk")
+		o.registerKB(fs)
+		return func(c *command, w *output, args []string) int {
+			if len(args) != 1 {
+				return w.fail(fmt.Errorf("show takes one page name"))
+			}
+			if *asPath && *raw {
+				return w.fail(fmt.Errorf("--path and --raw print different things; ask for one"))
+			}
 
-	k, code := opts.load(stderr)
-	if k == nil {
-		return code
-	}
-	path, err := resolve(k, fs.Arg(0))
-	if err != nil {
-		return fail(stderr, err)
-	}
-	page, ok := k.Graph.Page(path)
-	if !ok {
-		return fail(stderr, fmt.Errorf("%s is not a page", path))
-	}
+			k, code := o.load(w)
+			if k == nil {
+				return code
+			}
+			p, err := resolve(k, args[0])
+			if err != nil {
+				return w.fail(err)
+			}
+			page, ok := k.Graph.Page(p)
+			if !ok {
+				return w.fail(fmt.Errorf("%s is not a page", p))
+			}
 
-	if *asPath {
-		fmt.Fprintln(stdout, path)
-		return ExitOK
-	}
-	if *raw {
-		if _, err := stdout.Write(page.Bytes()); err != nil {
-			return fail(stderr, err)
+			switch {
+			case *asPath:
+				if w.json {
+					return w.emit(map[string]string{"path": p})
+				}
+				fmt.Fprintln(w.stdout, p)
+				return ExitOK
+			case *raw:
+				if w.json {
+					return w.emit(map[string]string{"path": p, "raw": string(page.Bytes())})
+				}
+				if _, err := w.stdout.Write(page.Bytes()); err != nil {
+					return w.fail(err)
+				}
+				return ExitOK
+			}
+
+			report := describe(k, p, page)
+			if w.json {
+				return w.emit(report)
+			}
+			fmt.Fprint(w.stdout, report.text())
+			return ExitOK
 		}
-		return ExitOK
-	}
-
-	report := describe(k, path, page)
-	if opts.json {
-		return writeJSON(stdout, stderr, report)
-	}
-	fmt.Fprint(stdout, report.text())
-	return ExitOK
+	},
 }
 
 // describe gathers everything the tool knows about a page, with its links and
 // citations resolved.
-func describe(k *kb.KB, path string, page *kb.Page) showReport {
+func describe(k *kb.KB, p string, page *kb.Page) showReport {
 	r := showReport{
-		Path:          path,
+		Path:          p,
 		Title:         page.Title(),
 		Type:          page.Type(),
 		Status:        page.Status(),
 		Aliases:       page.Aliases(),
+		Tags:          page.Tags(),
 		ArchiveReason: page.ArchiveReason(),
 		Body:          string(page.Body()),
 		Links:         []showLink{},
 		Citations:     []showCitation{},
 	}
-	for _, l := range k.Graph.Links(path) {
+	for _, l := range k.Graph.Links(p) {
 		res := k.Graph.Resolve(l.Name)
 		link := showLink{Target: l.Target}
 		switch res.Kind {
@@ -116,12 +125,12 @@ func describe(k *kb.KB, path string, page *kb.Page) showReport {
 		}
 		r.Links = append(r.Links, link)
 	}
-	for _, c := range k.Graph.Citations(path) {
-		cite := showCitation{Key: c.Key, Defined: k.Bibliography.Has(c.Key)}
-		if cite.Defined {
-			cite.DefinedIn = k.Bibliography.PathOf(c.Key)
+	for _, cite := range k.Graph.Citations(p) {
+		c := showCitation{Key: cite.Key, Defined: k.Bibliography.Has(cite.Key)}
+		if c.Defined {
+			c.DefinedIn = k.Bibliography.PathOf(cite.Key)
 		}
-		r.Citations = append(r.Citations, cite)
+		r.Citations = append(r.Citations, c)
 	}
 	return r
 }
@@ -140,6 +149,7 @@ func (r showReport) text() string {
 	field("type", r.Type)
 	field("status", r.Status)
 	field("aliases", strings.Join(r.Aliases, ", "))
+	field("tags", strings.Join(r.Tags, ", "))
 	field("reason", r.ArchiveReason)
 
 	fmt.Fprintf(&b, "\n%s", r.Body)

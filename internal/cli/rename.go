@@ -3,7 +3,6 @@ package cli
 import (
 	"flag"
 	"fmt"
-	"io"
 	"path"
 	"sort"
 	"strings"
@@ -22,7 +21,7 @@ type renameReport struct {
 	LeftAlone int    `json:"links_left_alone"`
 }
 
-// runRename implements `stemma rename`.
+// renameCommand implements `stemma rename`.
 //
 // A page is identified by its title, so retitling one breaks every link that
 // named it. This command exists to answer whether that can be done reliably,
@@ -40,133 +39,135 @@ type renameReport struct {
 // resolve, and rewriting them would be editing prose that is not broken. Links
 // whose target is ambiguous are left alone too, because such a link did not
 // mean this page and must not be silently retargeted to it.
-func runRename(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("stemma rename", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var opts options
-	opts.register(fs)
-	if err := parse(fs, args); err != nil {
-		return ExitError
-	}
-	if fs.NArg() != 2 {
-		return fail(stderr, fmt.Errorf("rename takes a page and a new title"))
-	}
-	from, newTitle := fs.Arg(0), strings.TrimSpace(fs.Arg(1))
-
-	k, code := opts.load(stderr)
-	if k == nil {
-		return code
-	}
-	start, err := resolve(k, from)
-	if err != nil {
-		return fail(stderr, err)
-	}
-	page, ok := k.Graph.Page(start)
-	if !ok {
-		return fail(stderr, fmt.Errorf("%s is not a page", start))
-	}
-	oldTitle := page.Title()
-
-	destination := path.Join(path.Dir(start), kb.Normalize(newTitle)+".md")
-	if err := checkNewTitle(k, start, newTitle); err != nil {
-		return fail(stderr, err)
-	}
-
-	// Anything that resolved before must still resolve afterwards. Collecting
-	// this first is what makes the check at the end a comparison rather than a
-	// guess.
-	brokenBefore := unresolvedLinks(k, start, destination)
-
-	// 1. Move the file, unless the name it wants is already taken by another
-	// page, in which case the file keeps its name: nothing depends on it.
-	moved := false
-	if destination != start {
-		if err := k.MovePage(start, destination); err != nil {
-			if _, taken := k.Graph.Page(destination); taken {
-				destination = start
-			} else {
-				return fail(stderr, err)
+var renameCommand = &command{
+	name:    "rename",
+	summary: "retitle a page and rewrite every link that named it",
+	args:    "PAGE TITLE",
+	setup: func(fs *flag.FlagSet, o *options) runFunc {
+		o.registerKB(fs)
+		return func(c *command, w *output, args []string) int {
+			if len(args) != 2 {
+				return w.fail(fmt.Errorf("rename takes a page and a new title"))
 			}
-		} else {
-			moved = true
-		}
-	}
+			from, newTitle := args[0], strings.TrimSpace(args[1])
 
-	// 2. Rewrite the links that resolve here by title.
-	report := renameReport{From: start, To: destination, OldTitle: oldTitle, NewTitle: newTitle}
-	var leftAlone []string
-	for _, referrer := range k.Graph.Paths() {
-		referrerPage, ok := k.Graph.Page(referrer)
-		if !ok {
-			continue
-		}
-		rewritten := 0
-		changed := referrerPage.RewriteLinks(func(l kb.Link) (string, bool) {
-			if l.Name != kb.Normalize(oldTitle) {
-				// Not a link by the old title. A link by an alias still names
-				// this page and is left as the author wrote it.
-				return "", false
+			k, code := o.load(w)
+			if k == nil {
+				return code
 			}
-			switch k.Graph.Resolve(l.Name).Kind {
-			case kb.Resolved:
-				rewritten++
-				return newTitle, true
-			case kb.Ambiguous:
-				// The link did not mean this page, so it must not be quietly
-				// made to.
-				leftAlone = append(leftAlone, fmt.Sprintf("%s:%d", referrer, l.Line))
+			start, err := resolve(k, from)
+			if err != nil {
+				return w.fail(err)
 			}
-			return "", false
-		})
-		if !changed {
-			continue
-		}
-		// The page may have been moved already, so its own body is written to
-		// where it now is rather than to where it was.
-		where := referrer
-		if referrer == start {
-			where = destination
-		}
-		if err := k.WritePage(where, referrerPage); err != nil {
-			return unfinished(stderr, err, report, moved)
-		}
-		report.Files++
-		report.Rewritten += rewritten
-	}
+			page, ok := k.Graph.Page(start)
+			if !ok {
+				return w.fail(fmt.Errorf("%s is not a page", start))
+			}
+			oldTitle := page.Title()
 
-	// 3. Retitle the page.
-	if err := page.Set(kb.FieldTitle, newTitle); err != nil {
-		return unfinished(stderr, err, report, moved)
-	}
-	if err := k.WritePage(destination, page); err != nil {
-		return unfinished(stderr, err, report, moved)
-	}
+			destination := path.Join(path.Dir(start), kb.Normalize(newTitle)+".md")
+			if err := checkNewTitle(k, start, newTitle); err != nil {
+				return w.fail(err)
+			}
 
-	// 4. Resolve again and check.
-	after, err := kb.Load(k.Root)
-	if err != nil {
-		return fail(stderr, fmt.Errorf("the rename may be incomplete: %w", err))
-	}
-	if r := after.Graph.Resolve(newTitle); r.Kind != kb.Resolved || r.Path != destination {
-		return fail(stderr, fmt.Errorf("%q does not resolve to %s now that it is renamed", newTitle, destination))
-	}
-	if broke := difference(unresolvedLinks(after, start, destination), brokenBefore); len(broke) > 0 {
-		return fail(stderr, fmt.Errorf("renaming broke %s", strings.Join(broke, ", ")))
-	}
+			// Anything that resolved before must still resolve afterwards.
+			// Collecting this first is what makes the check at the end a
+			// comparison rather than a guess.
+			brokenBefore := unresolvedLinks(k, start, destination)
 
-	report.LeftAlone = len(leftAlone)
-	if opts.json {
-		return writeJSON(stdout, stderr, report)
-	}
-	if moved {
-		fmt.Fprintf(stdout, "%s -> %s\n", start, destination)
-	}
-	fmt.Fprintf(stdout, "renamed %q to %q, rewriting %s in %s\n",
-		oldTitle, newTitle, count(report.Rewritten, "link"), count(report.Files, "file"))
-	for _, where := range leftAlone {
-		fmt.Fprintf(stderr, "stemma: left the ambiguous link at %s alone; it did not name this page\n", where)
-	}
-	return ExitOK
+			// 1. Move the file, unless the name it wants is already taken by
+			// another page, in which case the file keeps its name: nothing
+			// depends on it.
+			moved := false
+			if destination != start {
+				if err := k.MovePage(start, destination); err != nil {
+					if _, taken := k.Graph.Page(destination); taken {
+						destination = start
+					} else {
+						return w.fail(err)
+					}
+				} else {
+					moved = true
+				}
+			}
+
+			// 2. Rewrite the links that resolve here by title.
+			report := renameReport{From: start, To: destination, OldTitle: oldTitle, NewTitle: newTitle}
+			var leftAlone []string
+			for _, referrer := range k.Graph.Paths() {
+				referrerPage, ok := k.Graph.Page(referrer)
+				if !ok {
+					continue
+				}
+				rewritten := 0
+				changed := referrerPage.RewriteLinks(func(l kb.Link) (string, bool) {
+					if l.Name != kb.Normalize(oldTitle) {
+						// Not a link by the old title. A link by an alias still
+						// names this page and is left as the author wrote it.
+						return "", false
+					}
+					switch k.Graph.Resolve(l.Name).Kind {
+					case kb.Resolved:
+						rewritten++
+						return newTitle, true
+					case kb.Ambiguous:
+						// The link did not mean this page, so it must not be
+						// quietly made to.
+						leftAlone = append(leftAlone, fmt.Sprintf("%s:%d", referrer, l.Line))
+					}
+					return "", false
+				})
+				if !changed {
+					continue
+				}
+				// The page may have been moved already, so its own body is
+				// written to where it now is rather than to where it was.
+				where := referrer
+				if referrer == start {
+					where = destination
+				}
+				if err := k.WritePage(where, referrerPage); err != nil {
+					return unfinished(w, err, report, moved)
+				}
+				report.Files++
+				report.Rewritten += rewritten
+			}
+
+			// 3. Retitle the page.
+			if err := page.Set(kb.FieldTitle, newTitle); err != nil {
+				return unfinished(w, err, report, moved)
+			}
+			if err := k.WritePage(destination, page); err != nil {
+				return unfinished(w, err, report, moved)
+			}
+
+			// 4. Resolve again and check.
+			after, err := kb.Load(k.Root)
+			if err != nil {
+				return w.fail(fmt.Errorf("the rename may be incomplete: %w", err))
+			}
+			if r := after.Graph.Resolve(newTitle); r.Kind != kb.Resolved || r.Path != destination {
+				return w.fail(fmt.Errorf("%q does not resolve to %s now that it is renamed", newTitle, destination))
+			}
+			if broke := difference(unresolvedLinks(after, start, destination), brokenBefore); len(broke) > 0 {
+				return w.fail(fmt.Errorf("renaming broke %s", strings.Join(broke, ", ")))
+			}
+
+			report.LeftAlone = len(leftAlone)
+			if w.json {
+				return w.emit(report)
+			}
+			if moved {
+				fmt.Fprintf(w.stdout, "%s -> %s\n", start, destination)
+			}
+			fmt.Fprintf(w.stdout, "renamed %q to %q, rewriting %s in %s\n",
+				oldTitle, newTitle, count(report.Rewritten, "link"), count(report.Files, "file"))
+			for _, where := range leftAlone {
+				fmt.Fprintf(w.stderr, "stemma: left the ambiguous link at %s alone; it did not name this page\n", where)
+			}
+			return ExitOK
+		}
+	},
 }
 
 // checkNewTitle refuses a title that would break the KB rather than make it.
@@ -218,12 +219,12 @@ func difference(after, before map[string]bool) []string {
 
 // unfinished says what did get done, because a caller who is told only that
 // something failed cannot tell how much of it failed.
-func unfinished(stderr io.Writer, err error, report renameReport, moved bool) int {
-	fmt.Fprintf(stderr, "stemma: %v\n", err)
-	fmt.Fprintf(stderr, "stemma: %s rewritten in %s; run the same command again to finish\n",
+func unfinished(w *output, err error, report renameReport, moved bool) int {
+	fmt.Fprintf(w.stderr, "stemma: %v\n", err)
+	fmt.Fprintf(w.stderr, "stemma: %s rewritten in %s; run the same command again to finish\n",
 		count(report.Rewritten, "link"), count(report.Files, "file"))
 	if moved {
-		fmt.Fprintf(stderr, "stemma: the file is already at %s\n", report.To)
+		fmt.Fprintf(w.stderr, "stemma: the file is already at %s\n", report.To)
 	}
 	return ExitError
 }

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,9 +52,7 @@ func TestInitJSON(t *testing.T) {
 		t.Fatalf("exit = %d", code)
 	}
 	var got map[string]string
-	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
-		t.Fatalf("not JSON: %v\n%s", err, stdout)
-	}
+	decodeData(t, stdout, &got)
 	if got["title"] != "Demo" {
 		t.Errorf("title = %q", got["title"])
 	}
@@ -196,9 +193,7 @@ func TestListJSON(t *testing.T) {
 			Path, Title, Type, Status string
 		} `json:"pages"`
 	}
-	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
-		t.Fatalf("not JSON: %v\n%s", err, stdout)
-	}
+	decodeData(t, stdout, &got)
 	if got.Count != 2 || len(got.Pages) != 2 {
 		t.Errorf("count = %d, pages = %d", got.Count, len(got.Pages))
 	}
@@ -271,9 +266,7 @@ func TestShowJSON(t *testing.T) {
 		Title string `json:"title"`
 		Type  string `json:"type"`
 	}
-	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
-		t.Fatalf("not JSON: %v\n%s", err, stdout)
-	}
+	decodeData(t, stdout, &got)
 	if got.Path != "pages/alpha.md" || got.Title != "Alpha" || got.Type != "concept" {
 		t.Errorf("got %+v", got)
 	}
@@ -410,11 +403,13 @@ func TestArchiveJSON(t *testing.T) {
 	run("new", "--kb", root, "Alpha", "--type", "concept")
 
 	_, stdout, _ := run("archive", "--kb", root, "alpha", "--reason", "done", "--json")
-	var got map[string]string
-	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
-		t.Fatalf("not JSON: %v\n%s", err, stdout)
+	var got struct {
+		Status  string `json:"status"`
+		Reason  string `json:"reason"`
+		Changed bool   `json:"changed"`
 	}
-	if got["status"] != "archived" || got["reason"] != "done" {
+	decodeData(t, stdout, &got)
+	if got.Status != "archived" || got.Reason != "done" || !got.Changed {
 		t.Errorf("got %+v", got)
 	}
 }

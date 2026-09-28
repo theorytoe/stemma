@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -9,91 +8,54 @@ import (
 	"github.com/theorytoe/stemma/internal/kb"
 )
 
-// runLint implements `stemma lint`.
+// lintCommand implements `stemma lint`.
 //
 // It reports findings and returns exit code 1; a clean run returns 0; a KB that
 // cannot be read returns 2. Findings are on stdout so they can be piped, and
 // the summary is on stderr so that it does not end up in the pipe.
-func runLint(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("stemma lint", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var opts options
-	opts.register(fs)
-	if err := parse(fs, args); err != nil {
-		return ExitError
-	}
-	if fs.NArg() > 0 {
-		fmt.Fprintf(stderr, "stemma: lint takes no arguments, got %q\n", fs.Arg(0))
-		return ExitError
-	}
+var lintCommand = &command{
+	name:    "lint",
+	summary: "report everything wrong with the KB",
+	setup: func(fs *flag.FlagSet, o *options) runFunc {
+		o.registerKB(fs)
+		return func(c *command, w *output, args []string) int {
+			if len(args) > 0 {
+				return w.fail(fmt.Errorf("lint takes no arguments, got %q", args[0]))
+			}
 
-	k, code := opts.load(stderr)
-	if k == nil {
-		return code
-	}
+			k, code := o.load(w)
+			if k == nil {
+				return code
+			}
 
-	findings := k.Lint(opts.mode())
-	if opts.json {
-		return reportJSON(stdout, stderr, opts.strict, findings)
-	}
-	return reportText(stdout, stderr, findings)
-}
-
-// jsonFinding is one finding as it appears in --json output. Field and Line are
-// omitted rather than zeroed when they do not apply, so a consumer can tell
-// "no line" from "line 0".
-type jsonFinding struct {
-	Severity string `json:"severity"`
-	Code     string `json:"code"`
-	Path     string `json:"path"`
-	Line     int    `json:"line,omitempty"`
-	Field    string `json:"field,omitempty"`
-	Message  string `json:"message"`
-}
-
-// jsonReport is the whole document a --json run writes. Findings is always a
-// list, never null, because a consumer should not have to special-case an empty
-// KB.
-type jsonReport struct {
-	Strict   bool          `json:"strict"`
-	Clean    bool          `json:"clean"`
-	Warnings int           `json:"warnings"`
-	Errors   int           `json:"errors"`
-	Findings []jsonFinding `json:"findings"`
-}
-
-func reportJSON(stdout, stderr io.Writer, strict bool, findings []kb.Finding) int {
-	report := jsonReport{
-		Strict:   strict,
-		Clean:    len(findings) == 0,
-		Findings: make([]jsonFinding, 0, len(findings)),
-	}
-	for _, f := range findings {
-		report.Findings = append(report.Findings, jsonFinding{
-			Severity: string(f.Severity),
-			Code:     f.Code,
-			Path:     f.Path,
-			Line:     f.Line,
-			Field:    f.Field,
-			Message:  f.Message,
-		})
-		if f.Severity == kb.Error {
-			report.Errors++
-		} else {
-			report.Warnings++
+			findings := k.Lint(o.mode())
+			if w.json {
+				return w.report(summarise(o.strict, findings), findings)
+			}
+			return reportText(w.stdout, w.stderr, findings)
 		}
-	}
+	},
+}
 
-	enc := json.NewEncoder(stdout)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(report); err != nil {
-		fmt.Fprintf(stderr, "stemma: %v\n", err)
-		return ExitError
+// lintSummary is the payload of a --json lint, without the findings themselves.
+// The findings travel in the envelope, where every consumer looks for them.
+type lintSummary struct {
+	Strict   bool `json:"strict"`
+	Clean    bool `json:"clean"`
+	Warnings int  `json:"warnings"`
+	Errors   int  `json:"errors"`
+}
+
+func summarise(strict bool, findings []kb.Finding) lintSummary {
+	s := lintSummary{Strict: strict, Clean: len(findings) == 0}
+	for _, f := range findings {
+		if f.Severity == kb.Error {
+			s.Errors++
+			continue
+		}
+		s.Warnings++
 	}
-	if len(findings) == 0 {
-		return ExitOK
-	}
-	return ExitFindings
+	return s
 }
 
 func reportText(stdout, stderr io.Writer, findings []kb.Finding) int {

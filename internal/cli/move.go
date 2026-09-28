@@ -3,64 +3,63 @@ package cli
 import (
 	"flag"
 	"fmt"
-	"io"
 	"path"
 	"strings"
 
 	"github.com/theorytoe/stemma/internal/kb"
 )
 
-// runMove implements `stemma move`.
+// moveCommand implements `stemma move`.
 //
 // Directories inside pages/ are organisational and carry no meaning, which is
 // the whole point of the layout decision: a move changes no link anywhere in
 // the KB, so nothing has to be rewritten and nothing can be broken by moving a
 // page. The filename does not change either, because it is not what a page is.
-func runMove(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("stemma move", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	var opts options
-	opts.register(fs)
-	if err := parse(fs, args); err != nil {
-		return ExitError
-	}
-	if fs.NArg() != 2 {
-		return fail(stderr, fmt.Errorf("move takes a page and a destination directory"))
-	}
-	name, destination := fs.Arg(0), fs.Arg(1)
+var moveCommand = &command{
+	name:    "move",
+	summary: "move a page to another directory",
+	args:    "PAGE DIRECTORY",
+	setup: func(fs *flag.FlagSet, o *options) runFunc {
+		o.registerKB(fs)
+		return func(c *command, w *output, args []string) int {
+			if len(args) != 2 {
+				return w.fail(fmt.Errorf("move takes a page and a destination directory"))
+			}
 
-	k, code := opts.load(stderr)
-	if k == nil {
-		return code
-	}
-	from, err := resolve(k, name)
-	if err != nil {
-		return fail(stderr, err)
-	}
+			k, code := o.load(w)
+			if k == nil {
+				return code
+			}
+			from, err := resolve(k, args[0])
+			if err != nil {
+				return w.fail(err)
+			}
 
-	dir, err := underPages(destination)
-	if err != nil {
-		return fail(stderr, err)
-	}
-	to := path.Join(dir, path.Base(from))
+			dir, err := underPages(args[1])
+			if err != nil {
+				return w.fail(err)
+			}
+			to := path.Join(dir, path.Base(from))
 
-	if to == from {
-		// Nothing to do, and saying so is not the same as failing.
-		if opts.json {
-			return writeJSON(stdout, stderr, map[string]string{"from": from, "to": to})
+			if to == from {
+				// Nothing to do, and saying so is not the same as failing.
+				if w.json {
+					return w.emit(map[string]string{"from": from, "to": to})
+				}
+				fmt.Fprintf(w.stdout, "%s is already there\n", from)
+				return ExitOK
+			}
+			if err := k.MovePage(from, to); err != nil {
+				return w.fail(err)
+			}
+
+			if w.json {
+				return w.emit(map[string]string{"from": from, "to": to})
+			}
+			fmt.Fprintf(w.stdout, "%s -> %s\n", from, to)
+			return ExitOK
 		}
-		fmt.Fprintf(stdout, "%s is already there\n", from)
-		return ExitOK
-	}
-	if err := k.MovePage(from, to); err != nil {
-		return fail(stderr, err)
-	}
-
-	if opts.json {
-		return writeJSON(stdout, stderr, map[string]string{"from": from, "to": to})
-	}
-	fmt.Fprintf(stdout, "%s -> %s\n", from, to)
-	return ExitOK
+	},
 }
 
 // underPages checks that a destination is inside pages/ and returns it cleaned.

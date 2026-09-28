@@ -139,6 +139,53 @@ func TestJSONErrorEnvelope(t *testing.T) {
 
 // Even a flag the command does not define produces the JSON envelope when
 // --json was asked for, so a script never has to parse a human message.
+// Every command writes the same envelope, with its own name in it, so a client
+// can read one shape for the whole surface.
+func TestEveryCommandEmitsAnEnvelope(t *testing.T) {
+	root := writeTree(t, map[string]string{
+		"pages/index.md":   page("Index", "type: index", "see [[Alpha]]\n"),
+		"pages/alpha.md":   page("Alpha", "type: concept", ""),
+		"inbox/draft.md":   "---\ntitle: A Draft\ntype: note\n---\n",
+		"bibliography.bib": "@article{k,}\n",
+	})
+
+	// The mutations run in order, so each one acts on what the last one left.
+	for _, tc := range []struct {
+		name string
+		args []string
+	}{
+		{"new", []string{"--kb", root, "Beta", "--type", "note"}},
+		{"list", []string{"--kb", root}},
+		{"show", []string{"--kb", root, "Alpha"}},
+		{"move", []string{"--kb", root, "Beta", "pages/sub"}},
+		{"rename", []string{"--kb", root, "Alpha", "Renamed"}},
+		{"archive", []string{"--kb", root, "Renamed", "--reason", "done"}},
+		{"promote", []string{"--kb", root, "draft"}},
+		{"status", []string{"--kb", root}},
+		{"lint", []string{"--kb", root}},
+		{"doctor", nil},
+		{"help", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			args := append([]string{tc.name, "--json"}, tc.args...)
+			_, stdout, stderr := run(args...)
+			if stderr != "" {
+				t.Errorf("stderr = %q, want nothing under --json", stderr)
+			}
+			if e := decodeJSON(t, stdout); e.Command != tc.name {
+				t.Errorf("command = %q, want %q", e.Command, tc.name)
+			}
+		})
+	}
+
+	// init makes its own root, so it does not fit the sequence above.
+	initRoot := filepath.Join(t.TempDir(), "kb")
+	_, stdout, _ := run("init", initRoot, "--title", "X", "--json")
+	if e := decodeJSON(t, stdout); e.Command != "init" {
+		t.Errorf("command = %q, want init", e.Command)
+	}
+}
+
 func TestBadFlagUnderJSON(t *testing.T) {
 	code, stdout, stderr := run("lint", "--kb", cleanKB(t), "--bogus", "--json")
 	if code != ExitError {

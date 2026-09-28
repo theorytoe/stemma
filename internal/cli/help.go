@@ -20,17 +20,26 @@ var helpCommand = &command{
 		markdown := fs.Bool("markdown", false, "write the whole command reference as markdown")
 		return func(c *command, w *output, args []string) int {
 			if *markdown {
+				if w.json {
+					return w.emit(map[string]string{"markdown": referenceMarkdown()})
+				}
 				fmt.Fprint(w.stdout, referenceMarkdown())
 				return ExitOK
 			}
 			switch len(args) {
 			case 0:
+				if w.json {
+					return w.emit(helpReport{Commands: surface()})
+				}
 				fmt.Fprint(w.stdout, topUsage())
 				return ExitOK
 			case 1:
 				target := find(args[0])
 				if target == nil {
 					return w.fail(fmt.Errorf("no command is called %q", args[0]))
+				}
+				if w.json {
+					return w.emit(describeCommand(target))
 				}
 				fmt.Fprint(w.stdout, commandHelp(target))
 				return ExitOK
@@ -97,10 +106,44 @@ func subNames(c *command) string {
 // flagDoc is one documented flag, derived from the flag set the command builds
 // so that a flag and its documentation cannot drift apart.
 type flagDoc struct {
-	Name    string
-	Type    string
-	Default string
-	Usage   string
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Default string `json:"default,omitempty"`
+	Usage   string `json:"usage"`
+}
+
+// helpReport is the surface as data, for the agent that would rather read JSON
+// than parse the help text.
+type helpReport struct {
+	Commands []commandInfo `json:"commands"`
+}
+
+// commandInfo describes one verb.
+type commandInfo struct {
+	Name    string    `json:"name"`
+	Summary string    `json:"summary"`
+	Args    string    `json:"args,omitempty"`
+	Members []string  `json:"members,omitempty"`
+	Flags   []flagDoc `json:"flags,omitempty"`
+}
+
+func surface() []commandInfo {
+	out := make([]commandInfo, 0, len(commands))
+	for _, c := range commands {
+		out = append(out, describeCommand(c))
+	}
+	return out
+}
+
+func describeCommand(c *command) commandInfo {
+	info := commandInfo{Name: c.name, Summary: c.summary, Args: c.args}
+	if len(c.sub) > 0 {
+		for _, s := range c.sub {
+			info.Members = append(info.Members, s.name)
+		}
+	}
+	info.Flags = flagsOf(c)
+	return info
 }
 
 // flagsOf builds a command's flag set and reads back what it defined.

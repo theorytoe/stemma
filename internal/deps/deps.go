@@ -2,11 +2,14 @@
 
 // Package deps pins the dependency allowlist.
 //
-// Nothing imports these packages yet. The allowlist is fixed by the top-level
-// planfile: yaml.v3 for frontmatter, BurntSushi/toml for the manifest,
-// blackfriday/v2 for markdown rendering, and modernc.org/sqlite for the Tier-1
-// index. Later tasks in delegates/foundation.md and the delegates after it bring
-// them into real use.
+// The allowlist is fixed by the top-level planfile: yaml.v3 for frontmatter,
+// BurntSushi/toml for the manifest, blackfriday/v2 for markdown rendering, and
+// modernc.org/sqlite for the Tier-1 index.
+//
+// yaml.v3 and toml are imported where they are used, so they would stay in go.mod
+// without this file. blackfriday/v2 and sqlite are not imported anywhere yet:
+// this file is what keeps them, and the entries below are the whole reason it
+// exists.
 //
 // They live behind a build tag for one reason: `go mod tidy` acts as if every
 // build tag is enabled, so the four stay direct requirements in go.mod and

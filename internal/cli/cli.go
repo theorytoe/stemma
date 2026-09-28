@@ -35,6 +35,10 @@ const (
 // path is given on the command line.
 const EnvKB = "STEMMA_KB"
 
+// EnvOffline, when set to a true value, is the same as passing --offline to a
+// command that can use the network.
+const EnvOffline = "STEMMA_OFFLINE"
+
 // command is one verb on the surface.
 //
 // A command either runs (setup and its returned closure) or is a noun family
@@ -82,6 +86,7 @@ func init() {
 		archiveCommand,
 		promoteCommand,
 		statusCommand,
+		citeCommand,
 		lintCommand,
 		envCommand,
 		helpCommand,
@@ -90,46 +95,50 @@ func init() {
 
 // Run executes one invocation and returns the process exit code.
 func Run(args []string, stdout, stderr io.Writer) int {
-	c, rest, err := lookup(commands, args)
+	c, name, rest, err := lookup(commands, args)
 	if err != nil {
 		fmt.Fprintf(stderr, "stemma: %v\n\n", err)
 		fmt.Fprint(stderr, topUsage())
 		return ExitError
 	}
-	return c.invoke(rest, stdout, stderr)
+	return c.invoke(name, rest, stdout, stderr)
 }
 
-// lookup finds the command an argument list names.
+// lookup finds the command an argument list names, and the full name it was
+// invoked by.
 //
 // A noun family is matched by its first two arguments: `stemma export json`
 // runs the `json` member of the `export` family. Naming a family without one of
-// its members is a usage error rather than a guess.
-func lookup(cmds []*command, args []string) (*command, []string, error) {
+// its members is a usage error rather than a guess. The full name is returned
+// because the envelope has to say "cite add" rather than "add", and the member
+// alone does not know its family.
+func lookup(cmds []*command, args []string) (*command, string, []string, error) {
 	if len(args) == 0 {
-		return nil, nil, errors.New("no command given")
+		return nil, "", nil, errors.New("no command given")
 	}
 	for _, c := range cmds {
 		if c.name != args[0] {
 			continue
 		}
 		if len(c.sub) == 0 {
-			return c, args[1:], nil
+			return c, c.name, args[1:], nil
 		}
 		if len(args) < 2 {
-			return nil, nil, fmt.Errorf("%s needs one of: %s", c.name, subNames(c))
+			return nil, "", nil, fmt.Errorf("%s needs one of: %s", c.name, subNames(c))
 		}
 		for _, s := range c.sub {
 			if s.name == args[1] {
-				return s, args[2:], nil
+				return s, c.name + " " + s.name, args[2:], nil
 			}
 		}
-		return nil, nil, fmt.Errorf("%s has no %q; it has %s", c.name, args[1], subNames(c))
+		return nil, "", nil, fmt.Errorf("%s has no %q; it has %s", c.name, args[1], subNames(c))
 	}
-	return nil, nil, fmt.Errorf("unknown command %q", args[0])
+	return nil, "", nil, fmt.Errorf("unknown command %q", args[0])
 }
 
-// invoke parses a command's arguments and runs it.
-func (c *command) invoke(args []string, stdout, stderr io.Writer) int {
+// invoke parses a command's arguments and runs it. name is how the run is
+// named in output, which is the full "family member" name.
+func (c *command) invoke(name string, args []string, stdout, stderr io.Writer) int {
 	if wantsHelp(args) {
 		fmt.Fprint(stdout, commandHelp(c))
 		return ExitOK
@@ -144,10 +153,10 @@ func (c *command) invoke(args []string, stdout, stderr io.Writer) int {
 	o.registerJSON(fs)
 	run := c.setup(fs, &o)
 	if err := parse(fs, args); err != nil {
-		w := &output{cmd: c.name, json: o.json || wantsJSON(args), stdout: stdout, stderr: stderr}
+		w := &output{cmd: name, json: o.json || wantsJSON(args), stdout: stdout, stderr: stderr}
 		return w.fail(err)
 	}
-	w := &output{cmd: c.name, json: o.json, stdout: stdout, stderr: stderr}
+	w := &output{cmd: name, json: o.json, stdout: stdout, stderr: stderr}
 	return run(c, w, fs.Args())
 }
 

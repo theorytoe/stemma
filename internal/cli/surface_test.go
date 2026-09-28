@@ -100,12 +100,12 @@ func TestNounFamilyDispatch(t *testing.T) {
 	family := &command{name: "export", summary: "export the KB", sub: []*command{child}}
 	set := []*command{family}
 
-	c, rest, err := lookup(set, []string{"export", "json", "extra"})
+	c, name, rest, err := lookup(set, []string{"export", "json", "extra"})
 	if err != nil {
 		t.Fatalf("lookup: %v", err)
 	}
 	var stdout, stderr bytes.Buffer
-	if code := c.invoke(rest, &stdout, &stderr); code != ExitOK {
+	if code := c.invoke(name, rest, &stdout, &stderr); code != ExitOK {
 		t.Fatalf("exit = %d: %s", code, stderr.String())
 	}
 	if stdout.String() != "ran json with [extra]" {
@@ -113,7 +113,7 @@ func TestNounFamilyDispatch(t *testing.T) {
 	}
 
 	for _, args := range [][]string{{"export"}, {"export", "pdf"}} {
-		if _, _, err := lookup(set, args); err == nil {
+		if _, _, _, err := lookup(set, args); err == nil {
 			t.Errorf("lookup(%q) was accepted", args)
 		}
 	}

@@ -76,6 +76,18 @@ the tool does not silently pick one. Both forms may be present at once and are
 then read together, so a key defined in each of them is a duplicate like any
 other.
 
+A KB starts with the single file. The directory form is worth switching to when
+one file stops being reviewable — when several people edit the bibliography, or
+when every change touches a file everyone else also has open and merges conflict
+on. There is no threshold, because the cost is conflict and not size.
+
+A new entry is written to `bibliography.bib` whenever that file exists, so both
+forms together are a migration in progress and new work joins the default file.
+A KB with only the directory form writes one file per entry, named from the key
+(`smith-2020-widgets.bib`), with a `-2` suffix when another key already owns that
+name. An update always goes to the file the entry is already in, so a form in
+transition never moves an entry on its own.
+
 The bibliography is the source of truth for sources. Pages are the origin of
 their own content: a source is cited from a page, never the reverse, and a page
 that cites nothing is still a complete page.
@@ -86,6 +98,13 @@ hash of what was retrieved. Both are carried as fields on the BibTeX entry, and
 they have to be, because the bibliography is committed and is the only place a
 source's record can live. A source page is generated and never committed, so it
 cannot be the record of anything.
+
+A pointer is compared by what it names rather than by how it was typed. A DOI is
+one DOI whether it is written bare, as a resolver URL, or with a query string; an
+ISBN is one ISBN with or without its dashes; an arXiv identifier names one paper
+with or without its version, even though the version is what gets fetched. Two
+entries that point at one work are one work, and the check says so rather than
+leaving a person to notice.
 
 | Field                 | Meaning                                                 |
 | --------------------- | ------------------------------------------------------- |
@@ -98,8 +117,25 @@ different hash is a fact worth reporting, not a silent overwrite.
 Three further questions must be answerable from the bibliography and the pages
 together, because they are what make it useful rather than merely well-formed:
 which pages cite a given key, which cited keys are missing, and which present
-keys are never cited. The bibliography also exports to BibTeX and to CSL-JSON,
-and the export is validated on the way out rather than trusted.
+keys are never cited.
+
+The bibliography exports to BibTeX and to CSL-JSON. BibTeX is the KB's own form,
+so an export can be handed to a reference manager; CSL-JSON is what a citation
+processor reads, so the same records can be formatted by a tool that knows CSL
+without the KB becoming one. `--cited` narrows either export to the records some
+page actually relies on.
+
+The BibTeX export is self-contained: every entry is re-rendered with its values
+resolved, so a macro a source file defined is written out in full and the result
+needs nothing from the KB it came from. The CSL-JSON export maps the fields CSL
+names and carries the rest through under their own name, so the retrieval date
+and the content hash survive the trip; the retrieval date becomes CSL's
+`accessed`, which is what it is.
+
+Export is a rendering, not a rewrite. It never edits the KB and it loses no
+record: an entry type CSL has no name for becomes a plain document rather than
+being dropped. What the tool emits is checked by a reader other than the one
+that wrote it, because an export that nothing else can open is not an export.
 
 ### `sources/`
 
@@ -331,6 +367,22 @@ available forms are named by `citation_style` in the manifest, and the format
 requires only that rendering never changes the citation's meaning or which
 source it points at.
 
+Two styles are built in. `citation_style` names one of them, and nothing else.
+
+| Style         | In text                      | Reference list                          |
+| ------------- | ---------------------------- | --------------------------------------- |
+| `author-date` | `(Bush 1945)`, `Bush (1945)` | `Bush, Vannevar. 1945. As We May Think. The Atlantic Monthly, 176(1): 101--108.` |
+| `numeric`     | `[1]`, `[1; 2]`              | `[1] Bush, Vannevar. As We May Think. The Atlantic Monthly, 176(1): 101--108. 1945.` |
+
+Both styles render all five inline forms. A locator becomes `, p. 33` inside the
+label, a narrative citation puts the author in the prose (`Bush (1945)`), a
+suppressed author drops the name (`(1945)`), and a group renders as one
+bracketed list. `numeric` numbers a key by its first citation on the page.
+
+There is no CSL. A CSL style identifier is not a `citation_style`, no CSL
+processor is involved, and a style this tool does not have is an error rather
+than a silent fallback. Those two styles are the whole vocabulary.
+
 ## The manifest
 
 `stemma.toml` is the manifest. It is optional-with-defaults, and it is the
@@ -342,7 +394,7 @@ discovery marker. Unknown keys are preserved verbatim.
 | `description`    | string          | empty                        | a sentence or two about the KB            |
 | `default_type`   | string          | `topic`                      | the type `new` applies when none is given |
 | `types`          | list of strings | empty                        | types added to the built-in three         |
-| `citation_style` | string          | `author-date`                | a built-in formatter                      |
+| `citation_style` | string          | `author-date`                | a built-in formatter: `author-date` or `numeric` |
 | `ignore`         | list of strings | empty                        | path globs, relative to the KB root       |
 
 One table holds the export family's defaults. `default_depth` is how many hops a

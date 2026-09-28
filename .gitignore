@@ -5,3 +5,6 @@
 
 # Build output from `make build`.
 bin/
+
+# A working file for passing work between agents, not part of the project.
+.ctx/handoff.md

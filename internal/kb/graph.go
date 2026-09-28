@@ -95,7 +95,7 @@ func (g *Graph) Add(path string, p *Page) {
 		insertInto(g.cited, c.Key, path)
 	}
 
-	for _, name := range pageNames(p) {
+	for _, name := range claimedNames(p) {
 		insertInto(g.claims, name, path)
 	}
 }
@@ -107,7 +107,7 @@ func (g *Graph) Remove(path string) {
 		return
 	}
 	delete(g.pages, path)
-	for _, name := range pageNames(p) {
+	for _, name := range claimedNames(p) {
 		removeFrom(g.claims, name, path)
 	}
 	for _, l := range g.links[path] {
@@ -175,7 +175,7 @@ func (g *Graph) Backlinks(path string) []string {
 		return nil
 	}
 	found := map[string]bool{}
-	for _, name := range pageNames(p) {
+	for _, name := range claimedNames(p) {
 		for from := range g.linked[name] {
 			if from != path {
 				found[from] = true
@@ -197,7 +197,7 @@ func (g *Graph) Orphans() []string {
 	var out []string
 	for _, path := range g.Paths() {
 		p := g.pages[path]
-		if p.Type() == TypeIndex || p.Status() == StatusArchived {
+		if p.Type() == TypeIndex || p.Type() == TypeSource || p.Status() == StatusArchived {
 			continue
 		}
 		if len(g.Backlinks(path)) == 0 {
@@ -274,6 +274,19 @@ func unresolvedMessage(l Link) string {
 		return "an empty wikilink names nothing"
 	}
 	return "no page is called " + quote(l.Target)
+}
+
+// claimedNames returns the names a page answers to for link resolution and
+// collision checks.
+//
+// A virtual source page answers to none. It is outside the authored name space
+// (D45), which is exactly what keeps it from colliding with a page whose title
+// happens to equal a citation key.
+func claimedNames(p *Page) []string {
+	if p.Type() == TypeSource {
+		return nil
+	}
+	return pageNames(p)
 }
 
 // pageNames returns the names a page answers to: its normalised title and its

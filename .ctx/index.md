@@ -9,9 +9,12 @@ the delegates, and the design record are all part of the repository.
   the delegate plans in `delegates/`.
 - `delegates/` — one delegate plan per component, each in the planfile template.
 - `design/decisions.md` — the decision register. Principles `P1..P10`, decisions
-  `D1..D62`, the naming collision log, and the residual unknowns `U1..U6`.
+  `D1..D65`, the naming collision log, and the residual unknowns `U1..U6`.
 - `design/qa-session.md` — the full design interview, nine rounds, including the
   questions that were corrected and the reversals they caused.
+- `design/shim-contract.md` — the Go-to-Python interface: how the extraction script
+  is invoked, the JSON object it prints, its failure classes, its limits, and where
+  the script lives.
 
 ## Reading order
 

@@ -91,11 +91,12 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 
 ### Ingest
 
-| ID  | Decision                                                                                                                                              | Rationale |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| D37 | **Deterministic capture, agentic synthesis.** Tools resolve identifiers and extract text; they never write prose. The agent never hand-writes BibTeX. | Q23       |
-| D43 | Identifiers: **DOI, arXiv ID, URL, local PDF, ISBN**.                                                                                                 | Q23       |
-| D38 | Source text is **not vendored by default** — pointer, content hash, retrieval date; opt-in snapshots.                                                 | Q23       |
+| ID  | Decision                                                                                                                                                                     | Rationale |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| D37 | **Deterministic capture, agentic synthesis.** Tools resolve identifiers and extract text; they never write prose. The agent never hand-writes BibTeX.                        | Q23       |
+| D43 | Identifiers: **DOI, arXiv ID, URL, local PDF, ISBN**.                                                                                                                        | Q23       |
+| D38 | Source text is **not vendored by default** — pointer, content hash, retrieval date; opt-in snapshots.                                                                        | Q23       |
+| D66 | The Python shim is a **tracked script embedded in the binary** and written into `<kb>/.stemma/shim/` by `init`. Go supplies the text limit; the shim prints one JSON object. | review    |
 
 ### Tooling tiers, leniency, exports
 
@@ -203,6 +204,32 @@ survive because the file is not rewritten. "Preserve unknown keys verbatim on
 write" is therefore a property held by never writing, not by a writer that knows
 how to splice. If a command ever needs to change a manifest key, that command
 adds the writer and the tests it needs.
+
+### The extraction shim — where it lives, and who sets the limit. `D66` added.
+
+**Decision.** The extraction script is a tracked file in the repository,
+`internal/extract/extract.py`, embedded in the binary. `init` writes it into
+`<kb>/.stemma/shim/extract.py` when the KB is created, and every extraction
+compares that copy against the embedded bytes and rewrites it when they differ.
+The text limit is an argument Go supplies, not a number written into the contract.
+
+**Why.** The delegate allowed either embedding the script or shipping it as a file
+found at run time, and the first answer was a repository file resolved beside the
+executable. That was wrong for a reason worth recording: the binary is not
+self-contained either way, because the interpreter and the reading libraries live
+outside it, so embedding buys version-lock rather than independence. What it locks
+is worth locking, because the two halves share a JSON contract that must not
+drift. Writing the copy at `init` answers the objection that a file should not
+appear the first time someone reads a document, and the byte comparison is what
+makes a cleared `.stemma/`, an upgrade, and a KB received by clone one case rather
+than three.
+
+**Provenance.** The first draft of the contract made the 8 MiB limit a constant of
+the document. The number was invented rather than required, and pinning it there
+meant editing a design document to tune a policy, so the limit became an argument.
+`probe` had no place in that draft's success shape either: it describes the
+machine rather than a document, so its object carries `python` and `libs` in place
+of `text`.
 
 ### U5 — rewriting inbound links. `D19` stands.
 

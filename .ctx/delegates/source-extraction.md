@@ -62,7 +62,7 @@ mean the same thing on both sides.
 
 ## Task 1:
 
-Status: Not started
+Status: Done
 
 Define the shim contract, in writing, before implementing any extractor. Cover the
 invocation, the JSON schema for success and for each failure class, the streaming
@@ -71,7 +71,7 @@ what lets the extractors be replaced without touching Go.
 
 ## Task 2:
 
-Status: Not started
+Status: Done
 
 Prove the contract end to end with one trivial extractor, for plain text or
 markdown. The point is to validate the Go-to-Python boundary, the error paths, and

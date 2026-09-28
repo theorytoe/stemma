@@ -102,7 +102,7 @@ Status: Done
 
 CLI surface. Dispatch, KB discovery, manifest loading, uniform `--json` and exit
 codes, and the remaining non-source commands including `status`, `archive`,
-`promote`, and `doctor`.
+`promote`, and `env`.
 See `delegates/cli-surface.md`.
 
 It closed with the whole surface described once, in a command table that

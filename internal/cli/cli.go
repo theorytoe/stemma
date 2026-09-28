@@ -83,7 +83,7 @@ func init() {
 		promoteCommand,
 		statusCommand,
 		lintCommand,
-		doctorCommand,
+		envCommand,
 		helpCommand,
 	}
 }

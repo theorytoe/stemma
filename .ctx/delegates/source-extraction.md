@@ -26,7 +26,7 @@ Verified on the development machine: Python 3.14.7 is present with `pymupdf`,
 `pypdf`, `httpx`, `requests`, and `bs4` already importable system-wide. Note that
 system pip is `EXTERNALLY-MANAGED`, so the project must never attempt to install
 into it. There is no `uv` and no `pipx`; if a managed environment is ever needed,
-it is the project's responsibility to create one, and `doctor` must report it.
+it is the project's responsibility to create one, and `env` must report it.
 
 ## The shim contract
 
@@ -116,9 +116,9 @@ and its recorded hash disagree — report it, do not silently trust either side.
 
 Status: Not started
 
-Graceful degradation and `doctor` integration. Every command in this delegate must
+Graceful degradation and `env` integration. Every command in this delegate must
 fail with exit code `2` and an actionable message when Python or a required library
-is absent, and `doctor` must be able to explain the situation without running an
+is absent, and `env` must be able to explain the situation without running an
 extraction. The core library must be unaffected: no import, no build tag, no
 startup cost.
 

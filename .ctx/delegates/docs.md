@@ -123,5 +123,5 @@ Status: Not started
 Close out the residual unknowns and record the outcomes in
 `.ctx/design/decisions.md`. `U3`: which citation styles the built-in formatter
 actually needs, decided by looking at the real sources in the example wiki. `U4`:
-whether `doctor` and `fetch` earn their place, decided by use. `U6`: whether the
+whether `env` and `fetch` earn their place, decided by use. `U6`: whether the
 accepted `stemma` name collision has caused any real confusion.

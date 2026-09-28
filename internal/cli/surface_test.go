@@ -163,7 +163,7 @@ func TestEveryCommandEmitsAnEnvelope(t *testing.T) {
 		{"promote", []string{"--kb", root, "draft"}},
 		{"status", []string{"--kb", root}},
 		{"lint", []string{"--kb", root}},
-		{"doctor", nil},
+		{"env", nil},
 		{"help", nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -422,18 +422,18 @@ func TestPromoteNeedsADraft(t *testing.T) {
 	}
 }
 
-func TestDoctorReportsTheEnvironment(t *testing.T) {
-	code, stdout, stderr := run("doctor")
+func TestEnvReportsTheEnvironment(t *testing.T) {
+	code, stdout, stderr := run("env")
 	if code != ExitOK {
 		t.Fatalf("exit = %d: %s", code, stderr)
 	}
 	for _, want := range []string{"go", "python", "pdf", "sqlite"} {
 		if !strings.Contains(stdout, want) {
-			t.Errorf("doctor is missing %q:\n%s", want, stdout)
+			t.Errorf("env is missing %q:\n%s", want, stdout)
 		}
 	}
 
-	code, stdout, _ = run("doctor", "--json")
+	code, stdout, _ = run("env", "--json")
 	if code != ExitOK {
 		t.Fatalf("exit = %d", code)
 	}

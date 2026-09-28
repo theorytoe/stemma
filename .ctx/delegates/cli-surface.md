@@ -19,7 +19,7 @@ and adds the commands that are neither about sources nor about rendering.
 
 Dispatch and help for every verb, KB discovery, manifest handling, uniform
 machine-readable output and exit codes, and the commands `status`, `archive`,
-`promote`, `list` filters, `show` modes, and `doctor`. It also generates the CLI
+`promote`, `list` filters, `show` modes, and `env`. It also generates the CLI
 reference that the skill suite consumes in Task 7.
 
 ## Discovery and manifest
@@ -115,7 +115,7 @@ changed. Everything the inbox permits must become an error at promotion.
 
 Status: Done
 
-`doctor`. Detect and report the optional environment: Go runtime, the Python
+`env`. Detect and report the optional environment: Go runtime, the Python
 interpreter, whether a PDF extractor is importable, and whether SQLite is
 available. Go-primary with an optional Python shim means a missing extractor should
 be diagnosable rather than mysterious. This command earns its place only if it

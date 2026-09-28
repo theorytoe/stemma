@@ -13,10 +13,10 @@ import (
 	"github.com/theorytoe/stemma/internal/kb"
 )
 
-// doctorReport is what the environment looks like. Everything in it is
+// envReport is what the environment looks like. Everything in it is
 // optional except Go itself, and a missing piece is a fact to report rather
 // than a failure.
-type doctorReport struct {
+type envReport struct {
 	Go     goInfo      `json:"go"`
 	Python toolInfo    `json:"python"`
 	PDF    toolInfo    `json:"pdf"`
@@ -40,27 +40,27 @@ type toolInfo struct {
 	Why       string `json:"why,omitempty"`
 }
 
-// doctorCommand implements `stemma doctor`.
+// envCommand implements `stemma env`.
 //
 // Its job is to make a degraded environment diagnosable rather than mysterious:
 // Python is a leaf (P3, D6), so a missing interpreter or PDF library should be
 // explainable without running an extraction. It stays small on purpose; a
 // command that grew into a dependency manager would be cut (U4).
-var doctorCommand = &command{
-	name:    "doctor",
+var envCommand = &command{
+	name:    "env",
 	summary: "report the optional parts of the environment",
 	setup: func(fs *flag.FlagSet, o *options) runFunc {
 		o.registerKB(fs)
 		return func(c *command, w *output, args []string) int {
 			if len(args) > 0 {
-				return w.fail(fmt.Errorf("doctor takes no arguments, got %q", args[0]))
+				return w.fail(fmt.Errorf("env takes no arguments, got %q", args[0]))
 			}
 
-			report := doctorReport{
+			report := envReport{
 				Go: goInfo{Version: runtime.Version(), OS: runtime.GOOS, Arch: runtime.GOARCH},
 			}
 
-			// A KB is optional here: doctor reports on the environment first,
+			// A KB is optional here: env reports on the environment first,
 			// and adds the index state when it can find one.
 			if root, err := discover(o.kb); err == nil {
 				if k, err := kb.Load(root); err == nil {
@@ -87,7 +87,7 @@ var doctorCommand = &command{
 	},
 }
 
-func (r doctorReport) text() string {
+func (r envReport) text() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%-8s%s %s/%s\n", "go", r.Go.Version, r.Go.OS, r.Go.Arch)
 
@@ -172,7 +172,7 @@ func sqliteLinked() bool {
 	return false
 }
 
-// run executes a short diagnostic command with a timeout, so doctor can never
+// run executes a short diagnostic command with a timeout, so env can never
 // hang on a misbehaving interpreter.
 func runTool(name string, args ...string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

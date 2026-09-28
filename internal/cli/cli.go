@@ -80,7 +80,10 @@ func init() {
 		moveCommand,
 		renameCommand,
 		archiveCommand,
+		promoteCommand,
+		statusCommand,
 		lintCommand,
+		doctorCommand,
 		helpCommand,
 	}
 }

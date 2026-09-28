@@ -92,7 +92,10 @@ func (w *output) report(data any, findings []kb.Finding) int {
 // writes one.
 func (w *output) fail(err error) int {
 	if w.json {
-		return w.write(response{Command: w.cmd, OK: false, Error: err.Error()})
+		if code := w.write(response{Command: w.cmd, OK: false, Error: err.Error()}); code != ExitOK {
+			return code
+		}
+		return ExitError
 	}
 	fmt.Fprintf(w.stderr, "stemma: %v\n", err)
 	return ExitError

@@ -86,6 +86,8 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D35 | **Small built-in formatter**, a few common styles. **No CSL conformance** — full CSL implies `citeproc-js`, ruled out by D9.                                                | Q22       |
 | D36 | Sources **do** get metadata pages, auto-generated from the BibTeX entry.                                                                                                    | Q22       |
 | D45 | Source pages are **virtual**: materialised only at export/build time, never committed. Resolvable by citation key. Excluded from orphan and title-collision checks.         | Q28       |
+| D64 | Export is **`cite export --format bibtex|csl-json`**, whole bibliography by default, `--cited` to narrow it. BibTeX is **self-contained** (macros resolved); CSL-JSON maps known fields and passes the rest through. Output is checked by an independent reader. | Q22       |
+| D65 | A source pointer is compared by **what it names, not how it is typed**, and there is **one normalisation rule per identifier in `kb`**, shared by duplicate detection and by resolution so the two cannot disagree. DOI folds case and drops the URL wrapper, query and fragment; ISBN keeps digits only; arXiv **keeps the version to fetch and drops it to identify**. Names are read by **one shared reader** for the same reason. | review    |
 
 ### Ingest
 

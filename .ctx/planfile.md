@@ -112,11 +112,12 @@ decision recorded in the register as `D63`.
 
 ## Task 3:
 
-Status: Not started
+Status: Done
 
 Sources and bibliography. BibTeX parse and serialise, identifier resolution for
 DOI, arXiv, and ISBN, inline citation resolution, the `cite` family, built-in
-formatters, virtual source pages, and the large-KB bibliography directory form.
+formatters, virtual source pages, the large-KB bibliography directory form, and
+validated BibTeX and CSL-JSON export.
 See `delegates/sources-bibliography.md`.
 
 ## Task 4:

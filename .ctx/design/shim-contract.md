@@ -14,44 +14,52 @@ Go is the project language (`D6`) and Python is the single exception, admitted
 because the PDF and HTML ecosystem is Python's. The permission stays narrow by
 being spent in exactly one place with one shape: a script that takes an explicit
 input, prints one JSON object, and exits. Everything else — which file gets read,
-what the tool says when it cannot read it, where the text is written, what an exit
-code means — belongs to Go.
+what the tool says when it cannot read it, where the text goes, what an exit code
+means — belongs to Go.
 
 The rule that follows from it: **Python is a leaf, never a dependency of the
 core.** The core library must build, test, and run with no Python present. Only
 the commands in this delegate degrade, and they degrade by reporting, never by
 working around (`P1`).
 
+Writing the script is not one of the places Python is needed. The script is bytes
+in the binary; installing it is a file write.
+
 # Invocation
 
 ```
-extract.py <subcommand> <input> [<user-agent>]
+extract.py <subcommand> <input> <limit> [<user-agent>]
 ```
 
 One script, one subcommand per input family. The script is never sourced, never
 imported, and never told anything through the environment.
 
-| subcommand | input           | user agent | reads                                  |
-| ---------- | --------------- | ---------- | -------------------------------------- |
-| `probe`    | —               | —          | nothing; reports what is importable     |
-| `text`     | a file path     | —          | the file as UTF-8 text                  |
-| `pdf`      | a file path     | —          | the file as a PDF                       |
-| `url`      | an absolute URL | required   | the URL, then the main content of the page |
+| subcommand | input           | limit   | user agent | reads                              |
+| ---------- | --------------- | ------- | ---------- | ---------------------------------- |
+| `probe`    | —               | —       | —          | nothing; reports what is importable |
+| `text`     | a file path     | bytes   | —          | the file as UTF-8 text              |
+| `pdf`      | a file path     | bytes   | —          | the file as a PDF                   |
+| `url`      | an absolute URL | bytes   | required   | the URL, then the page's main text  |
 
 `probe` exists because `env` has to explain a degraded machine without running an
-extraction (`Task 7`). It reports the interpreter and, for every library this
+extraction (Task 7). It reports the interpreter and, for every library this
 contract names, whether it imports and which version it is. It is the only
 subcommand that must work on a machine where nothing else does, and it must not
 fail: a missing library is a fact it reports, not an error it raises.
 
-`url` takes the user agent as an argument rather than deciding it, because the Go
-side already has one (`stemma/<version>`) and a second user agent invented here
-would be a second thing to keep true.
+`limit` is a required argument rather than a constant of this document. It is
+data Go must supply — how much text it is willing to receive — and the two sides
+cannot disagree about a number that only one of them chooses. It also means the
+default can be tuned in Go, and a `--max-bytes` flag can appear later, without
+editing this file.
 
-**No flags.** The size limit below is a constant of the contract, not an option,
-so the two sides cannot disagree about it. There is no verbose mode, no output
-file, and no configuration argument: an extractor that needs a setting to be
-useful is an extractor whose behaviour the Go side cannot predict.
+`url` takes the user agent as an argument for the same reason: the Go side already
+has one (`stemma/<version>`), and a second user agent invented here would be a
+second thing to keep true.
+
+There are no other arguments. No verbose mode, no output file, no configuration
+option: an extractor that needs a setting to be useful is an extractor whose
+behaviour Go cannot predict.
 
 **The shim defines no environment variable and branches on none.** Letting a
 caller change behaviour through the environment is how an interface acquires a
@@ -64,10 +72,9 @@ library's business, not configuration the shim accepts.
 stdout carries exactly one JSON object and nothing else. Both success and failure
 use it, so the Go side parses one shape and branches on one field.
 
-`contract` is present in every object. It is the integer version of this
-document. Go refuses to use output whose `contract` it does not know, which is
-what makes an old copy of the script a diagnosable error rather than a strange
-one.
+`contract` is present in every object. It is the integer version of this document.
+Go refuses to use output whose `contract` it does not know, which turns a stale
+copy or a development override into a diagnosable error rather than a strange one.
 
 Success:
 
@@ -90,9 +97,9 @@ Success:
 | `ok`        | always   | `true`                                                               |
 | `kind`      | always   | the subcommand that ran                                              |
 | `text`      | always   | the extraction, as UTF-8. Never empty when `ok` is `true`            |
-| `extractor` | always   | what actually read it, as `<name> <version>` or a chain like `httpx+bs4` |
+| `extractor` | always   | what read it, as `<name> <version>` or a chain like `httpx+bs4`       |
 | `pages`     | PDF only | how many pages the document has                                      |
-| `truncated` | always   | whether `text` was cut at the size limit                             |
+| `truncated` | always   | whether `text` was cut at the limit                                  |
 | `notes`     | optional | short statements about the input that did not stop extraction        |
 
 `notes` is where a fact about the input goes when the text is still usable: a page
@@ -119,14 +126,14 @@ for a person and may change freely; Go never parses it.
 | `unreadable`        | the path is absent, unreadable, or is not what it claims to be      | the input    |
 | `empty`             | extraction ran and found no text: no text layer, or a JS-only page  | the input    |
 | `network`           | the fetch failed: DNS, TLS, a refused connection, or a non-2xx      | the machine  |
-| `too_large`         | the input or the download exceeded the size limit                   | the input    |
+| `too_large`         | the input or the download exceeded the limit                        | the input    |
 | `internal`          | the shim was called wrongly, or hit a bug                           | the shim     |
 
 Two of these carry the delegate's weight. `missing_extractor` is what lets `env`
 say *why* nothing works instead of "failed". `empty` is the case that must not
 become a silent success: a scanned PDF and a JavaScript-only page both extract to
 nothing, and the tool has to say which happened rather than hand back an empty
-string (`Task 3`, `Task 4`).
+string (Tasks 3 and 4).
 
 **`missing_python` is not in this table, because the shim cannot report it.** If
 the interpreter is absent, nothing runs. Go checks for the interpreter before it
@@ -137,8 +144,8 @@ emit would be a lie in the contract.
 
 The rule is short: **exit 0 whenever a JSON object was printed, non-zero only when
 the shim could not print one.** Success and every typed failure above are exit 0,
-because the object already says what happened and putting the same information in
-two places would invite them to disagree.
+because the object already says what happened, and putting the same information in
+two places invites the two to disagree.
 
 A non-zero exit therefore means the shim died: a traceback, a syntax error, a
 missing interpreter, a killed process. There is no object to parse, so Go adds the
@@ -157,23 +164,30 @@ stderr.
 
 # Size, buffering, and time
 
-**The text is capped at 8 MiB of UTF-8.** The shim truncates at that point, on a
-line boundary where one is available, and sets `truncated: true`. Go reads at most
-the cap plus 64 KiB of slack and treats anything longer as `internal`, so a shim
-that ignores its own limit cannot exhaust the process that called it.
+The text is capped at the `limit` argument. The shim stops reading once it has
+that much, cuts on a line boundary where one is available, and sets
+`truncated: true`. Stopping early is the point: a nine-hundred-page PDF costs
+roughly what its first pages cost, rather than being linearised in full before Go
+can decide it does not want it.
 
 The shim buffers rather than streams. One JSON object is one write, and a JSON
 string cannot be escaped correctly across chunk boundaries without building a
 streaming encoder on both sides — machinery that would exist only to let a
-document be half-read. The cap is what makes buffering safe: memory is bounded by
-the limit, not by the document. For a large PDF this costs nothing either way,
-because the reading library takes a path and does not need the file in memory.
+document be half-read. The limit is what makes buffering safe: memory is bounded
+by the caller's number, not by the document. For a large PDF this costs nothing
+either way, because the reading library takes a path and does not need the file in
+memory.
 
-The URL family caps the downloaded body at the same 8 MiB, before parsing, and
-reports `too_large` if a page exceeds it. A page that big is not a document.
+Go reads at most `limit` plus 64 KiB of slack and treats anything longer as
+`internal`, so a shim that ignores its own limit cannot exhaust the process that
+called it.
+
+The URL family bounds the downloaded body by the same limit, before parsing, and
+reports `too_large` when a page exceeds it. A page larger than the text anyone
+wants is not a document worth fetching.
 
 **Go enforces the timeout, not the shim.** A process cannot be trusted to kill
-itself on schedule, and a shim that blocked inside a C library would not get the
+itself on schedule, and a shim blocked inside a C library would not get the
 chance. Go runs the shim under a context with a wall-clock limit — 60 seconds for
 `url`, 300 for `pdf`, since linearising a book is legitimately slow — and maps a
 kill to `timeout`.
@@ -188,45 +202,63 @@ document goes in `extractor`, `pages`, or `notes`.
 The property this buys is determinism: the same input read with the same libraries
 produces byte-identical text. No timestamps, no source path, no ordering that
 depends on when it ran. Text that changes between two runs is text that cannot be
-diffed, hashed, or vendored (`Task 6`).
+diffed, hashed, or vendored (Task 6).
 
 The shim writes nothing but stdout and stderr. It creates no temporary file,
 leaves no cache, and touches the network only for `url`. This is the reason
 `pdftotext` was not adopted as a fallback despite being installed on the
-development machine: it writes to a path, which would put file lifecycle into the
-contract for a fallback of a fallback.
+development machine: it writes to a path, so the tool would acquire a temporary
+file's lifecycle in the middle of extracting someone's document. The one file the
+tool writes of its own accord is the script itself, once, and that is a different
+kind of thing.
 
 # Where the script lives
 
-The script is embedded in the Go binary with `go:embed` and materialised to
-`<kb>/.stemma/shim/extract.py` before it runs.
+The script is a tracked file in the repository, `internal/extract/extract.py`. It
+is embedded in the Go binary at compile time, so the bytes that print the JSON are
+the bytes compiled into the version that parses it.
 
-Embedding is what keeps the binary and the contract from drifting: the bytes that
-print the JSON are the bytes compiled into the version that parses it, and a
-`stemma` copied to another machine still carries them. Materialising to a path
-rather than piping the script to the interpreter keeps it a real file — something
-an author can open when the extraction is wrong, and something `env` can name.
-`.stemma/` is the generated-artifact directory (`D23`), so it is gitignored,
-outside the preservation guarantee, and rewritten whenever the embedded bytes
-differ. Hand-edits there are lost by design; the place to change the shim is the
-repository.
+`init` writes it out eagerly, to `<kb>/.stemma/shim/extract.py`, in the same breath
+as the manifest and the entry document. A new KB has its whole shape from the
+moment it exists: nothing appears later the first time someone runs `fetch`, and
+the file is there to be read, run by hand, and pointed at. `kb.Init` does not know
+this file exists — `extract.Materialise` writes it, and the init command calls
+both — so the core keeps no dependency on the extraction package.
 
-If the KB directory cannot be written, the shim is materialised in a temporary
-directory instead. `env` reports the path it used and whether it is current, so
-"which copy ran" is answerable without guessing.
+**Every `.stemma/` artifact is per-checkout and re-derivable, and is re-established
+whenever it is absent or stale.** So the script is also checked before each
+extraction against the embedded bytes: missing means write, identical means
+nothing, different means overwrite. A cleared `.stemma/` (a documented operation),
+an upgrade, and a KB received by clone all change or remove it, and none of them
+should leave extraction broken. The check is a byte comparison against a file of a
+few kilobytes, so there is nothing to record alongside it and no digest to keep in
+step. The write goes to a temporary file in the same directory and is renamed into
+place, so an interrupted write never leaves a half-finished script.
+
+`init` warns and carries on if the write fails. The KB is valid either way, and the
+script is re-derived on use, which is the same rule that covers the cleared case.
+`env` reports the path and whether the file is `absent`, `current`, or `stale`,
+reading only — a diagnostic command that creates files is a bad citizen, and `env`
+has to work with no KB at all.
+
+`STEMMA_SHIM` overrides the path, for developing an extractor without rebuilding
+the binary each time. `env` reports when it is in force, and `contract` catches the
+mismatch if what it points at is not the version this binary expects.
 
 # How this is tested without Python
+
+Because the script is a real file, it has its own tests beside it, runnable as
+plain `python3` with no framework. They exercise each subcommand and each failure
+class directly, which is not possible when the script exists only inside a binary.
+What they cannot test is a library that is not installed: those cases skip.
 
 The Go side never invokes `python3` directly; it invokes a runner that can be
 pointed elsewhere. Every test of the Go half — parsing each class, a truncated
 result, an oversized result, a crash with no object, a timeout, a missing
-interpreter — runs against a fake script that prints canned JSON. Those tests must
-pass on a machine with no Python at all, because that is the machine the core
-promises to work on.
-
-Tests that exercise real extraction call `probe` first and skip unless the library
-is reported. They are evidence about the extractor, never a precondition for
-building or testing Stemma.
+interpreter — runs against a fake script that prints canned JSON. Those tests pass
+on a machine with no Python at all, because that is the machine the core promises
+to work on. Alongside them, a test asserts that what `Materialise` writes is
+byte-identical to the embedded script, and that a stale copy is refreshed.
 
 Nothing in `internal/kb` imports the extraction package. The core's no-Python
 property is a dependency direction, not a convention.
@@ -234,6 +266,6 @@ property is a dependency direction, not a convention.
 # Deliberately out of scope
 
 OCR for scanned PDFs, EPUB, and rendering a JavaScript-only page are not inputs
-this shim accepts (`Task 8`). They are `unsupported` and `empty` respectively,
-which is the point of having those classes: a refusal that names itself is
-degradation, and a blank string is not.
+this shim accepts (Task 8). They are `unsupported` and `empty` respectively, which
+is the point of having those classes: a refusal that names itself is degradation,
+and a blank string is not.

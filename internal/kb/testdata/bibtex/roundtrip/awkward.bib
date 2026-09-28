@@ -1,0 +1,34 @@
+% Awkward but valid content a real bibliography contains.
+
+@article{escapes_1988,
+  title = {The {C} Programming Language and \{braces\}},
+  author = {Kernighan, Brian W. and Ritchie, Dennis M.},
+  year = {1988},
+  note = {Includes a 12" disk and a 5" one},
+  howpublished = {mail \texttt{user@example.com}},
+}
+
+@book{unicode2021,
+  title = {Über die Quantenmechanik — 量子力学},
+  author = {Müller, Jörg and 李, 明},
+  publisher = {Springer},
+  year = {2021},
+  address = {Berlin, Deutschland},
+}
+
+@misc{nested_2017,
+  title = {{A}n {O}ddly {C}apitalised {T}itle},
+  note = {A value with "quotes" inside braces},
+  year = 2017,
+}
+
+@article{concat_2020,
+  title = "A title that is " # "joined from pieces",
+  author = {Surname, "Nested" Given},
+  year = {2020},
+}
+
+@article(paren_2019,
+  title = {A value with a (parenthesis) inside},
+  year = {2019}
+)

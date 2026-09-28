@@ -1,0 +1,35 @@
+% A file exercising the parts of BibTeX that are not entries.
+
+@string{jan = "January"}
+@string{acm = "Association for Computing Machinery"}
+@string{acmpub = acm # ", New York, NY, USA"}
+@string{acmpub = acm # ", NY"}
+
+@preamble{ "\newcommand{\noopsort}[1]{}" }
+
+@comment{jabref-meta: databaseType:bibtex;}
+
+@inproceedings{doe2019survey,
+  author = {Doe, John},
+  title = {A Survey},
+  booktitle = {Proceedings of the International Conference},
+  year = 2019,
+  month = jan,
+  publisher = acmpub,
+  keywords = {survey, transformers},
+}
+
+@dataset{lee2021corpus,
+  title = {An Annotated Corpus},
+  author = {Lee, Alice},
+  year = {2021},
+  publisher = {Zenodo},
+  doi = {10.5281/zenodo.1234567},
+  version = {1.0.0},
+}
+
+@online{stemma2026,
+  title = {Stemma},
+  url = {https://example.com/stemma},
+  urldate = {2026-01-02},
+}

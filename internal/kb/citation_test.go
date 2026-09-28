@@ -352,3 +352,121 @@ func TestAnUnclosedQuoteIsStillRefused(t *testing.T) {
 		t.Error("an unterminated quoted value was accepted")
 	}
 }
+
+// A citation carries the form it was written in, so the renderer never has to
+// read the prose a second time to learn what lint did not need.
+func TestCitationFormsCarryTheirStructure(t *testing.T) {
+	body := "First [@b], then [see @a, p. 33; -@c], a narrative @d, and [@e].\n"
+	got := pageWithBody(t, body).Citations()
+
+	type want struct {
+		key            string
+		group, pos     int
+		prefix, loc    string
+		suppress, narr bool
+	}
+	wants := []want{
+		{key: "b", group: 0, pos: 0},
+		{key: "a", group: 1, pos: 0, prefix: "see", loc: "p. 33"},
+		{key: "c", group: 1, pos: 1, suppress: true},
+		{key: "d", group: 2, pos: 0, narr: true},
+		{key: "e", group: 3, pos: 0},
+	}
+	if len(got) != len(wants) {
+		t.Fatalf("citations = %+v, want %d", got, len(wants))
+	}
+	for i, w := range wants {
+		c := got[i]
+		if c.Key != w.key || c.Group != w.group || c.Position != w.pos ||
+			c.Prefix != w.prefix || c.Locator != w.loc ||
+			c.SuppressAuthor != w.suppress || c.Narrative != w.narr {
+			t.Errorf("citation %d = %+v, want %+v", i, c, w)
+		}
+	}
+}
+
+// A bracket that holds no key, and an "@" that is part of an address, are not
+// citations.
+func TestNonCitationsStayNonCitations(t *testing.T) {
+	for _, body := range []string{
+		"[user@example.com]\n",
+		"mail user@example.com\n",
+		"[[Transformer]]\n",
+		"at @ sign\n",
+		"`[@key]`\n",
+	} {
+		if got := pageWithBody(t, body).Citations(); len(got) != 0 {
+			t.Errorf("%q produced %+v", body, got)
+		}
+	}
+}
+
+func TestBibliographyEntry(t *testing.T) {
+	b, err := ParseBibliography("b.bib", []byte("@article{a, title = {A}}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	e, ok := b.Entry("a")
+	if !ok {
+		t.Fatal("the entry was not kept")
+	}
+	if got, _ := e.Value("title"); got != "A" {
+		t.Errorf("title = %q", got)
+	}
+	if _, ok := b.Entry("missing"); ok {
+		t.Error("Entry found a key nothing defines")
+	}
+}
+
+func TestBibliographyAddKeepsEntries(t *testing.T) {
+	a, err := ParseBibliography("a.bib", []byte("@article{one,}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := ParseBibliography("b.bib", []byte("@article{two, title = {Two}}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.Add(other)
+
+	if _, ok := a.Entry("one"); !ok {
+		t.Error("the original entry was lost")
+	}
+	e, ok := a.Entry("two")
+	if !ok {
+		t.Fatal("the merged entry was not kept")
+	}
+	if got, _ := e.Value("title"); got != "Two" {
+		t.Errorf("title = %q", got)
+	}
+}
+
+func TestReferencesResolveInCitationOrder(t *testing.T) {
+	b, err := ParseBibliography("b.bib", []byte("@article{a,}\n@article{b,}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := NewGraph()
+	g.Add("pages/p.md", pageWithBody(t, "First [@b], then [@a], then [@b] again, and [@missing].\n"))
+	k := &KB{Graph: g, Bibliography: b}
+
+	refs, missing := k.References("pages/p.md")
+	if len(refs) != 2 {
+		t.Fatalf("references = %+v, want 2", refs)
+	}
+	if refs[0].Entry.Key() != "b" || refs[1].Entry.Key() != "a" {
+		t.Errorf("reference keys = %q, %q; want b, a", refs[0].Entry.Key(), refs[1].Entry.Key())
+	}
+	if len(missing) != 1 || missing[0].Key != "missing" {
+		t.Errorf("missing = %+v", missing)
+	}
+}
+
+func TestReferencesWithNoBibliographyAreAllMissing(t *testing.T) {
+	g := NewGraph()
+	g.Add("pages/p.md", pageWithBody(t, "cite [@a] and [@b]\n"))
+	refs, missing := g.References("pages/p.md", nil)
+	if len(refs) != 0 || len(missing) != 2 {
+		t.Errorf("refs = %+v, missing = %+v", refs, missing)
+	}
+}

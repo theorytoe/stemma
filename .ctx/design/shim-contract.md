@@ -91,16 +91,32 @@ Success:
 }
 ```
 
-| field       | required | meaning                                                              |
-| ----------- | -------- | -------------------------------------------------------------------- |
-| `contract`  | always   | the contract version                                                 |
-| `ok`        | always   | `true`                                                               |
-| `kind`      | always   | the subcommand that ran                                              |
-| `text`      | always   | the extraction, as UTF-8. Never empty when `ok` is `true`            |
-| `extractor` | always   | what read it, as `<name> <version>` or a chain like `httpx+bs4`       |
-| `pages`     | PDF only | how many pages the document has                                      |
-| `truncated` | always   | whether `text` was cut at the limit                                  |
-| `notes`     | optional | short statements about the input that did not stop extraction        |
+`probe` is the one subcommand whose success object carries no `text`, because it
+is describing the machine rather than a document. It answers with the
+interpreter and the libraries instead:
+
+```json
+{
+  "contract": 1,
+  "ok": true,
+  "kind": "probe",
+  "python": "3.14.7",
+  "libs": { "pymupdf": "1.26.4", "pypdf": null }
+}
+```
+
+| field       | present    | meaning                                                              |
+| ----------- | ---------- | -------------------------------------------------------------------- |
+| `contract`  | always     | the contract version                                                 |
+| `ok`        | always     | `true`                                                               |
+| `kind`      | always     | the subcommand that ran                                              |
+| `text`      | except `probe` | the extraction, as UTF-8. Never empty when `ok` is `true`         |
+| `extractor` | except `probe` | what read it, as `<name> <version>` or a chain like `httpx+bs4`   |
+| `pages`     | PDF only   | how many pages the document has                                      |
+| `truncated` | except `probe` | whether `text` was cut at the limit                               |
+| `notes`     | optional   | short statements about the input that did not stop extraction        |
+| `python`    | `probe`    | the interpreter's version                                            |
+| `libs`      | `probe`    | module to version; a module that is not importable has none           |
 
 `notes` is where a fact about the input goes when the text is still usable: a page
 with no text layer in an otherwise readable PDF, a table that could not be
@@ -235,11 +251,12 @@ few kilobytes, so there is nothing to record alongside it and no digest to keep 
 step. The write goes to a temporary file in the same directory and is renamed into
 place, so an interrupted write never leaves a half-finished script.
 
-`init` warns and carries on if the write fails. The KB is valid either way, and the
-script is re-derived on use, which is the same rule that covers the cleared case.
-`env` reports the path and whether the file is `absent`, `current`, or `stale`,
-reading only — a diagnostic command that creates files is a bad citizen, and `env`
-has to work with no KB at all.
+`init` fails if the write fails, like every other file it writes. A KB that
+cannot take the script is a KB that could not be created, and the alternative —
+reporting success for a half-made KB — would put the difference somewhere a
+person would have to go looking for it. `env` reports the path and whether the
+file is `absent`, `current`, or `stale`, reading only, since a diagnostic command
+that creates files is a bad citizen and `env` has to work with no KB at all.
 
 `STEMMA_SHIM` overrides the path, for developing an extractor without rebuilding
 the binary each time. `env` reports when it is in force, and `contract` catches the

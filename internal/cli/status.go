@@ -109,28 +109,28 @@ func ambiguousNames(k *kb.KB) []string {
 
 func (r statusReport) text() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%-9s%s\n", "kb", r.Title)
-	fmt.Fprintf(&b, "%-9s%s\n", "root", r.Root)
-	fmt.Fprintf(&b, "%-9s%d\n", "pages", r.Pages)
+	fmt.Fprintf(&b, "%-10s%s\n", "kb", r.Title)
+	fmt.Fprintf(&b, "%-10s%s\n", "root", r.Root)
+	fmt.Fprintf(&b, "%-10s%d\n", "pages", r.Pages)
 	types := make([]string, 0, len(r.ByType))
 	for t := range r.ByType {
 		types = append(types, t)
 	}
 	sort.Strings(types)
 	for _, t := range types {
-		fmt.Fprintf(&b, "%-9s%d %s\n", "", r.ByType[t], t)
+		fmt.Fprintf(&b, "%-10s%d %s\n", "", r.ByType[t], t)
 	}
-	fmt.Fprintf(&b, "%-9s%d\n", "orphans", len(r.Orphans))
-	fmt.Fprintf(&b, "%-9s%d\n", "ambiguous", len(r.Ambiguous))
-	fmt.Fprintf(&b, "%-9s%d (%d uncited)\n", "sources", r.Sources, len(r.UncitedSources))
-	fmt.Fprintf(&b, "%-9s%d\n", "drafts", r.Drafts)
+	fmt.Fprintf(&b, "%-10s%d\n", "orphans", len(r.Orphans))
+	fmt.Fprintf(&b, "%-10s%d\n", "ambiguous", len(r.Ambiguous))
+	fmt.Fprintf(&b, "%-10s%d (%d uncited)\n", "sources", r.Sources, len(r.UncitedSources))
+	fmt.Fprintf(&b, "%-10s%d\n", "drafts", r.Drafts)
 	switch {
 	case !r.Index.Present:
-		fmt.Fprintf(&b, "%-9s%s\n", "index", "absent")
+		fmt.Fprintf(&b, "%-10s%s\n", "index", "absent")
 	case r.Index.Fresh:
-		fmt.Fprintf(&b, "%-9s%s\n", "index", "fresh")
+		fmt.Fprintf(&b, "%-10s%s\n", "index", "fresh")
 	default:
-		fmt.Fprintf(&b, "%-9s%s\n", "index", "stale")
+		fmt.Fprintf(&b, "%-10s%s\n", "index", "stale")
 	}
 	return b.String()
 }

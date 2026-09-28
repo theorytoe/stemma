@@ -449,6 +449,50 @@ func TestDoctorReportsTheEnvironment(t *testing.T) {
 	}
 }
 
+func TestStatusText(t *testing.T) {
+	root := writeTree(t, map[string]string{
+		"pages/index.md": page("Index", "type: index", ""),
+		"pages/a.md":     page("A", "type: concept", ""),
+		"inbox/draft.md": "---\ntitle: Draft\n---\n",
+	})
+	code, stdout, stderr := run("status", "--kb", root)
+	if code != ExitOK {
+		t.Fatalf("exit = %d: %s", code, stderr)
+	}
+	for _, want := range []string{"pages", "orphans", "sources", "drafts", "index", "absent"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("status text is missing %q:\n%s", want, stdout)
+		}
+	}
+}
+
+// A rename that cannot finish has to say how far it got. This is the failure
+// mode of the most dangerous command, and the one a caller has to be able to
+// recover from by running it again.
+func TestRenameReportsPartialFailure(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores file permissions")
+	}
+	root := writeTree(t, map[string]string{
+		"pages/index.md":    page("Index", "type: index", "[[Alpha]]\n"),
+		"pages/alpha.md":    page("Alpha", "type: concept", ""),
+		"pages/sub/beta.md": page("Beta", "type: concept", "[[Alpha]]\n"),
+	})
+	sub := filepath.Join(root, "pages", "sub")
+	if err := os.Chmod(sub, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(sub, 0o755) })
+
+	code, _, stderr := run("rename", "--kb", root, "Alpha", "New Title")
+	if code != ExitError {
+		t.Fatalf("exit = %d, want %d", code, ExitError)
+	}
+	if !strings.Contains(stderr, "run the same command again") {
+		t.Errorf("the failure does not say how to finish:\n%s", stderr)
+	}
+}
+
 // P5: a plain directory works. No manifest, no git, no index, no setup.
 func TestAPlainDirectoryWithNoManifestOrGit(t *testing.T) {
 	root := writeTree(t, map[string]string{

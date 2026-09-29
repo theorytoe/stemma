@@ -187,6 +187,50 @@ func TestFetchClearWithNothingToClear(t *testing.T) {
 	}
 }
 
+// A path whose digits add up to an ISBN's length is still a path. This is not
+// hypothetical: `t.TempDir()` names hold a number, and one run of the suite turned
+// up a directory named for a thirteen digit one.
+func TestFetchReadsAFileWhoseNameLooksLikeAnIdentifier(t *testing.T) {
+	root := fetchKB(t)
+	fakeRunner(t, `printf '%s' '{"contract":1,"ok":true,"kind":"text","text":"the text\n","extractor":"stdlib"}'`)
+
+	dir := filepath.Join(t.TempDir(), "9780262033848")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	source := filepath.Join(dir, "note.txt")
+	if err := os.WriteFile(source, []byte("whatever"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	code, stdout, stderr := run("fetch", "--kb", root, source)
+	if code != ExitOK {
+		t.Fatalf("fetch exited %d: %s", code, stderr)
+	}
+	if stdout != "the text\n" {
+		t.Errorf("stdout = %q, want the file to have been read", stdout)
+	}
+}
+
+// The same confusion where the file is not there to settle it: a pointer holding a
+// path separator is a path, and what a person needs to hear is that the file is
+// missing, not that their filename is an ISBN.
+func TestFetchLooksForAMissingPathBeforeNamingAWork(t *testing.T) {
+	root := fetchKB(t)
+	absent := filepath.Join(t.TempDir(), "9780262033848", "absent.txt")
+
+	code, _, stderr := run("fetch", "--kb", root, absent)
+	if code != ExitError {
+		t.Fatalf("fetch exited %d, want %d", code, ExitError)
+	}
+	if strings.Contains(stderr, "isbn") {
+		t.Errorf("stderr = %q, want it to look for the file", stderr)
+	}
+	if !strings.Contains(stderr, "absent.txt") {
+		t.Errorf("stderr = %q, want it to name the file", stderr)
+	}
+}
+
 // The one test here that needs a real interpreter. Text is the library-free case,
 // so this much works wherever Python does.
 func TestFetchThroughTheRealShim(t *testing.T) {

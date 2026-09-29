@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/theorytoe/stemma/internal/extract"
 	"github.com/theorytoe/stemma/internal/kb"
@@ -122,13 +123,31 @@ var fetchCommand = &command{
 
 // readPointer decides which subcommand reads a pointer, and runs it.
 //
+// A pointer that names a file on disk is that file, decided before what the string
+// looks like is considered at all. The two can be confused: an ISBN is a run of
+// digits, a path may hold one by accident, and a directory named for a thirteen
+// digit number is a perfectly ordinary thing. Existence first is what makes
+// `fetch ./9780262033848/note.txt` read a file instead of refusing it as a work.
+//
 // An identifier names a work rather than a document — resolving one produces a
-// record, not text — so it is refused with the command that does own it instead of
-// being attempted as a filename.
+// record, not text — so anything left that is an identifier is refused with the
+// command that does own it, instead of being attempted as a filename.
 func readPointer(runner *extract.Runner, pointer string) (*extract.Result, error) {
 	ctx := context.Background()
 
+	if _, err := os.Stat(pointer); err == nil {
+		return readLocal(runner, ctx, pointer)
+	}
+
 	kind := source.Detect(pointer)
+	// An ISBN is digits, dashes and spaces with no path in it, so a pointer holding
+	// a separator is a path even when its digits do add up to a plausible ISBN. This
+	// is the half of the confusion that exists cannot settle, because the file is not
+	// there to be found.
+	if kind == source.KindISBN && strings.ContainsAny(pointer, `/\`) {
+		kind = source.KindUnknown
+	}
+
 	switch {
 	case kind == source.KindURL:
 		return runner.URL(ctx, pointer)
@@ -137,15 +156,20 @@ func readPointer(runner *extract.Runner, pointer string) (*extract.Result, error
 			"%q names a work (%s) rather than a document; `stemma cite add` records what a work is, "+
 				"and fetch reads what it says, which is a file or a URL", pointer, kind)
 	}
+	return readLocal(runner, ctx, pointer)
+}
 
-	family, err := localFamily(pointer)
+// readLocal reads a file, choosing between the two readers by what is in it rather
+// than by what it is called.
+func readLocal(runner *extract.Runner, ctx context.Context, path string) (*extract.Result, error) {
+	family, err := localFamily(path)
 	if err != nil {
 		return nil, err
 	}
 	if family == "pdf" {
-		return runner.PDF(ctx, pointer)
+		return runner.PDF(ctx, path)
 	}
-	return runner.Text(ctx, pointer)
+	return runner.Text(ctx, path)
 }
 
 // localFamily decides which subcommand reads a local file.

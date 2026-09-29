@@ -65,12 +65,18 @@ rather than replaces. Task 7 of the project consumes `search` and `graph`.
 
 ## Task 1:
 
-Status: Not started
+Status: Done
 
 Index store design. Schema, on-disk location inside the generated-artifact
 directory, and a version marker so an incompatible schema is rebuilt rather than
 misread. Record what is stored: pages, frontmatter fields used for filtering, the
 link graph, citation keys, and the FTS table. Nothing that cannot be regenerated.
+
+Landed as `internal/index`: `<kb>/.stemma/index.sqlite`, schema version in
+`user_version`, rebuilt by deletion on any mismatch or on a file that is not a
+database. Tables for pages (with type, status, tags), claimed names, links,
+citations and tags, plus an external-content FTS5 table over title, tags and body.
+The choices are recorded as `D67`.
 
 ## Task 2:
 

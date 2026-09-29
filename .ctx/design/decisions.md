@@ -114,6 +114,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D44 | Out-of-scope links are **pruned** from the extract.                                                                                                                   | Q21       |
 | D51 | Pruned links **retain their anchor text** as plain text. A summary is reported by default; a flag emits the full list.                                                | Q36       |
 | D33 | A **JSON/JSONL machine-readable dump** of pages, links, and citations is included.                                                                                    | Q21       |
+| D67 | The Tier-1 index is **one file, `<kb>/.stemma/index.sqlite`**, versioned by SQLite's `user_version`; any other version, or a file that is not a database, is deleted and rebuilt. Text search is FTS5 `unicode61 remove_diacritics 2` with a 2/3/4-character prefix index, over external content. | review    |
 
 ### Platform
 
@@ -241,6 +242,46 @@ variable. The bytes guard stayed, for the reason that does not depend on
 installations at all: PyMuPDF also reads EPUB, XPS and plain text files, so without
 the guard a document would be read by a pipeline this contract does not describe
 and reported as a PDF, with EPUB supported by accident rather than by design.
+
+### The Tier-1 index — one file, one version marker, one tokenizer. `D67` added.
+
+**Decision.** The cache is a single SQLite file at `<kb>/.stemma/index.sqlite`. Its
+schema version lives in SQLite's `user_version`; a file carrying any other value,
+or one that is not a database at all, is deleted and rebuilt from the KB. Full
+text is indexed with FTS5's `unicode61` tokenizer with `remove_diacritics 2` and a
+prefix index over two-, three- and four-character prefixes. The text table is
+external-content over the page rows, so `snippet()` can quote the real page rather
+than a stored copy.
+
+**Why delete rather than migrate.** The cache is derived and nothing in it is a
+source of truth, so the only state a version mismatch can lose is state that the
+next build recomputes. Deleting the file is the one recovery that works whatever
+is on disk — a wrong version, a half-created schema, a file that is not a database
+— and it removes the need for a migration path that would itself have to be
+tested. A partial schema at the *right* version is still rebuilt, because a header
+is not evidence that the objects behind it exist.
+
+**Why `unicode61`.** It is the FTS5 default: case- and accent-folded word tokens
+with no stemming, so non-English text and code identifiers survive as written. A
+token like `getUserName` stays whole and `café` is found by `cafe`. `porter` was
+rejected because English stemming mangles identifiers and does nothing for
+non-English text; `trigram` because substring matching buys code-fragment recall
+at the cost of index size and precision on prose. The prefix index recovers the
+word-prefix recall a stemmer would have given, without altering the tokens. The
+choice is sticky — changing it rebuilds the index — which is why it is recorded
+rather than left in a comment.
+
+**Why `internal/index` and not `internal/kb`.** `D10` puts the index in the core
+library rather than in a surface, and `internal/index` is that core library's
+index half: the CLI calls it and writes no SQL of its own. It is a separate
+package because it is the one part of the core that links `modernc.org/sqlite`;
+keeping it apart leaves the page model, which every command imports, free of the
+database and of a build tag. `internal/kb` stays the pure on-disk format.
+
+**Provenance.** The delegate fixed the tiers, the storage engine and the fact
+that the cache must be deletable, and left the file name and the tokenizer to
+implementation. Both are recorded here because both are expensive to change once
+an index exists on disk.
 
 ### U5 — rewriting inbound links. `D19` stands.
 

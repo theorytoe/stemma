@@ -139,12 +139,22 @@ size limit passed by Go rather than frozen in the contract (`D66`).
 
 ## Task 5:
 
-Status: Not started
+Status: Done
 
 Index and retrieval. The Tier-1 SQLite FTS5 store, incremental updates,
 transparent Tier-0 fallback, the benchmark that answers how far Tier 0 scales,
 and the `search` and `graph` commands.
 See `delegates/index-retrieval.md`.
+
+It closed with `internal/index` as the index half of the core: a versioned
+`.stemma/index.sqlite` rebuilt by deletion, an incremental `Refresh` stamped by
+content hash, one Go tokenizer and one Go BM25 scorer shared by both tiers, and
+a `Source` interface both tiers implement so search and graph are single
+functions over it. `stemma index`, `stemma search` and `stemma graph` are the
+surface; `status` and `env` report the real index state. `U1` was measured
+rather than guessed — Tier 0 is comfortable to roughly a thousand pages and the
+index begins to pay in the low thousands — and the finding is in `FORMAT.md` and
+the new `README.md`. The choices are recorded as `D67` and `D68`.
 
 ## Task 6:
 

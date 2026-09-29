@@ -182,9 +182,16 @@ command never needs the KB object. `Source` gained `Orphans` and `DeadEnds`
 
 ## Task 8:
 
-Status: Not started
+Status: Done
 
 Tier-parity tests. Assert that every query returns the same answer on both tiers
 for the same corpus. This is the test that prevents the index from silently
 becoming authoritative, and it should run against the example wiki as well as
 synthetic corpora.
+
+`parity_test.go` runs the whole retrieval surface against both tiers: pages,
+tokenized docs, links, backlinks, citations, a battery of derived search
+requests, neighbourhood walks at three directions and depths, orphans, dead
+ends, name resolution, citation maps and average length. It runs on synthetic
+corpora of 1, 5 and 40 pages and on a temporary copy of the project's own
+example wiki (the generated `.stemma/` is skipped).

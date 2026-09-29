@@ -115,6 +115,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D51 | Pruned links **retain their anchor text** as plain text. A summary is reported by default; a flag emits the full list.                                                | Q36       |
 | D33 | A **JSON/JSONL machine-readable dump** of pages, links, and citations is included.                                                                                    | Q21       |
 | D67 | The Tier-1 index is **one file, `<kb>/.stemma/index.sqlite`**, versioned by SQLite's `user_version`; any other version, or a file that is not a database, is deleted and rebuilt. Tokens are defined by **one Go tokenizer** shared by both tiers; FTS5 is an external-content index over a `tokens` column those tokens fill, and **BM25 ranking and snippets are Go code**. | review    |
+| D68 | Retrieval is one **data-source interface** (`index.Source`) that both tiers implement, not an interface of queries. Search and graph are single functions over it, so the tiers agree by construction; `NewSource` prefers a fresh index and **silently falls back to the KB**, reporting the downgrade through one optional callback. | review    |
 
 ### Platform
 
@@ -299,6 +300,29 @@ that the cache must be deletable, and left the file name and the tokenizer to
 implementation. Both are recorded here because both are expensive to change once
 an index exists on disk; the tokenizer's move into Go was the tool author's
 choice, made after the parity cost of the first answer was shown.
+
+### Retrieval — one source interface, two tiers. `D68` added.
+
+**Decision.** Retrieval is one interface, `index.Source`, that both tiers
+implement: each answers what the corpus holds — pages, tokenised documents,
+candidate terms, names, links, backlinks, citations. Search and graph traversal
+are functions written once against that interface, not methods on it.
+`NewSource` returns the index when it is fresh and the KB otherwise, and reports
+the downgrade through one optional callback, never per query.
+
+**Why a data interface, not a query interface.** An interface whose methods were
+"search" and "graph" would leave each tier free to rank or traverse differently,
+and the tier-parity requirement would be a promise two implementations have to
+keep rather than a property of the code. Making the interface the data half means
+there is one ranking implementation and one traversal implementation; the two
+tiers supply different rows, never different answers. It is the same reasoning
+that moved the tokenizer and ranker into Go (`D67`): a candidate the index finds
+must be a candidate the KB scan would find.
+
+**The fallback is not an error.** A missing, stale or unreadable index is a
+reason to answer from the KB, not to fail, because every command must work with
+no index (`D23`, `P1`). The downgrade is silent; a caller that wants a diagnostic
+passes a callback and gets one line per invocation.
 
 ### U5 — rewriting inbound links. `D19` stands.
 

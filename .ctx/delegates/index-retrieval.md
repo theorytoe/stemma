@@ -114,11 +114,19 @@ report the real state. The text table moved to external content (schema version
 
 ## Task 4:
 
-Status: Not started
+Status: Done
 
 Transparent fallback. A single internal query interface that both tiers implement,
 with freshness checked before use and a silent downgrade to Tier 0. Log the
 downgrade at most once per invocation; silence is the requirement, noise is not.
+
+Landed as `index.Source`, a *data* interface both tiers implement (pages,
+tokenized documents, candidate matching, document frequencies, names, links,
+backlinks, citations), so search and graph are single functions over it and the
+tiers cannot disagree. `newKBSource` wraps a loaded KB; `newIndexSource` answers
+from the store alone. `NewSource` checks freshness, returns the index when it is
+fresh, and otherwise falls back to the KB, calling an optional callback once with
+the reason. Recorded as `D68`.
 
 ## Task 5:
 

@@ -59,20 +59,19 @@ func insertPage(tx *sql.Tx, path string, page *kb.Page) error {
 	body := string(page.Body())
 
 	titleTokens := Tokenize(title)
-	var tagTokens []string
+	tagsToks := tagTokens(page.Tags())
 	var normTags []string
 	for _, tag := range page.Tags() {
 		if norm := kb.Normalize(tag); norm != "" {
 			normTags = append(normTags, norm)
 		}
-		tagTokens = append(tagTokens, Tokenize(tag)...)
 	}
 	bodyTokens := Tokenize(body)
 
-	doc := Doc{Title: titleTokens, Tags: tagTokens, Body: bodyTokens}
-	all := make([]string, 0, len(titleTokens)+len(tagTokens)+len(bodyTokens))
+	doc := Doc{Title: titleTokens, Tags: tagsToks, Body: bodyTokens}
+	all := make([]string, 0, len(titleTokens)+len(tagsToks)+len(bodyTokens))
 	all = append(all, titleTokens...)
-	all = append(all, tagTokens...)
+	all = append(all, tagsToks...)
 	all = append(all, bodyTokens...)
 
 	if _, err := tx.Exec(

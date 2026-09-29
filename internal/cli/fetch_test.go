@@ -231,6 +231,27 @@ func TestFetchLooksForAMissingPathBeforeNamingAWork(t *testing.T) {
 	}
 }
 
+func TestFetchRefusesAZipContainer(t *testing.T) {
+	// An EPUB is a zip container. The command only knows "this is not a PDF", so it
+	// is the text reader that has to recognise it: read as text it would fail on the
+	// encoding, which names the wrong thing entirely.
+	if _, err := extract.FindPython(); err != nil {
+		t.Skipf("no interpreter on this machine: %v", err)
+	}
+	root := fetchKB(t)
+	source := document(t, "book.epub", "PK\x03\x04"+strings.Repeat("\x00", 60))
+
+	code, _, stderr := run("fetch", "--kb", root, source)
+	if code != ExitError {
+		t.Fatalf("fetch exited %d, want %d", code, ExitError)
+	}
+	for _, want := range []string{"unsupported", "EPUB"} {
+		if !strings.Contains(stderr, want) {
+			t.Errorf("stderr = %q, want %q in it", stderr, want)
+		}
+	}
+}
+
 // The one test here that needs a real interpreter. Text is the library-free case,
 // so this much works wherever Python does.
 func TestFetchThroughTheRealShim(t *testing.T) {

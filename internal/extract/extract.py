@@ -35,6 +35,13 @@ LIBRARIES = {
 # one.
 MAX_CHAR = 4
 
+# A zip container is worth naming because it is the shape an EPUB, a DOCX and a
+# CBZ all take, and "that is an EPUB" is a more useful sentence than "that is not
+# UTF-8". It is the one thing read as text that is refused as a *kind* of document
+# rather than as an unreadable file.
+ZIP_MAGIC = b"PK\x03\x04"
+ZIP_REFUSAL = "this is a zip container, most likely an EPUB, and EPUB is out of scope"
+
 
 def ok(**fields):
     result = {"contract": CONTRACT, "ok": True}
@@ -137,6 +144,8 @@ def text(argv):
 
     if not raw:
         return failed("empty", "the file is empty")
+    if raw[:4] == ZIP_MAGIC:
+        return failed("unsupported", ZIP_REFUSAL)
 
     body, cut = clip(raw, limit)
     try:
@@ -167,11 +176,8 @@ def sniff_pdf(path):
 
     if b"%PDF-" in head:
         return None
-    if head[:4] == b"PK\x03\x04":
-        return failed(
-            "unsupported",
-            "this is a zip container, most likely an EPUB, and EPUB is out of scope",
-        )
+    if head[:4] == ZIP_MAGIC:
+        return failed("unsupported", ZIP_REFUSAL)
     return failed("unreadable", "no %PDF- header in the first 1024 bytes, so this is not a PDF")
 
 

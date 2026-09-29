@@ -345,6 +345,19 @@ def case_pdf_refuses_a_zip_container():
                    "EPUB" in out["error"]["message"], out["error"]["message"])
 
 
+def case_text_refuses_a_zip_container():
+    # The same file handed to the text reader, which is what a command that only
+    # knows "this is not a PDF" will do. Without this the answer would be "not
+    # UTF-8 text", which names the encoding rather than the format.
+    with tempfile.TemporaryDirectory() as directory:
+        path = write(directory, "book.epub", b"PK\x03\x04" + b"\x00" * 60)
+        out = shim.main(["text", path, "1024"])
+        check("a zip container is unsupported here too",
+              out["error"]["class"], "unsupported")
+        check_true("and still names EPUB",
+                   "EPUB" in out["error"]["message"], out["error"]["message"])
+
+
 def case_pdf_without_pymupdf():
     # No fixture needed: the sniff passes, and then there is nothing that can read
     # the file. PyMuPDF is the only PDF reader the shim uses, so on a machine that

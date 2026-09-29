@@ -116,7 +116,7 @@ and its recorded hash disagree — report it, do not silently trust either side.
 
 ## Task 7:
 
-Status: Not started
+Status: Done
 
 Graceful degradation and `env` integration. Every command in this delegate must
 fail with exit code `2` and an actionable message when Python or a required library

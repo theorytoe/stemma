@@ -343,9 +343,16 @@ place, so an interrupted write never leaves a half-finished script.
 `init` fails if the write fails, like every other file it writes. A KB that
 cannot take the script is a KB that could not be created, and the alternative —
 reporting success for a half-made KB — would put the difference somewhere a
-person would have to go looking for it. `env` reports the path and whether the
-file is `absent`, `current`, or `stale`, reading only, since a diagnostic command
-that creates files is a bad citizen and `env` has to work with no KB at all.
+person would have to go looking for it.
+
+`env` reports where the script is and whether it is `absent`, `current`, or
+`stale`, and it writes nothing *into the KB*: a diagnostic that changes the thing
+it is describing is answering a different question. It does need a script to ask
+the interpreter anything, so with no KB, or one that cannot be written, it uses a
+copy made in a temporary directory and says as much, rather than printing a path
+that is about to disappear. An extraction still needs a KB it can write to,
+because its text goes there — the temporary copy is for the question, not for the
+work.
 
 `STEMMA_SHIM` overrides the path, for developing an extractor without rebuilding
 the binary each time. `env` reports when it is in force, and `contract` catches the

@@ -28,6 +28,14 @@ index.** If any command fails or degrades noticeably without it, the tier is a
 dependency and `P1` has been violated. The fallback path deserves as much testing
 as the fast path, and it is the path a new user actually experiences.
 
+**Where the index state is reported today.** `status` and `env` each print an
+`index` line, and neither can be right yet: nothing builds an index. The check
+they used was the newest modification anywhere under `.stemma/`, which stopped
+meaning anything as soon as that directory also held the extraction script and the
+text `fetch` reads — it reported a fresh index on a KB that had just been created.
+Both now report the index as absent, which is the truth until this delegate lands.
+Naming the index file and looking for it belongs here.
+
 Nothing generated is committed. The index lives inside the KB root in a gitignored
 directory, alongside the scratch area from `delegates/source-extraction.md`.
 

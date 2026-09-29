@@ -66,6 +66,21 @@ with no loss, because it is a cache and never a source of truth.
 
 No command may require it. A KB with no `.stemma/` directory is fully usable.
 
+Two of the things inside it are worth naming, because commands put them there and
+a person may want to read them:
+
+- `.stemma/shim/extract.py` — the extraction script. `init` writes it and the tool
+  rewrites it whenever it does not match the binary, so an edit there is lost;
+  the script is changed in the repository.
+- `.stemma/fetched/<name>-<digest>.txt` — text that `fetch` read, named after the
+  source it came from. Both halves are derived from the pointer, so fetching one
+  source twice lands on the same file and two sources cannot land on one
+  (`--clear` empties the directory and leaves the rest of `.stemma/` alone).
+
+The fetched text is a cache and never a record. What a source *is* lives in the
+bibliography, with its pointer, its retrieval date and its content hash; what it
+*says* lives here until someone clears it.
+
 ### The bibliography
 
 The bibliography is BibTeX. A single `bibliography.bib` in the KB root is the

@@ -230,9 +230,19 @@ class Reading:
         self.limit = limit
         self.chunks = []
         self.chars = 0
+        self.examined = 0
         self.blank = 0
         self.broken = 0
         self.columns = 0
+
+    def seen(self):
+        """One more page was looked at, whether or not anything came back.
+
+        The notes count the pages that were read rather than the pages the document
+        has: a PDF that stopped at the limit has not been surveyed, and a note whose
+        denominator is the whole document claims that it was.
+        """
+        self.examined += 1
 
     def add(self, text, two_column=False):
         if not text.strip():
@@ -268,9 +278,9 @@ class Reading:
 
         notes = []
         if self.blank:
-            notes.append("%d of %d pages have no text layer" % (self.blank, pages))
+            notes.append("%d of %d pages have no text layer" % (self.blank, self.examined))
         if self.broken:
-            notes.append("%d of %d pages could not be read" % (self.broken, pages))
+            notes.append("%d of %d pages could not be read" % (self.broken, self.examined))
         if self.columns:
             notes.append("this PDF looks multi-column, so the reading order is the extractor's")
 
@@ -300,6 +310,7 @@ def pdf_with_pymupdf(path, limit):
         pages = document.page_count
         reading = Reading(limit)
         for number, page in enumerate(document):
+            reading.seen()
             try:
                 reading.add(
                     page.get_text("text") or "",

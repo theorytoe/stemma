@@ -289,6 +289,32 @@ def case_pdf_notes_a_page_with_no_text_layer():
         )
 
 
+def case_pdf_counts_the_pages_it_read_and_not_the_document():
+    module = need_pymupdf("pdf counts the pages it read")
+    if module is None:
+        return
+    with tempfile.TemporaryDirectory() as directory:
+        # A blank first page and four pages after it, read with a limit small enough
+        # that the read stops almost at once. The blank page adds no characters, so
+        # the loop passes one more page before it is past the limit: two pages are
+        # looked at and one of them is blank. The note used to say "1 of 5 pages",
+        # which is a survey of a document that was never read.
+        path = make_pdf(
+            pathlib.Path(directory) / "long.pdf",
+            [[]] + [[((40, 50, 570, 750), BODY * 6)]] * 4,
+            module,
+        )
+        out = shim.main(["pdf", path, "10"])
+        check("a PDF stopped at the limit is ok", out["ok"], True)
+        check("and says it stopped", out["truncated"], True)
+        check("and still reports the document's length", out["pages"], 5)
+        check_true(
+            "and counts the pages it read in the note",
+            any("1 of 2 pages" in note for note in out.get("notes", [])),
+            out.get("notes"),
+        )
+
+
 def case_pdf_flags_a_two_column_page():
     module = need_pymupdf("pdf flags two columns")
     if module is None:

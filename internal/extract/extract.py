@@ -296,8 +296,14 @@ class Reading:
         return result
 
 
-def pdf_with_pymupdf(path, limit):
-    module = import_any(LIBRARIES["pymupdf"])
+def pdf_with_pymupdf(module, path, limit):
+    """Read the PDF with the library the caller has already imported.
+
+    The module is an argument rather than an import here, so that the one place
+    that decides whether a PDF can be read at all is also the one place that
+    reports it: importing again would put a second answer beside the first, and
+    `None.open` would say `unreadable` about a library that is not installed.
+    """
     try:
         document = module.open(path)
     except Exception as exc:
@@ -337,13 +343,14 @@ def pdf(argv):
     if refused is not None:
         return refused
 
-    if import_any(LIBRARIES["pymupdf"]) is None:
+    module = import_any(LIBRARIES["pymupdf"])
+    if module is None:
         return failed(
             "missing_extractor",
             "pymupdf is not importable, so no PDF can be read; "
             "`stemma env` says what this machine has",
         )
-    return pdf_with_pymupdf(path, limit)
+    return pdf_with_pymupdf(module, path, limit)
 
 
 # What a response has to declare itself as to be read as a document.

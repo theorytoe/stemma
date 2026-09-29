@@ -556,6 +556,16 @@ an operational failure. Every command supports `--json`.
 - Not CSL: `citation_style` names a built-in formatter, not a style ID.
 - Not a converter: importing an existing wiki is not a feature and is not
   planned.
+- Not a reader of every kind of document. `fetch` reads PDFs and HTML pages and
+  refuses the rest by name: an EPUB is a zip container the tool does not open, a
+  scanned page has no text layer to read, and a page fetched from an address whose
+  text only exists once JavaScript has run has nothing on the server to read. Each
+  is reported as itself — `unsupported` for the EPUB, `empty` for the other two —
+  rather than handed back as an empty document, because "there is nothing there"
+  and "there is nothing I can read" are different facts and a reader has to know
+  which one happened. A file that *is* text is read as text whatever it is called,
+  so fetching a local `.html` file returns its markup as it stands rather than a
+  rendering of it.
 - Not dependent on git. Every command works in a plain directory, and history
   features switch on when a repository happens to be present.
 - Not a substitute for git history. Because history is optional, a page is

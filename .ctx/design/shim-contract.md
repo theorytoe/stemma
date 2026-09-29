@@ -208,6 +208,41 @@ chance. Go runs the shim under a context with a wall-clock limit — 60 seconds 
 `url`, 300 for `pdf`, since linearising a book is legitimately slow — and maps a
 kill to `timeout`.
 
+# The PDF family
+
+`pdf` reads **pymupdf first and pypdf second**, and `extractor` names the one that
+ran with its version, so which library read a document is never a guess. A machine
+with neither is `missing_extractor`, which is a fact about the machine rather than
+about the file.
+
+**The file is judged by its own bytes, not by what a library will accept.** PyMuPDF
+opens EPUB, XPS and other container formats besides PDF, and a shim that simply
+handed it a path would therefore support EPUB on the machines that happen to have
+pymupdf and not on the others. So a document is accepted as a PDF here or not at
+all: a `%PDF-` header in the first 1024 bytes, or a refusal. A zip container —
+which is what an EPUB is — is `unsupported` by name, and anything else is
+`unreadable`. This is also the only mechanism that keeps the EPUB exclusion in the
+last section true rather than aspirational.
+
+Three outcomes are worth telling apart, and the classes exist to keep them apart:
+
+- **An encrypted PDF** is `unreadable`. It is a real document that cannot be read,
+  which is a different thing from one with nothing in it.
+- **A page with no text layer** is a `note` when other pages have text, and
+  `empty` when none of them do. That is the case a scan produces, and saying so is
+  the point: `empty` names OCR as the reason, where an empty string would look like
+  a document that happened to say nothing.
+- **A page that looks like two columns of body text** is a `note`. It is never
+  reordered. An extractor's own block order is usually right, because a PDF stores
+  text in the order it was drawn, and a heuristic that reordered a page wrongly
+  would be worse than one that says the order may be the library's. This is
+  therefore the one place where the two extractors differ in what they report,
+  since pypdf does not offer the block geometry the check needs.
+
+Reading stops as soon as the limit is passed, so a nine-hundred-page PDF costs
+roughly what its first pages cost, and `pages` still reports the document's true
+length rather than the number of pages read.
+
 # What the text is
 
 `text` is the document's text as UTF-8, and it is not a document. The shim does
@@ -283,6 +318,7 @@ property is a dependency direction, not a convention.
 # Deliberately out of scope
 
 OCR for scanned PDFs, EPUB, and rendering a JavaScript-only page are not inputs
-this shim accepts (Task 8). They are `unsupported` and `empty` respectively, which
-is the point of having those classes: a refusal that names itself is degradation,
-and a blank string is not.
+this shim accepts (Task 8). EPUB is refused by the bytes guard above; a scan is
+`empty` and a JavaScript-only page is `empty` too. That is the point of having
+those classes: a refusal that names itself is degradation, and a blank string is
+not.

@@ -19,10 +19,17 @@ import sys
 # mystery.
 CONTRACT = 1
 
-# The libraries this contract names. probe reports on all of them, whether or not
-# a subcommand uses one yet: its job is to describe the machine, because that is
-# what `stemma env` has to explain.
-LIBRARIES = ("pymupdf", "pypdf", "httpx", "bs4")
+# The libraries this contract names, each with the module names that can satisfy
+# it. probe reports on all of them, whether or not a subcommand uses one yet: its
+# job is to describe the machine, because that is what `stemma env` has to
+# explain. PyMuPDF answered to `fitz` before it answered to `pymupdf`, and a
+# machine with either one has a PDF reader.
+LIBRARIES = {
+    "pymupdf": ("pymupdf", "fitz"),
+    "pypdf": ("pypdf",),
+    "httpx": ("httpx",),
+    "bs4": ("bs4",),
+}
 
 # The most bytes one UTF-8 character can occupy. Reading this far past the limit
 # is what lets a cut land on the last whole character rather than the middle of
@@ -44,25 +51,43 @@ def failed(cls, message):
     }
 
 
-def version_of(module):
-    """The version of an importable module, or None when it cannot be imported.
+def import_module(name):
+    """The module, or None when it cannot be imported.
 
     Catching everything is the point rather than a shortcut: "not importable" is
     the answer the caller wants, and an import can fail in many ways that are all
     equally uninteresting here.
     """
     try:
-        loaded = __import__(module)
+        return __import__(name)
     except Exception:
         return None
-    return str(getattr(loaded, "__version__", "") or "unknown")
+
+
+def import_any(candidates):
+    """The first of several module names that imports, or None."""
+    for name in candidates:
+        module = import_module(name)
+        if module is not None:
+            return module
+    return None
+
+
+def version_of(module):
+    """The version of an imported module, or None when there is no module."""
+    if module is None:
+        return None
+    return str(getattr(module, "__version__", "") or "unknown")
 
 
 def probe(_argv):
     return ok(
         kind="probe",
         python="%d.%d.%d" % sys.version_info[:3],
-        libs={name: version_of(name) for name in LIBRARIES},
+        libs={
+            name: version_of(import_any(candidates))
+            for name, candidates in LIBRARIES.items()
+        },
     )
 
 
@@ -126,6 +151,210 @@ def text(argv):
     return ok(kind="text", text=body, extractor="stdlib", truncated=cut)
 
 
+def sniff_pdf(path):
+    """Judge the file by its own bytes before any library does.
+
+    PyMuPDF reads EPUB, XPS and a few other container formats besides PDF. That
+    capability is deliberately not in the contract, so a document is accepted here
+    as a PDF or not at all, rather than according to whichever library happens to
+    be installed on the machine. Returns a failure, or None when the file looks
+    like a PDF.
+    """
+    try:
+        with open(path, "rb") as handle:
+            head = handle.read(1024)
+    except OSError as exc:
+        return failed("unreadable", str(exc))
+
+    if b"%PDF-" in head:
+        return None
+    if head[:4] == b"PK\x03\x04":
+        return failed(
+            "unsupported",
+            "this is a zip container, most likely an EPUB, and EPUB is out of scope",
+        )
+    return failed("unreadable", "no %PDF- header in the first 1024 bytes, so this is not a PDF")
+
+
+# How many pages are examined for the multi-column signature. It is a property of
+# a document in practice, so sampling bounds what a heuristic costs.
+COLUMN_SAMPLE = 5
+
+# A block has to be at least this long to count as body text rather than a caption
+# or a label.
+COLUMN_MIN_CHARS = 200
+
+
+def looks_two_column(page):
+    """Whether this page looks like two columns of body text side by side.
+
+    This is used to warn, never to reorder. An extractor's own block order is
+    usually right for a two-column paper, because text is stored in the order it
+    was drawn, and a heuristic that reordered a page wrongly would be worse than
+    one that says the order may be the library's. It is therefore also the one
+    place where the two extractors differ in what they report, since pypdf's block
+    geometry is not available here.
+    """
+    try:
+        blocks = [
+            block
+            for block in page.get_text("blocks")
+            if len(block[4].strip()) >= COLUMN_MIN_CHARS
+        ]
+    except Exception:
+        return False
+
+    for left in blocks:
+        for right in blocks:
+            if left[2] <= right[0]:  # entirely to the left of the other
+                overlap = min(left[3], right[3]) - max(left[1], right[1])
+                shorter = min(left[3] - left[1], right[3] - right[1])
+                if shorter > 0 and overlap > shorter / 2:
+                    return True
+    return False
+
+
+class Reading:
+    """Pages accumulated until the caller has been given more than it asked for.
+
+    The character count is the stopping test and the byte count is the cut. Every
+    character is at least one byte, so passing the limit in characters means the
+    limit has certainly been passed in bytes, and the exact boundary is then
+    decided once, at the end, rather than measured on every page.
+    """
+
+    def __init__(self, limit):
+        self.limit = limit
+        self.chunks = []
+        self.chars = 0
+        self.blank = 0
+        self.broken = 0
+        self.columns = 0
+
+    def add(self, text, two_column=False):
+        if not text.strip():
+            self.blank += 1
+            return
+        self.chunks.append(text)
+        self.chars += len(text)
+        if two_column:
+            self.columns += 1
+
+    def broken_page(self):
+        self.broken += 1
+
+    def full(self):
+        return self.chars > self.limit
+
+    def answer(self, extractor, pages):
+        if not self.chunks:
+            if self.broken and not self.blank:
+                return failed("unreadable", "the PDF opened but no page could be read")
+            return failed(
+                "empty",
+                "the PDF has no text layer, which is what a scan looks like; OCR is out of scope",
+            )
+
+        # A newline is added only where a page did not end with one, so that no word
+        # of one page runs into the first word of the next. A page marker would be
+        # adding something to the document; this is only separating two of them.
+        joined = "".join(
+            chunk if chunk.endswith("\n") else chunk + "\n" for chunk in self.chunks
+        )
+        body, cut = clip(joined.encode("utf-8"), self.limit)
+
+        notes = []
+        if self.blank:
+            notes.append("%d of %d pages have no text layer" % (self.blank, pages))
+        if self.broken:
+            notes.append("%d of %d pages could not be read" % (self.broken, pages))
+        if self.columns:
+            notes.append("this PDF looks multi-column, so the reading order is the extractor's")
+
+        result = ok(
+            kind="pdf",
+            text=body.decode("utf-8"),
+            extractor=extractor,
+            pages=pages,
+            truncated=cut,
+        )
+        if notes:
+            result["notes"] = notes
+        return result
+
+
+def pdf_with_pymupdf(path, limit):
+    module = import_any(LIBRARIES["pymupdf"])
+    try:
+        document = module.open(path)
+    except Exception as exc:
+        return failed("unreadable", "the PDF could not be opened: %s" % exc)
+
+    try:
+        if document.needs_pass:
+            return failed("unreadable", "the PDF is encrypted")
+
+        pages = document.page_count
+        reading = Reading(limit)
+        for number, page in enumerate(document):
+            try:
+                reading.add(
+                    page.get_text("text") or "",
+                    two_column=number < COLUMN_SAMPLE and looks_two_column(page),
+                )
+            except Exception:
+                reading.broken_page()
+            if reading.full():
+                break
+        return reading.answer("pymupdf %s" % version_of(module), pages)
+    finally:
+        document.close()
+
+
+def pdf_with_pypdf(path, limit):
+    module = import_any(LIBRARIES["pypdf"])
+    try:
+        reader = module.PdfReader(path)
+        if reader.is_encrypted:
+            return failed("unreadable", "the PDF is encrypted")
+        pages = len(reader.pages)
+    except Exception as exc:
+        return failed("unreadable", "the PDF could not be opened: %s" % exc)
+
+    reading = Reading(limit)
+    for page in reader.pages:
+        try:
+            reading.add(page.extract_text() or "")
+        except Exception:
+            reading.broken_page()
+        if reading.full():
+            break
+    return reading.answer("pypdf %s" % version_of(module), pages)
+
+
+def pdf(argv):
+    if len(argv) != 2:
+        return failed("internal", "pdf takes a path and a limit, got %d arguments" % len(argv))
+    path = argv[0]
+    limit = parse_limit(argv[1])
+    if limit is None:
+        return failed("internal", "the limit must be a positive integer, got %r" % argv[1])
+
+    refused = sniff_pdf(path)
+    if refused is not None:
+        return refused
+
+    if import_any(LIBRARIES["pymupdf"]) is not None:
+        return pdf_with_pymupdf(path, limit)
+    if import_any(LIBRARIES["pypdf"]) is not None:
+        return pdf_with_pypdf(path, limit)
+    return failed(
+        "missing_extractor",
+        "neither pymupdf nor pypdf is importable, so no PDF can be read; "
+        "`stemma env` says what this machine has",
+    )
+
+
 def main(argv):
     if not argv:
         return failed("internal", "no subcommand given")
@@ -134,6 +363,8 @@ def main(argv):
         return probe(rest)
     if name == "text":
         return text(rest)
+    if name == "pdf":
+        return pdf(rest)
     return failed("internal", "unknown subcommand %r" % name)
 
 

@@ -151,7 +151,7 @@ def case_text_bad_arguments():
 def case_unknown_subcommand():
     check("no subcommand is internal", shim.main([])["error"]["class"], "internal")
     check("an unknown subcommand is internal",
-          shim.main(["pdf", "x", "1024"])["error"]["class"], "internal")
+          shim.main(["epub", "x", "1024"])["error"]["class"], "internal")
 
 
 def case_runs_as_a_process():
@@ -173,6 +173,211 @@ def case_runs_as_a_process():
     check("a reported failure still exits 0", failed_proc.returncode, 0)
     check("a reported failure prints its class",
           json.loads(failed_proc.stdout.decode("utf-8"))["error"]["class"], "unreadable")
+
+
+# ------------------------------------------------------------------- PDF
+#
+# The fixtures are written by the tests rather than committed, which is the only
+# way to get a page with no text layer, a page laid out in two columns, and an
+# encrypted file on purpose. They need a library to build, so these cases skip
+# where none is installed; the cases that need no library at all do not.
+
+BODY = "Column text long enough to count as body text rather than a caption. "
+
+
+def need_pymupdf(case):
+    module = shim.import_any(shim.LIBRARIES["pymupdf"])
+    if module is None:
+        print("skip  %s: pymupdf is not installed" % case)
+        return None
+    return module
+
+
+def make_pdf(path, pages, module, encryption=None):
+    document = module.open()
+    for sheet in pages:
+        page = document.new_page()
+        for rect, body in sheet:
+            page.insert_textbox(module.Rect(*rect), body, fontsize=9)
+    if encryption is None:
+        document.save(str(path))
+    else:
+        document.save(
+            str(path),
+            encryption=getattr(module, "PDF_ENCRYPT_AES_256", 1),
+            owner_pw="owner",
+            user_pw="user",
+        )
+    document.close()
+    return str(path)
+
+
+def one_column(directory, name="fixture.pdf", repeat=6):
+    module = need_pymupdf(name)
+    if module is None:
+        return None, None
+    path = pathlib.Path(directory) / name
+    return module, make_pdf(path, [[((40, 50, 570, 750), BODY * repeat)]], module)
+
+
+def case_pdf_reads_a_pdf():
+    with tempfile.TemporaryDirectory() as directory:
+        module, path = one_column(directory)
+        if module is None:
+            return
+        out = shim.main(["pdf", path, "1000000"])
+        check("pdf is ok", out["ok"], True)
+        check_true("pdf names what read it",
+                   out["extractor"].startswith("pymupdf"), out["extractor"])
+        check("pdf counts the pages", out["pages"], 1)
+        check_true("pdf carries the text",
+                   out["text"].count("Column") >= 3, out["text"][:80])
+        check("pdf is not truncated", out["truncated"], False)
+
+
+def case_pdf_truncates():
+    module = need_pymupdf("pdf truncates")
+    if module is None:
+        return
+    with tempfile.TemporaryDirectory() as directory:
+        path = make_pdf(
+            pathlib.Path(directory) / "long.pdf",
+            [[((40, 50, 570, 750), BODY * 8)] for _ in range(3)],
+            module,
+        )
+        out = shim.main(["pdf", path, "200"])
+        check("pdf past the limit says so", out["truncated"], True)
+        check_true("pdf past the limit stays within it",
+                   len(out["text"].encode("utf-8")) <= 200, out["text"])
+        check("pdf reports the whole document's length", out["pages"], 3)
+
+
+def case_pdf_with_no_text_layer():
+    module = need_pymupdf("pdf with no text layer")
+    if module is None:
+        return
+    with tempfile.TemporaryDirectory() as directory:
+        # A page that was never written to is what a scan looks like to an
+        # extractor: a real page with no text layer.
+        path = make_pdf(pathlib.Path(directory) / "blank.pdf", [[]], module)
+        out = shim.main(["pdf", path, "1000"])
+        check("a PDF with no text is empty", out["error"]["class"], "empty")
+        check_true("and says what that means",
+                   "OCR" in out["error"]["message"], out["error"]["message"])
+
+
+def case_pdf_notes_a_page_with_no_text_layer():
+    module = need_pymupdf("pdf notes a blank page")
+    if module is None:
+        return
+    with tempfile.TemporaryDirectory() as directory:
+        path = make_pdf(
+            pathlib.Path(directory) / "mixed.pdf",
+            [[((40, 50, 570, 750), BODY * 6)], []],
+            module,
+        )
+        out = shim.main(["pdf", path, "1000000"])
+        check("a partly blank PDF is ok", out["ok"], True)
+        check_true(
+            "and notes the page with no text layer",
+            any("no text layer" in note for note in out.get("notes", [])),
+            out.get("notes"),
+        )
+
+
+def case_pdf_flags_a_two_column_page():
+    module = need_pymupdf("pdf flags two columns")
+    if module is None:
+        return
+    with tempfile.TemporaryDirectory() as directory:
+        path = make_pdf(
+            pathlib.Path(directory) / "columns.pdf",
+            [[((40, 50, 300, 750), BODY * 5), ((310, 50, 570, 750), BODY * 5)]],
+            module,
+        )
+        out = shim.main(["pdf", path, "1000000"])
+        check("a two-column PDF is ok", out["ok"], True)
+        check_true(
+            "and says the order may be the extractor's",
+            any("multi-column" in note for note in out.get("notes", [])),
+            out.get("notes"),
+        )
+
+
+def case_pdf_refuses_an_encrypted_file():
+    module = need_pymupdf("pdf refuses encryption")
+    if module is None:
+        return
+    with tempfile.TemporaryDirectory() as directory:
+        path = make_pdf(
+            pathlib.Path(directory) / "locked.pdf",
+            [[((40, 50, 570, 750), BODY * 6)]],
+            module,
+            encryption=True,
+        )
+        out = shim.main(["pdf", path, "1000000"])
+        check("an encrypted PDF is unreadable", out["error"]["class"], "unreadable")
+        check_true("and says it is encrypted",
+                   "encrypted" in out["error"]["message"], out["error"]["message"])
+
+
+def case_pdf_falls_back_to_pypdf():
+    if shim.import_any(shim.LIBRARIES["pypdf"]) is None:
+        print("skip  pypdf fallback: pypdf is not installed")
+        return
+    module = need_pymupdf("pypdf fallback")
+    if module is None:
+        return
+    with tempfile.TemporaryDirectory() as directory:
+        _, path = one_column(directory)
+        saved = shim.LIBRARIES["pymupdf"]
+        shim.LIBRARIES["pymupdf"] = ()
+        try:
+            out = shim.main(["pdf", path, "1000000"])
+        finally:
+            shim.LIBRARIES["pymupdf"] = saved
+        check_true("pdf falls back to pypdf",
+                   str(out.get("extractor", "")).startswith("pypdf"), out)
+        check_true("and still carries the text",
+                   "Column" in out.get("text", ""), out.get("text", "")[:80])
+
+
+def case_pdf_refuses_what_is_not_a_pdf():
+    with tempfile.TemporaryDirectory() as directory:
+        path = write(directory, "notes.pdf", "this is not a PDF at all\n")
+        out = shim.main(["pdf", path, "1024"])
+        check("a file that is not a PDF is unreadable", out["error"]["class"], "unreadable")
+        check_true("and says what is missing",
+                   "%PDF-" in out["error"]["message"], out["error"]["message"])
+
+
+def case_pdf_refuses_a_zip_container():
+    # EPUB is explicitly out of scope, and pymupdf would happily read one. The file
+    # is judged by its own bytes instead of by the library that happens to be here.
+    with tempfile.TemporaryDirectory() as directory:
+        path = write(directory, "book.pdf", b"PK\x03\x04" + b"\x00" * 60)
+        out = shim.main(["pdf", path, "1024"])
+        check("a zip container is unsupported", out["error"]["class"], "unsupported")
+        check_true("and names EPUB",
+                   "EPUB" in out["error"]["message"], out["error"]["message"])
+
+
+def case_pdf_without_any_library():
+    # No fixture and no library needed: the sniff passes, and then there is
+    # nothing that can read the file. On a machine with both libraries installed
+    # this is the only way to see that outcome at all.
+    saved = dict(shim.LIBRARIES)
+    shim.LIBRARIES["pymupdf"] = ()
+    shim.LIBRARIES["pypdf"] = ()
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            path = write(directory, "bare.pdf", b"%PDF-1.4\n% nothing here will read this\n")
+            out = shim.main(["pdf", path, "1024"])
+    finally:
+        shim.LIBRARIES.clear()
+        shim.LIBRARIES.update(saved)
+    check("pdf with no library is missing_extractor",
+          out["error"]["class"], "missing_extractor")
 
 
 def main():

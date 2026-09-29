@@ -156,6 +156,15 @@ func (r *Runner) Text(ctx context.Context, path string) (*Result, error) {
 	return env.result(), nil
 }
 
+// PDF reads a PDF, with whichever library the machine has.
+func (r *Runner) PDF(ctx context.Context, path string) (*Result, error) {
+	env, err := r.call(ctx, "pdf", path, strconv.Itoa(r.limit()))
+	if err != nil {
+		return nil, err
+	}
+	return env.result(), nil
+}
+
 // FindPython locates the interpreter the shim runs under.
 //
 // Python is never a dependency of the core, so this is only reached on a path

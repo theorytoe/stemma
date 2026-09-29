@@ -161,6 +161,56 @@ func TestASlowShimIsKilled(t *testing.T) {
 	}
 }
 
+func TestPDFCarriesThePagesAndTheNotes(t *testing.T) {
+	r := fakeShim(t, `printf '%s' '{"contract":1,"ok":true,"kind":"pdf","text":"body",`+
+		`"extractor":"pymupdf 1.28.2","pages":12,"truncated":false,`+
+		`"notes":["1 of 12 pages have no text layer"]}'`)
+
+	got, err := r.PDF(context.Background(), "p.pdf")
+	if err != nil {
+		t.Fatalf("PDF: %v", err)
+	}
+	if got.Pages != 12 {
+		t.Errorf("Pages = %d, want 12", got.Pages)
+	}
+	if got.Extractor != "pymupdf 1.28.2" {
+		t.Errorf("Extractor = %q", got.Extractor)
+	}
+	if len(got.Notes) != 1 || !strings.Contains(got.Notes[0], "no text layer") {
+		t.Errorf("Notes = %v", got.Notes)
+	}
+}
+
+// The subcommand, the input and the limit are the half of the contract that is
+// neither JSON nor an exit status, so they are checked by making the shim echo
+// what it was given.
+func TestTheArgumentsAreWhatTheContractSays(t *testing.T) {
+	echo := func(t *testing.T, limit int, call func(*Runner) (*Result, error)) string {
+		t.Helper()
+		r := fakeShim(t, `printf '{"contract":1,"ok":true,"kind":"text","text":"%s","extractor":"x"}' "$*"`)
+		r.Limit = limit
+		got, err := call(r)
+		if err != nil {
+			t.Fatalf("call: %v", err)
+		}
+		return got.Text
+	}
+
+	text := echo(t, 1234, func(r *Runner) (*Result, error) {
+		return r.Text(context.Background(), "a.txt")
+	})
+	if text != "text a.txt 1234" {
+		t.Errorf("text was given %q, want %q", text, "text a.txt 1234")
+	}
+
+	pdf := echo(t, 4321, func(r *Runner) (*Result, error) {
+		return r.PDF(context.Background(), "a.pdf")
+	})
+	if pdf != "pdf a.pdf 4321" {
+		t.Errorf("pdf was given %q, want %q", pdf, "pdf a.pdf 4321")
+	}
+}
+
 func TestProbeReportsTheMachineRatherThanFailing(t *testing.T) {
 	r := fakeShim(t, `printf '%s' '{"contract":1,"ok":true,"kind":"probe","python":"3.14.7",`+
 		`"libs":{"pymupdf":"1.26.4","pypdf":null}}'`)

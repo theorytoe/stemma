@@ -13,7 +13,7 @@ LDFLAGS  = -X github.com/theorytoe/stemma/internal/version.Version=$(VERSION)
 # tool defines and checked by the tool itself.
 WIKI   ?= wiki
 
-.PHONY: all build test test-shim vet check lint-wiki tidy fmt clean
+.PHONY: all build test test-shim vet check lint-wiki bench tidy fmt clean
 
 all: build
 
@@ -46,6 +46,12 @@ check: build vet test test-shim lint-wiki
 # shippable. Raising the findings is not enough: this has to fail the build.
 lint-wiki: build
 	$(BIN) lint --kb $(WIKI) --strict
+
+# The scale benchmark behind the tier finding in FORMAT.md. It measures, it
+# does not pass or fail, so it is not part of check. One iteration per size
+# keeps it a wall-clock measurement rather than a long average.
+bench:
+	$(GO) test ./internal/index/ -run '^$$' -bench BenchmarkTiers -benchtime 1x -benchmem
 
 tidy:
 	$(GO) mod tidy

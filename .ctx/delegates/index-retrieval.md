@@ -130,13 +130,22 @@ the reason. Recorded as `D68`.
 
 ## Task 5:
 
-Status: Not started
+Status: Done
 
 Benchmark and publish `U1`. Generate synthetic KBs across a range of page counts
 and measure the commands that matter — resolution, lint, search, graph traversal —
 on both tiers. Record the point where Tier 0 becomes uncomfortable, commit the
 benchmark so it can be re-run, and write the finding into `FORMAT.md` and the
 README. This is a measurement task, not an optimisation task.
+
+`BenchmarkTiers` in `internal/index/bench_test.go` builds synthetic KBs of 100,
+1,000 and 10,000 pages and measures load, hashing, freshness checking,
+tokenization, resolution, lint, matching and backlink traversal on both tiers;
+`make bench` runs it one iteration per size. The finding: Tier 0 is comfortable
+to roughly 1,000 pages; the index cuts a search four to five times at 10,000 but
+costs about ten searches to build there, so the crossover is in the low
+thousands and depends on query volume. Recorded in `FORMAT.md` ("Tiers and
+scale"), the new `README.md`, and `U1` in the register.
 
 ## Task 6:
 

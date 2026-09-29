@@ -161,7 +161,7 @@ be discovered during implementation, recorded so they are not mistaken for settl
 
 | #  | Unknown                                                                                           | Becomes known by                                                                 |
 | --- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| U1 | The page count at which Tier 0 stops being fast enough.                                           | Benchmarking the on-demand resolver.                                             |
+| U1 | **Answered.** Tier 0 is comfortable to roughly 1,000 pages; the index starts to pay in the low thousands, and only under repeated queries. Measured by `make bench`; the table is in `FORMAT.md`. | Benchmarking the on-demand resolver.                                             |
 | U2 | Whether global title uniqueness becomes a real nuisance given arbitrary `pages/` structure (D50). | Real use. Path-qualified links are the escape hatch, deliberately not taken now. |
 | U3 | Which citation styles the built-in formatter should cover.                                        | Examining the author's actual sources.                                           |
 | U4 | Whether `env` and `fetch` earn their place in the surface.                                     | Use.                                                                             |

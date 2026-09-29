@@ -184,6 +184,40 @@ destroy the evidence of what happened. Replacing a capture with different text
 takes `--force`, and the text is only written once all of it has been read: a
 capture that stops at a size limit would be a capture of something else.
 
+## Tiers and scale
+
+Retrieval runs in two tiers. Tier 0 is the KB itself: pages are read and
+resolved in memory, with no setup and nothing generated. Tier 1 is the SQLite
+index under `.stemma/`, built by `stemma index`. Every command uses the index
+when one exists and is fresh and falls back to Tier 0 otherwise, and no command
+requires it.
+
+The index is never a source of truth. It is stamped with each page's content
+hash, so it is checked by content rather than by timestamp: a file touched
+without changing does not invalidate it, and a file changed on a machine with a
+wrong clock does. That check reads every page's bytes to hash them — cheaper
+than parsing, but not free — so the index saves the parse and the tokenization,
+not the read.
+
+How far Tier 0 scales was measured rather than guessed. `make bench` runs the
+benchmark behind these numbers, one iteration per size; re-run it on the machine
+that matters:
+
+| pages  | lint   | resolve | search, Tier 0 | search, Tier 1 | build the index |
+| ------ | ------ | ------- | -------------- | -------------- | --------------- |
+| 100    | 0.2 ms | 9 µs    | 2.7 ms         | 0.7 ms         | 19 ms           |
+| 1,000  | 2.5 ms | 9 µs    | 27 ms          | 6 ms           | 0.19 s          |
+| 10,000 | 32 ms  | 11 µs   | 0.27 s         | 59 ms          | 2.6 s           |
+
+Measured on a 2020 six-core laptop; read the numbers as orders of magnitude.
+Together they answer `U1`: resolution is O(1) and never a reason to build an
+index; lint is linear and still comfortable at ten thousand pages; and a Tier-0
+search is comfortable to roughly a thousand pages, after which it costs a few
+hundred milliseconds. The index cuts a search by four to five times at ten
+thousand pages, but building it there costs about ten searches. The crossover is
+in the low thousands of pages, and depends on how often the KB is queried
+between edits.
+
 ## Pages
 
 A page is a single file in `pages/` with the extension `.md`, encoded UTF-8.

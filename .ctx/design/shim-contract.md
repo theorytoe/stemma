@@ -101,7 +101,7 @@ interpreter and the libraries instead:
   "ok": true,
   "kind": "probe",
   "python": "3.14.7",
-  "libs": { "pymupdf": "1.26.4", "pypdf": null }
+  "libs": { "pymupdf": "1.26.4", "httpx": "0.28.1", "bs4": null }
 }
 ```
 
@@ -210,19 +210,33 @@ kill to `timeout`.
 
 # The PDF family
 
-`pdf` reads **pymupdf first and pypdf second**, and `extractor` names the one that
-ran with its version, so which library read a document is never a guess. A machine
-with neither is `missing_extractor`, which is a fact about the machine rather than
-about the file.
+`pdf` reads with **PyMuPDF, and PyMuPDF alone**. `extractor` names it with its
+version, so what read a document is never a guess. A machine without it is
+`missing_extractor`, which is a fact about the machine rather than about the file.
 
-**The file is judged by its own bytes, not by what a library will accept.** PyMuPDF
-opens EPUB, XPS and other container formats besides PDF, and a shim that simply
-handed it a path would therefore support EPUB on the machines that happen to have
-pymupdf and not on the others. So a document is accepted as a PDF here or not at
-all: a `%PDF-` header in the first 1024 bytes, or a refusal. A zip container —
-which is what an EPUB is — is `unsupported` by name, and anything else is
-`unreadable`. This is also the only mechanism that keeps the EPUB exclusion in the
-last section true rather than aspirational.
+One library and not a list is a deliberate narrowing. The delegate asked for
+pymupdf with a pypdf fallback, and implementing it showed what the fallback
+actually costs: the two libraries do not report the same things — the two-column
+note below needs block geometry that pypdf does not offer — so the tool's answers
+would have depended on which one happened to be installed. Requiring pymupdf makes
+the machine stop being a variable.
+
+**The file is judged by its own bytes, not by what the library will accept.** This
+is the second, independent reason, and it is not about installations at all.
+PyMuPDF opens EPUB, XPS, CBZ, MOBI and plain text files besides PDFs, and shown a
+.txt it will happily return a page of text. Handing it a path unchecked would
+therefore mean a document being read by a pipeline the contract does not describe
+and reported as `kind: "pdf"` with a PDF library named as the extractor. Every
+field of that answer would be wrong about what had happened, and EPUB would be
+supported by accident rather than by design: no chapter structure, no metadata,
+and nothing for the vendoring and hashing in Task 6 to hold on to.
+
+So a document is accepted here as a PDF or not at all: a `%PDF-` header in the
+first 1024 bytes, or a refusal. A zip container — which is what an EPUB is — is
+`unsupported` by name, and anything else is `unreadable`. This is what keeps the
+EPUB exclusion in the last section true rather than aspirational, and it turns
+"that is not a PDF" into a sentence that says so instead of a library's format
+error.
 
 Three outcomes are worth telling apart, and the classes exist to keep them apart:
 
@@ -235,9 +249,7 @@ Three outcomes are worth telling apart, and the classes exist to keep them apart
 - **A page that looks like two columns of body text** is a `note`. It is never
   reordered. An extractor's own block order is usually right, because a PDF stores
   text in the order it was drawn, and a heuristic that reordered a page wrongly
-  would be worse than one that says the order may be the library's. This is
-  therefore the one place where the two extractors differ in what they report,
-  since pypdf does not offer the block geometry the check needs.
+  would be worse than one that says the order may be the library's.
 
 Reading stops as soon as the limit is passed, so a nine-hundred-page PDF costs
 roughly what its first pages cost, and `pages` still reports the document's true

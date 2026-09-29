@@ -88,6 +88,7 @@ func init() {
 		statusCommand,
 		indexCommand,
 		searchCommand,
+		graphCommand,
 		citeCommand,
 		fetchCommand,
 		lintCommand,

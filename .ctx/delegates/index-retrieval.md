@@ -165,12 +165,20 @@ ranking and membership are identical on both tiers.
 
 ## Task 7:
 
-Status: Not started
+Status: Done
 
 `graph`. Neighbourhood traversal with `--in` for backlinks and `--out` for forward
 links, bounded by `--depth`, and `--json` output. Backlinks are folded into this
 command rather than getting a dedicated verb. Include a way to find orphans and
 dead ends, since lint reports the same facts without the traversal view.
+
+`index.Neighbors` walks a `Source` breadth-first in either direction, reporting
+each page once at its first hop, dropping forward links that do not resolve to
+exactly one page and treating `--depth 0` as the whole reachable set.
+`index.ResolvePage` resolves a start by path or name through the source, so the
+command never needs the KB object. `Source` gained `Orphans` and `DeadEnds`
+(the index answers both in one query). The `stemma graph` command takes a page or
+`--orphans`/`--dead-ends`, reports the tier in `--json`, and stays silent in text.
 
 ## Task 8:
 

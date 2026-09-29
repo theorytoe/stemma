@@ -100,6 +100,25 @@ func (s *kbSource) CitedBy(key string) ([]string, error) {
 	return s.k.Graph.CitedBy(key), nil
 }
 
+func (s *kbSource) Orphans() ([]string, error) { return s.k.Graph.Orphans(), nil }
+
+func (s *kbSource) DeadEnds() ([]string, error) {
+	var out []string
+	for _, path := range s.k.Graph.Paths() {
+		page, ok := s.k.Graph.Page(path)
+		if !ok {
+			continue
+		}
+		if page.Type() == kb.TypeSource || page.Status() == kb.StatusArchived {
+			continue
+		}
+		if len(page.Links()) == 0 {
+			out = append(out, path)
+		}
+	}
+	return out, nil
+}
+
 func (s *kbSource) Close() error { return nil }
 
 // docTerms returns the distinct tokens in a document.

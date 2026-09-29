@@ -164,6 +164,7 @@ func TestEveryCommandEmitsAnEnvelope(t *testing.T) {
 		{"status", []string{"--kb", root}},
 		{"index", []string{"--kb", root}},
 		{"search", []string{"--kb", root, "Alpha"}},
+		{"graph", []string{"--kb", root, "--orphans"}},
 		{"lint", []string{"--kb", root}},
 		{"env", nil},
 		{"help", nil},

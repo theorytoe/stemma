@@ -92,6 +92,14 @@ type Source interface {
 	// CitedBy returns the pages citing a key, sorted.
 	CitedBy(key string) ([]string, error)
 
+	// Orphans returns the pages nothing links to, sorted. Index and source
+	// pages are left out, and so are archived pages, matching lint's rule.
+	Orphans() ([]string, error)
+
+	// DeadEnds returns the pages with no outgoing links, sorted. Source pages
+	// are left out, and so are archived pages.
+	DeadEnds() ([]string, error)
+
 	// Close releases whatever the source holds open.
 	Close() error
 }

@@ -195,6 +195,28 @@ func (s *indexSource) CitedBy(key string) ([]string, error) {
 	return s.column(`SELECT DISTINCT path FROM citations WHERE key = ? ORDER BY path`, key)
 }
 
+// Orphans mirrors the in-memory rule: a page nothing links to, no index or
+// source page, and no archived page. The join finds a page whose claimed names
+// are named by a link from somewhere else.
+func (s *indexSource) Orphans() ([]string, error) {
+	return s.column(`
+		SELECT p.path FROM pages p
+		WHERE p.type NOT IN ('index', 'source') AND p.status <> 'archived'
+		  AND NOT EXISTS (
+		    SELECT 1 FROM links l JOIN names n ON l.name = n.name
+		    WHERE n.path = p.path AND l.from_path <> p.path
+		  )
+		ORDER BY p.path`)
+}
+
+func (s *indexSource) DeadEnds() ([]string, error) {
+	return s.column(`
+		SELECT p.path FROM pages p
+		WHERE p.type <> 'source' AND p.status <> 'archived'
+		  AND NOT EXISTS (SELECT 1 FROM links l WHERE l.from_path = p.path)
+		ORDER BY p.path`)
+}
+
 func (s *indexSource) Close() error { return s.s.Close() }
 
 // column runs a query expected to return one text column.

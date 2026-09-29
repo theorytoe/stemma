@@ -51,6 +51,18 @@ func TestTextPathSlugsAreReadable(t *testing.T) {
 	}
 }
 
+// A pointer that reduces to nothing still has to name a file, and the name it
+// lands on must be a name: a leading dash is what a trimmed-away slug leaves
+// behind, and it is what the fallback exists to prevent.
+func TestTextPathAlwaysNamesAFile(t *testing.T) {
+	for _, pointer := range []string{"...", "..", ".", "", "https://.", "-", "---"} {
+		name := filepath.Base(TextPath("/kb", pointer))
+		if !strings.HasPrefix(name, "source-") {
+			t.Errorf("TextPath(%q) = %q, want it to start with source-", pointer, name)
+		}
+	}
+}
+
 func TestClearEmptiesOnlyTheScratchArea(t *testing.T) {
 	root := t.TempDir()
 

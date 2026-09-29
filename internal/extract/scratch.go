@@ -76,7 +76,14 @@ func slug(pointer string) string {
 	if len(kept) > 48 {
 		kept = kept[:48]
 	}
-	return strings.Trim(string(kept), "-.")
+	// The fallback is decided after the trim rather than before it, because the trim
+	// is what can empty a name: a pointer of nothing but dots and dashes reduces to
+	// one, and returning it would name the file "-<digest>.txt", which reads as a
+	// flag rather than as a file.
+	if trimmed := strings.Trim(string(kept), "-."); trimmed != "" {
+		return trimmed
+	}
+	return "source"
 }
 
 // Clear empties the scratch area and touches nothing else, and reports how many

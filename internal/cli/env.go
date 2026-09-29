@@ -203,12 +203,12 @@ func (r envReport) text() string {
 	// The index is only a question once there is a KB for it to be in.
 	switch {
 	case r.KB == "":
-	case r.Index != nil && r.Index.Fresh:
-		fmt.Fprintf(&b, "%-8s%s\n", "index", "present and fresh")
-	case r.Index != nil:
-		fmt.Fprintf(&b, "%-8s%s\n", "index", "present but stale")
-	default:
+	case r.Index == nil || !r.Index.Present:
 		fmt.Fprintf(&b, "%-8s%s\n", "index", "absent")
+	case r.Index.Fresh:
+		fmt.Fprintf(&b, "%-8s%s\n", "index", "present and fresh")
+	default:
+		fmt.Fprintf(&b, "%-8s%s\n", "index", "present but stale")
 	}
 	return b.String()
 }

@@ -33,6 +33,16 @@ func TestEnvNamesTheKBItIsTalkingAbout(t *testing.T) {
 	if report.Index == nil || report.Index.Present {
 		t.Errorf("Index = %+v, want it reported as absent", report.Index)
 	}
+
+	// And the same in words: "present but stale" on a KB that has just been created
+	// is how this line read before the field was checked.
+	code, stdout, stderr := run("env", "--kb", root)
+	if code != ExitOK {
+		t.Fatalf("env exited %d: %s", code, stderr)
+	}
+	if !strings.Contains(stdout, "index   absent") {
+		t.Errorf("stdout = %q, want the index reported as absent", stdout)
+	}
 }
 
 // env must reach a verdict on every machine, including one with no interpreter at

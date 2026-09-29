@@ -49,7 +49,7 @@ type Client struct {
 func NewClient() *Client {
 	return &Client{
 		HTTP:    &http.Client{Timeout: DefaultTimeout},
-		UA:      "stemma/" + version.Version + " (+https://github.com/theorytoe/stemma)",
+		UA:      version.UserAgent(),
 		Retries: DefaultRetries,
 		Backoff: baseBackoff,
 		sleep:   sleepContext,

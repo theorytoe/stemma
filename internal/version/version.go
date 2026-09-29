@@ -9,3 +9,14 @@ package version
 //
 //	go build -ldflags "-X github.com/theorytoe/stemma/internal/version.Version=v1.2.3"
 var Version = "0.0.0-dev"
+
+// UserAgent is what the tool calls itself when it makes a request: the version,
+// and where to find out what asked.
+//
+// It lives here rather than at either call site because two independent parts of
+// the tool make requests — resolution and extraction — and they have to give the
+// same answer to "who are you?". A second spelling would be a second user agent
+// to keep true.
+func UserAgent() string {
+	return "stemma/" + Version + " (+https://github.com/theorytoe/stemma)"
+}

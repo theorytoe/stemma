@@ -3,11 +3,8 @@ package cli
 import (
 	"flag"
 	"fmt"
-	"io/fs"
-	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/theorytoe/stemma/internal/kb"
 )
@@ -135,40 +132,15 @@ func (r statusReport) text() string {
 	return b.String()
 }
 
-// readIndexState looks at the generated directory. The index is optional, so a
-// KB without one is not a problem; it is a fact about which tier the next
-// command will use.
+// readIndexState reports whether this KB has an index.
+//
+// Nothing can build one yet, so the honest answer is that none is there. This
+// used to be the newest modification anywhere under .stemma/, which stopped
+// meaning anything the moment that directory began holding things that are not an
+// index — the extraction script, and the text fetch reads. Finding the index by
+// its own name is the index task's to write; root is here for it.
 func readIndexState(root string) indexState {
-	newest, ok := newestModTime(filepath.Join(root, filepath.FromSlash(kb.GeneratedDir)))
-	if !ok {
-		return indexState{}
-	}
-	pages, ok := newestModTime(filepath.Join(root, filepath.FromSlash(kb.PagesDir)))
-	if !ok {
-		return indexState{Present: true, Fresh: true}
-	}
-	return indexState{Present: true, Fresh: !pages.After(newest)}
-}
-
-// newestModTime is the most recent modification time anywhere under a
-// directory, and whether there was anything to look at.
-func newestModTime(root string) (time.Time, bool) {
-	var newest time.Time
-	found := false
-	_ = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return nil
-		}
-		info, err := d.Info()
-		if err != nil {
-			return nil
-		}
-		if !found || info.ModTime().After(newest) {
-			newest, found = info.ModTime(), true
-		}
-		return nil
-	})
-	return newest, found
+	return indexState{}
 }
 
 // nonNil turns a nil slice into an empty one, so that --json always reports a

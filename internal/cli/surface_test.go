@@ -427,7 +427,7 @@ func TestEnvReportsTheEnvironment(t *testing.T) {
 	if code != ExitOK {
 		t.Fatalf("exit = %d: %s", code, stderr)
 	}
-	for _, want := range []string{"go", "python", "pdf", "sqlite"} {
+	for _, want := range []string{"go", "python", "shim", "reads", "sqlite"} {
 		if !strings.Contains(stdout, want) {
 			t.Errorf("env is missing %q:\n%s", want, stdout)
 		}

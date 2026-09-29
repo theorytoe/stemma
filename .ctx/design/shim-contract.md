@@ -53,6 +53,12 @@ cannot disagree about a number that only one of them chooses. It also means the
 default can be tuned in Go, and a `--max-bytes` flag can appear later, without
 editing this file.
 
+`limit` bounds the text, and not the object that carries it. JSON escaping makes
+the object larger than the text inside it — a quote, a backslash or a newline
+becomes two bytes, and any other control character becomes six — so Go allows for
+that rather than refusing an answer that is correct. A shim that prints past even
+that allowance is the case the ceiling exists for.
+
 `url` takes the user agent as an argument for the same reason: the Go side already
 has one (`stemma/<version>`), and a second user agent invented here would be a
 second thing to keep true.

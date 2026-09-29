@@ -42,6 +42,15 @@ const (
 	// fixed amount.
 	slack = 64 << 10
 
+	// escapeWorst is the most the text can grow on its way through JSON. The shim
+	// writes UTF-8 rather than ASCII escapes, so an ordinary character costs what
+	// it costs, but a quote, a backslash or a newline becomes two bytes, and any
+	// other control character becomes six. The drain has to allow for that because
+	// the limit bounds the text and not the envelope carrying it: sized from the
+	// limit alone, a document that is largely quotation is refused as a shim that
+	// printed too much, which is a reader being told the tool is broken.
+	escapeWorst = 6
+
 	// stderrKept bounds what is quoted from a shim that died. A traceback is
 	// useful; a runaway log is not.
 	stderrKept = 8 << 10
@@ -255,7 +264,7 @@ func (r *Runner) call(ctx context.Context, fallback time.Duration, args ...strin
 	ctx, cancel := context.WithTimeout(ctx, budget)
 	defer cancel()
 
-	stdout := &sink{room: int64(r.limit()) + slack}
+	stdout := &sink{room: int64(r.limit())*escapeWorst + slack}
 	stderr := &sink{room: stderrKept}
 	cmd := exec.CommandContext(ctx, python, append([]string{r.Script}, args...)...)
 	cmd.Stdout = stdout
@@ -282,7 +291,8 @@ func (r *Runner) call(ctx context.Context, fallback time.Duration, args ...strin
 	if stdout.overflowed() {
 		return nil, &Error{
 			Kind: KindInternal,
-			Err:  fmt.Errorf("the shim printed more than the %d bytes it was allowed", stdout.room),
+			Err: fmt.Errorf("the shim printed more than the %d bytes an answer may hold, which is %d times the %d byte limit",
+				stdout.room, escapeWorst, r.limit()),
 		}
 	}
 	return parse(stdout.bytes())

@@ -145,14 +145,37 @@ func TestAContractFromAnotherVersionIsRefused(t *testing.T) {
 }
 
 func TestOutputPastTheLimitIsRefused(t *testing.T) {
-	// The shim is given a 1 KiB limit and prints 70 KiB anyway, which is past the
-	// limit and its slack. A shim that ignores its own limit must not be able to
-	// exhaust this process.
+	// The shim is given a 1 KiB limit and prints 200 KiB anyway, which is past
+	// everything the limit allows for. A shim that ignores its own limit must not
+	// be able to exhaust this process.
 	r := fakeShim(t, `printf '{"contract":1,"ok":true,"kind":"text","text":"';`+
-		`head -c 70000 /dev/zero | tr '\0' 'a'; printf '"}'`)
+		`head -c 200000 /dev/zero | tr '\0' 'a'; printf '"}'`)
 	r.Limit = 1024
 
 	requireError(t, textFailure(t, r), KindInternal)
+}
+
+func TestTheLimitBoundsTheTextAndNotTheEnvelope(t *testing.T) {
+	// A quote is two bytes once JSON has carried it. Reading a document that is
+	// largely quotation is ordinary — a JSON or LaTeX source is — so a drain sized
+	// from the limit alone calls a correct shim a liar, and the reader is told the
+	// tool is broken. The limit itself has to be met exactly, though: this shim
+	// sends 128 KiB of text against a 128 KiB limit.
+	r := fakeShim(t, `printf '{"contract":1,"ok":true,"kind":"text","text":"'`+"\n"+
+		`yes '\"' | head -n 131072 | tr -d '\n'`+"\n"+
+		`printf '","extractor":"shim"}'`)
+	r.Limit = 128 << 10
+
+	got, err := r.Text(context.Background(), "quotes.json")
+	if err != nil {
+		t.Fatalf("Text: %v", err)
+	}
+	if len(got.Text) != 128<<10 {
+		t.Errorf("text is %d bytes, want %d", len(got.Text), 128<<10)
+	}
+	if strings.Trim(got.Text, `"`) != "" {
+		t.Errorf("text is not all quotes: %q", got.Text[:40])
+	}
 }
 
 func TestASlowShimIsKilled(t *testing.T) {

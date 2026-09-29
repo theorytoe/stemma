@@ -81,9 +81,11 @@ the absence-of-Python path before real extraction complexity is added.
 
 Status: Done
 
-PDF extraction. Prefer `pymupdf`, fall back to `pypdf`, and report which was used.
-Handle the cases that matter in practice: no extractable text layer, multi-column
-layouts, and very large files. Refuse to guess rather than emitting garbage.
+PDF extraction. Read with `pymupdf` and report it. Handle the cases that matter in
+practice: no extractable text layer, multi-column layouts, and very large files.
+Refuse to guess rather than emitting garbage. The `pypdf` fallback this originally
+asked for was dropped during implementation, for the reason recorded against `D66`
+in the decision register.
 
 ## Task 4:
 

@@ -205,7 +205,7 @@ write" is therefore a property held by never writing, not by a writer that knows
 how to splice. If a command ever needs to change a manifest key, that command
 adds the writer and the tests it needs.
 
-### The extraction shim — where it lives, and who sets the limit. `D66` added.
+### The extraction shim — delivery, the limit, and one PDF library. `D66` added.
 
 **Decision.** The extraction script is a tracked file in the repository,
 `internal/extract/extract.py`, embedded in the binary. `init` writes it into
@@ -230,6 +230,17 @@ meant editing a design document to tune a policy, so the limit became an argumen
 `probe` had no place in that draft's success shape either: it describes the
 machine rather than a document, so its object carries `python` and `libs` in place
 of `text`.
+
+**Changed during implementation.** The delegate asked for pymupdf with a pypdf
+fallback, and the fallback was built first. It was then dropped, because
+implementing it showed what it costs: the two libraries do not report the same
+things. The note about a page that looks two-column needs block geometry that only
+pymupdf offers, so the tool's answers would have depended on which library a
+machine happened to have. Requiring pymupdf makes the machine stop being a
+variable. The bytes guard stayed, for the reason that does not depend on
+installations at all: PyMuPDF also reads EPUB, XPS and plain text files, so without
+the guard a document would be read by a pipeline this contract does not describe
+and reported as a PDF, with EPUB supported by accident rather than by design.
 
 ### U5 — rewriting inbound links. `D19` stands.
 

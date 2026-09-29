@@ -1,8 +1,6 @@
 package extract
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"io/fs"
 	"os"
@@ -29,8 +27,7 @@ func ScratchDir(root string) string {
 // one. The slug is there to make a directory listing readable; the digest beside
 // it is what actually identifies the file, which is what lets the slug stay lossy.
 func TextPath(root, pointer string) string {
-	sum := sha256.Sum256([]byte(pointer))
-	return filepath.Join(ScratchDir(root), slug(pointer)+"-"+hex.EncodeToString(sum[:4])+".txt")
+	return filepath.Join(ScratchDir(root), slug(pointer)+"-"+kb.ShortHashOf([]byte(pointer))+".txt")
 }
 
 // slug reduces a pointer to something recognisable in a directory listing.

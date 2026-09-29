@@ -1,8 +1,6 @@
 package kb
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"path"
 	"path/filepath"
 	"strings"
@@ -17,8 +15,7 @@ import (
 // `smith-2020` — from claiming one file between them.
 func VendoredName(key string) string {
 	base := strings.TrimSuffix(fileNameForKey(key), ".bib")
-	sum := sha256.Sum256([]byte(key))
-	return path.Join(SourcesDir, base+"-"+hex.EncodeToString(sum[:4])+".txt")
+	return path.Join(SourcesDir, base+"-"+ShortHashOf([]byte(key))+".txt")
 }
 
 // VendoredPath is where that file is on disk.

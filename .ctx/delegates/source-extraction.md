@@ -108,7 +108,7 @@ without touching anything else.
 
 ## Task 6:
 
-Status: Not started
+Status: Done
 
 Opt-in vendoring. Copy a source's full text into the KB on request, record the
 hash, and verify it on subsequent reads. Define what happens when a vendored copy

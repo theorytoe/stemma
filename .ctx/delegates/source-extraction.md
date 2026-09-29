@@ -99,7 +99,7 @@ should acknowledge rather than silently return empty.
 
 ## Task 5:
 
-Status: Not started
+Status: Done
 
 The `fetch` command and the scratch area. Deterministic output location, a
 predictable filename derived from the source, and a documented lifecycle so an

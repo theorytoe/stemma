@@ -5,11 +5,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/theorytoe/stemma/internal/version"
 )
 
 // fakeShim writes a shell script that stands in for the interpreter, so the whole
@@ -208,6 +212,14 @@ func TestTheArgumentsAreWhatTheContractSays(t *testing.T) {
 	})
 	if pdf != "pdf a.pdf 4321" {
 		t.Errorf("pdf was given %q, want %q", pdf, "pdf a.pdf 4321")
+	}
+
+	link := echo(t, 2345, func(r *Runner) (*Result, error) {
+		return r.URL(context.Background(), "http://example.test/page")
+	})
+	want := "url http://example.test/page 2345 " + version.UserAgent()
+	if link != want {
+		t.Errorf("url was given %q, want %q", link, want)
 	}
 }
 
@@ -427,5 +439,50 @@ func TestProbeThroughTheRealShim(t *testing.T) {
 		if _, ok := got.Libs[name]; !ok {
 			t.Errorf("probe did not report %s", name)
 		}
+	}
+}
+
+// The URL path needs a server, so this is the one place a real fetch happens end
+// to end: Go's own test server, fetched by the real shim.
+func TestURLThroughTheRealShim(t *testing.T) {
+	r := realRunner(t)
+	r.Timeout = 20 * time.Second
+
+	probe, err := r.Probe(context.Background())
+	if err != nil {
+		t.Fatalf("Probe: %v", err)
+	}
+	for _, needed := range []string{"httpx", "bs4"} {
+		if !probe.Has(needed) {
+			t.Skipf("%s is not installed, so a page cannot be read here", needed)
+		}
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if agent := req.Header.Get("User-Agent"); agent != version.UserAgent() {
+			t.Errorf("user agent = %q, want %q", agent, version.UserAgent())
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprintf(w, "<html><body><header><nav>Menu</nav></header>"+
+			"<article><h1>Heading</h1><p>%s</p></article><footer>Foot</footer></body></html>",
+			strings.Repeat("Body text for the article. ", 20))
+	}))
+	defer server.Close()
+
+	got, err := r.URL(context.Background(), server.URL)
+	if err != nil {
+		t.Fatalf("URL: %v", err)
+	}
+	if got.Extractor != "httpx+bs4" {
+		t.Errorf("Extractor = %q", got.Extractor)
+	}
+	if !strings.Contains(got.Text, "Heading") {
+		t.Errorf("the article heading is missing: %q", got.Text[:min(80, len(got.Text))])
+	}
+	if !strings.Contains(got.Text, "Body text for the article") {
+		t.Errorf("the article body is missing: %q", got.Text[:min(80, len(got.Text))])
+	}
+	if strings.Contains(got.Text, "Menu") || strings.Contains(got.Text, "Foot") {
+		t.Errorf("the navigation or footer was kept: %q", got.Text)
 	}
 }

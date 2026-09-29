@@ -8,12 +8,16 @@ The Go side tests the boundary; this tests the reading.
     python3 internal/extract/extract_test.py
 """
 
+import contextlib
+import http.server
 import importlib.util
 import json
 import pathlib
+import socket
 import subprocess
 import sys
 import tempfile
+import threading
 
 HERE = pathlib.Path(__file__).resolve().parent
 
@@ -358,6 +362,169 @@ def case_pdf_without_pymupdf():
           out["error"]["class"], "missing_extractor")
     check_true("and names pymupdf", "pymupdf" in out["error"]["message"],
                out["error"]["message"])
+
+
+# ------------------------------------------------------------------- URL
+#
+# These are served by a real HTTP server on a loopback port, because the failure
+# classes here are all about what a server does: a status code, a content type, a
+# body that will not stop. A fake response would only test the fake.
+
+PAGE = """<!doctype html>
+<html><head><title>A Test Page</title></head>
+<body>
+<header><nav><a href="/">Home</a> <a href="/about">About the Site</a></nav></header>
+<article><h1>The Article</h1><p>%s</p></article>
+<footer>Copyright nobody</footer>
+</body></html>""" % (BODY * 3)
+
+PLAIN = """<!doctype html><html><body><div><p>%s</p></div></body></html>""" % BODY
+
+SCRIPTED = (
+    "<!doctype html><html><body><div id='root'></div>"
+    "<script>document.write('rendered later')</script></body></html>"
+)
+
+AGENT = "stemma/test"
+
+LAST_REQUEST = {}
+
+
+class PageHandler(http.server.BaseHTTPRequestHandler):
+    ROUTES = {
+        "/page": ("text/html; charset=utf-8", PAGE),
+        "/plain": ("text/html", PLAIN),
+        "/scripted": ("text/html", SCRIPTED),
+        "/data": ("application/json", '{"not": "html"}'),
+        "/huge": ("text/html", "x" * 40000),
+    }
+
+    def do_GET(self):
+        LAST_REQUEST["user-agent"] = self.headers.get("User-Agent", "")
+        if self.path in self.ROUTES:
+            status, kind = 200, None
+            kind, text = self.ROUTES[self.path]
+            body = text.encode("utf-8")
+        else:
+            status, kind, body = 404, "text/html", b"missing"
+        self.send_response(status)
+        self.send_header("Content-Type", kind)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):
+        pass  # a test server's chatter is not test output
+
+
+@contextlib.contextmanager
+def serving():
+    server = http.server.HTTPServer(("127.0.0.1", 0), PageHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield "http://127.0.0.1:%d" % server.server_address[1]
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def free_port():
+    # A port nothing is listening on, for the refused-connection case. Closing the
+    # socket is what frees it; a test racing on this would be a test asserting the
+    # wrong thing anyway.
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
+
+
+def case_url_reads_the_main_content():
+    with serving() as base:
+        out = shim.main(["url", base + "/page", "1000000", AGENT])
+        check("url is ok", out["ok"], True)
+        check("url names its pipeline", out["extractor"], "httpx+bs4")
+        check_true("url keeps the article",
+                   "The Article" in out["text"], out["text"][:120])
+        check_true("url drops the navigation",
+                   "About the Site" not in out["text"], out["text"][:200])
+        check_true("url drops the footer",
+                   "Copyright nobody" not in out["text"], out["text"][:200])
+        check("url is not truncated", out["truncated"], False)
+
+
+def case_url_sends_the_user_agent_it_was_given():
+    with serving() as base:
+        shim.main(["url", base + "/page", "1000000", AGENT])
+    check("url sends the user agent it was given", LAST_REQUEST.get("user-agent"), AGENT)
+
+
+def case_url_notes_a_page_with_no_article():
+    with serving() as base:
+        out = shim.main(["url", base + "/plain", "1000000", AGENT])
+        check("a page with no main element is still ok", out["ok"], True)
+        check_true(
+            "and says the body was read",
+            any("no article" in note for note in out.get("notes", [])),
+            out.get("notes"),
+        )
+
+
+def case_url_reports_a_page_that_needs_javascript():
+    with serving() as base:
+        out = shim.main(["url", base + "/scripted", "1000000", AGENT])
+        check("a page with no server-rendered text is empty", out["error"]["class"], "empty")
+        check_true("and says JavaScript is why",
+                   "JavaScript" in out["error"]["message"], out["error"]["message"])
+
+
+def case_url_refuses_a_response_that_is_not_html():
+    with serving() as base:
+        out = shim.main(["url", base + "/data", "1000000", AGENT])
+        check("a JSON response is unsupported", out["error"]["class"], "unsupported")
+        check_true("and names the content type",
+                   "application/json" in out["error"]["message"], out["error"]["message"])
+
+
+def case_url_reports_a_bad_status():
+    with serving() as base:
+        out = shim.main(["url", base + "/absent", "1000000", AGENT])
+        check("a 404 is a network failure", out["error"]["class"], "network")
+        check_true("and names the status",
+                   "404" in out["error"]["message"], out["error"]["message"])
+
+
+def case_url_refuses_a_page_past_the_limit():
+    with serving() as base:
+        out = shim.main(["url", base + "/huge", "1024", AGENT])
+        check("a page past the limit is too_large", out["error"]["class"], "too_large")
+
+
+def case_url_reports_a_connection_that_fails():
+    out = shim.main(["url", "http://127.0.0.1:%d/" % free_port(), "1000000", AGENT])
+    check("a refused connection is a network failure", out["error"]["class"], "network")
+
+
+def case_url_without_its_libraries():
+    # No server needed: the libraries are checked before anything is fetched, which
+    # is also what keeps this case runnable on a machine that has neither.
+    for missing in ("httpx", "bs4"):
+        saved = dict(shim.LIBRARIES)
+        shim.LIBRARIES[missing] = ()
+        try:
+            out = shim.main(["url", "http://127.0.0.1:1/", "1024", AGENT])
+        finally:
+            shim.LIBRARIES.clear()
+            shim.LIBRARIES.update(saved)
+        check("url without %s is missing_extractor" % missing,
+              out["error"]["class"], "missing_extractor")
+        check_true("and names %s" % missing,
+                   missing in out["error"]["message"], out["error"]["message"])
+
+
+def case_url_without_a_user_agent():
+    out = shim.main(["url", "http://127.0.0.1:1/", "1024"])
+    check("url without a user agent is internal", out["error"]["class"], "internal")
 
 
 def main():

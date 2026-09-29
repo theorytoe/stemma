@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strconv"
 	"time"
+
+	"github.com/theorytoe/stemma/internal/version"
 )
 
 // contract is the version of the shim interface this binary speaks. It has to
@@ -25,8 +27,14 @@ const (
 	// before it can stop reading.
 	DefaultLimit = 8 << 20
 
-	// DefaultTimeout bounds one extraction when a caller does not choose.
+	// DefaultTimeout bounds one extraction when a caller does not choose. A fetch
+	// and a parse are quick, and a server that has not answered in a minute is not
+	// going to.
 	DefaultTimeout = 60 * time.Second
+
+	// pdfTimeout bounds reading a PDF, which is legitimately slower: linearising a
+	// book is work, not a failure.
+	pdfTimeout = 300 * time.Second
 
 	// slack is how far past the limit this side will read before deciding the
 	// answer is oversized. It is not zero because the object is larger than the
@@ -140,7 +148,7 @@ type Runner struct {
 // Probe asks what this machine can do. It reports rather than fails, so a
 // missing library comes back as a library with no version.
 func (r *Runner) Probe(ctx context.Context) (*Probe, error) {
-	env, err := r.call(ctx, "probe")
+	env, err := r.call(ctx, DefaultTimeout, "probe")
 	if err != nil {
 		return nil, err
 	}
@@ -149,16 +157,28 @@ func (r *Runner) Probe(ctx context.Context) (*Probe, error) {
 
 // Text reads a file as UTF-8 text.
 func (r *Runner) Text(ctx context.Context, path string) (*Result, error) {
-	env, err := r.call(ctx, "text", path, strconv.Itoa(r.limit()))
+	env, err := r.call(ctx, DefaultTimeout, "text", path, strconv.Itoa(r.limit()))
 	if err != nil {
 		return nil, err
 	}
 	return env.result(), nil
 }
 
-// PDF reads a PDF, with whichever library the machine has.
+// PDF reads a PDF.
 func (r *Runner) PDF(ctx context.Context, path string) (*Result, error) {
-	env, err := r.call(ctx, "pdf", path, strconv.Itoa(r.limit()))
+	env, err := r.call(ctx, pdfTimeout, "pdf", path, strconv.Itoa(r.limit()))
+	if err != nil {
+		return nil, err
+	}
+	return env.result(), nil
+}
+
+// URL fetches a page and reads its main content.
+//
+// The user agent is passed in rather than chosen here, because the tool already
+// has one and a second spelling would be a second thing to keep true.
+func (r *Runner) URL(ctx context.Context, address string) (*Result, error) {
+	env, err := r.call(ctx, DefaultTimeout, "url", address, strconv.Itoa(r.limit()), version.UserAgent())
 	if err != nil {
 		return nil, err
 	}
@@ -216,8 +236,9 @@ func (e *envelope) result() *Result {
 }
 
 // call runs one subcommand and returns the object it printed, or the failure it
-// described.
-func (r *Runner) call(ctx context.Context, args ...string) (*envelope, error) {
+// described. fallback is the wall-clock bound for this family, used when the
+// caller did not set one.
+func (r *Runner) call(ctx context.Context, fallback time.Duration, args ...string) (*envelope, error) {
 	python := r.Python
 	if python == "" {
 		found, err := FindPython()
@@ -227,7 +248,8 @@ func (r *Runner) call(ctx context.Context, args ...string) (*envelope, error) {
 		python = found
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, r.timeout())
+	budget := r.timeout(fallback)
+	ctx, cancel := context.WithTimeout(ctx, budget)
 	defer cancel()
 
 	stdout := &sink{room: int64(r.limit()) + slack}
@@ -241,7 +263,7 @@ func (r *Runner) call(ctx context.Context, args ...string) (*envelope, error) {
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
 		return nil, &Error{
 			Kind: KindTimeout,
-			Err:  fmt.Errorf("the extractor did not finish within %s", r.timeout()),
+			Err:  fmt.Errorf("the extractor did not finish within %s", budget),
 		}
 	case errors.Is(err, exec.ErrNotFound), errors.Is(err, os.ErrNotExist):
 		return nil, &Error{
@@ -355,9 +377,9 @@ func (r *Runner) limit() int {
 	return DefaultLimit
 }
 
-func (r *Runner) timeout() time.Duration {
+func (r *Runner) timeout(fallback time.Duration) time.Duration {
 	if r.Timeout > 0 {
 		return r.Timeout
 	}
-	return DefaultTimeout
+	return fallback
 }

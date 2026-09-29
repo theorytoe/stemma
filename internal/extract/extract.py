@@ -329,6 +329,143 @@ def pdf(argv):
     return pdf_with_pymupdf(path, limit)
 
 
+# What a response has to declare itself as to be read as a document.
+HTML_TYPES = ("text/html", "application/xhtml+xml")
+
+# How long one fetch may take. It is shorter than the wall clock Go enforces, so a
+# slow server produces a sentence about the server rather than a killed process.
+FETCH_TIMEOUT = 30.0
+
+# Elements that are never the document. Dropping them is most of the difference
+# between reading a page and reading its navigation.
+CHROME = (
+    "script",
+    "style",
+    "noscript",
+    "nav",
+    "header",
+    "footer",
+    "aside",
+    "form",
+    "button",
+    "svg",
+    "iframe",
+    "template",
+)
+
+# Where the document is looked for, best first. The first of these a page has is
+# the one whose text is taken; body is the honest last resort, and saying so is
+# left to the note the caller gets.
+MAIN = ("article", "main", "[role=main]", "#content", ".content", "body")
+
+
+def looks_html(content_type):
+    return content_type.split(";")[0].strip().lower() in HTML_TYPES
+
+
+def read_at_most(response, limit):
+    """A response body, or None when it is past the limit.
+
+    Reading stops at the limit rather than after it, so a server that would stream
+    a gigabyte is stopped instead of buffered.
+    """
+    body = bytearray()
+    for chunk in response.iter_bytes():
+        body.extend(chunk)
+        if len(body) > limit:
+            return None
+    return bytes(body)
+
+
+def tidy(text):
+    """Collapse the whitespace an HTML parser leaves behind.
+
+    Line breaks in markup say nothing about the document, so a run of blank lines
+    becomes one and trailing spaces go. Nothing is reordered and nothing is added.
+    """
+    kept = []
+    for line in text.splitlines():
+        line = line.strip()
+        if line or (kept and kept[-1]):
+            kept.append(line)
+    return "\n".join(kept).strip() + "\n"
+
+
+def reduce_page(soup_module, body, limit):
+    soup = soup_module.BeautifulSoup(body, "html.parser")
+    for element in soup(list(CHROME)):
+        element.decompose()
+
+    main = None
+    for selector in MAIN:
+        main = soup.select_one(selector)
+        if main is not None:
+            break
+    if main is None:
+        return failed("empty", "the page has no body to read")
+
+    text = tidy(main.get_text(separator="\n"))
+    if not text.strip():
+        return failed(
+            "empty",
+            "the page has no text outside its scripts and its navigation, "
+            "which is what a page rendered by JavaScript looks like",
+        )
+
+    clipped, cut = clip(text.encode("utf-8"), limit)
+    result = ok(kind="url", text=clipped.decode("utf-8"), extractor="httpx+bs4", truncated=cut)
+    if main.name == "body":
+        result["notes"] = ["the page has no article or main element, so the body was read"]
+    return result
+
+
+def url(argv):
+    if len(argv) != 3:
+        return failed(
+            "internal", "url takes a URL, a limit and a user agent, got %d arguments" % len(argv)
+        )
+    address = argv[0]
+    limit = parse_limit(argv[1])
+    if limit is None:
+        return failed("internal", "the limit must be a positive integer, got %r" % argv[1])
+    agent = argv[2]
+
+    http = import_any(LIBRARIES["httpx"])
+    soup_module = import_any(LIBRARIES["bs4"])
+    for name, module in (("httpx", http), ("bs4", soup_module)):
+        if module is None:
+            return failed(
+                "missing_extractor",
+                "%s is not importable, so a page cannot be read; "
+                "`stemma env` says what this machine has" % name,
+            )
+
+    headers = {"User-Agent": agent, "Accept": "text/html,application/xhtml+xml"}
+    try:
+        with http.Client(follow_redirects=True, timeout=FETCH_TIMEOUT, headers=headers) as client:
+            with client.stream("GET", address) as response:
+                if not 200 <= response.status_code < 300:
+                    return failed(
+                        "network", "the server answered %d for %s" % (response.status_code, address)
+                    )
+                content_type = response.headers.get("content-type", "")
+                if not looks_html(content_type):
+                    return failed(
+                        "unsupported",
+                        "the response declares %s, which is not HTML"
+                        % (content_type.split(";")[0].strip() or "no content type"),
+                    )
+                body = read_at_most(response, limit)
+                if body is None:
+                    return failed(
+                        "too_large", "the page is larger than the %d bytes it was allowed" % limit
+                    )
+    except Exception as exc:
+        return failed("network", "%s: %s" % (type(exc).__name__, exc))
+
+    return reduce_page(soup_module, body, limit)
+
+
 def main(argv):
     if not argv:
         return failed("internal", "no subcommand given")
@@ -339,6 +476,8 @@ def main(argv):
         return text(rest)
     if name == "pdf":
         return pdf(rest)
+    if name == "url":
+        return url(rest)
     return failed("internal", "unknown subcommand %r" % name)
 
 

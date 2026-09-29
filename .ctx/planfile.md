@@ -122,12 +122,20 @@ See `delegates/sources-bibliography.md`.
 
 ## Task 4:
 
-Status: Not started
+Status: Done
 
 Source extraction. The Python shim contract, PDF and URL extraction, the `fetch`
 command and its scratch area, opt-in vendoring, and graceful degradation when
 Python is unavailable.
 See `delegates/source-extraction.md`.
+
+It closed with the script embedded in the binary and written into every KB by
+`init`, a contract that says exactly what the two halves promise each other, PDF
+and HTML reading behind it, `fetch` and `cite vendor` on top of that, and the
+no-Python promise kept literally: the whole Go test suite passes on a machine with
+no interpreter on `PATH` at all. Two substitutions were recorded as they happened
+rather than after the fact — PyMuPDF alone instead of a pypdf fallback, and the
+size limit passed by Go rather than frozen in the contract (`D66`).
 
 ## Task 5:
 

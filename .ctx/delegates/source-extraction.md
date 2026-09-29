@@ -126,7 +126,7 @@ startup cost.
 
 ## Task 8:
 
-Status: Not started
+Status: Done
 
 Deferred inputs. Record EPUB, OCR for scanned PDFs, and any other format as
 explicitly out of scope. `D43` settles DOI, arXiv, URL, local PDF, and ISBN; the

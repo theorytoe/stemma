@@ -324,3 +324,9 @@ the same result.
 
 - `llm-wiki-okf` — author states its end goals do not align. Not a design input.
 - `firwiki` — an older, incomplete attempt. Not a useful design input.
+- Input formats other than PDF and HTML. EPUB is a zip container with its own
+  structure and metadata; a scanned page needs OCR, which is a different class of
+  tool; a page that only exists after JavaScript has run needs a browser. The shim
+  refuses each by name — `unsupported` for the EPUB, `empty` for the other two —
+  rather than returning an empty document, and the shim contract is the seam any of
+  them would arrive through if one were ever wanted (`D66`).

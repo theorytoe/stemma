@@ -178,6 +178,15 @@ func TestTheLimitBoundsTheTextAndNotTheEnvelope(t *testing.T) {
 	}
 }
 
+func TestASuccessWithNoTextIsNotAnAnswer(t *testing.T) {
+	// The shim has a class for having found no text, so an empty success is a shim
+	// that disagrees with its own contract. Passing it on would write an empty
+	// capture into the KB and report success.
+	r := fakeShim(t, `printf '%s' '{"contract":1,"ok":true,"kind":"text","text":"","extractor":"shim"}'`)
+
+	requireError(t, textFailure(t, r), KindInternal)
+}
+
 func TestASlowShimIsKilled(t *testing.T) {
 	r := fakeShim(t, `exec sleep 5`)
 	r.Timeout = 50 * time.Millisecond

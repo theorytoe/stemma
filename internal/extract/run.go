@@ -20,6 +20,10 @@ import (
 // than a mystery.
 const contract = 1
 
+// probeKind is the one successful answer that describes the machine instead of a
+// document, and so the one that carries no text.
+const probeKind = "probe"
+
 const (
 	// DefaultLimit is how much text a caller gets when it does not choose. It is
 	// a bound on three things at once: the memory the text costs in two
@@ -111,7 +115,8 @@ func (e *Error) Unwrap() error { return e.Err }
 type Result struct {
 	// Kind is which subcommand ran: text, pdf or url.
 	Kind string
-	// Text is the document's text, and is never empty.
+	// Text is the document's text. It is never empty: the boundary refuses an empty
+	// answer rather than passing one on.
 	Text string
 	// Extractor is what read it.
 	Extractor string
@@ -323,6 +328,17 @@ func parse(raw []byte) (*envelope, error) {
 		}
 	}
 	if env.OK {
+		// A reading subcommand that answers with nothing is not an answer. The shim has
+		// a class for having found no text, so this is a shim disagreeing with its own
+		// contract, and passing it on would write an empty capture into the KB and
+		// report success. A probe is the one answer that is about the machine rather
+		// than about a document, and so the one that has no text in it.
+		if env.Kind != probeKind && env.Text == "" {
+			return nil, &Error{
+				Kind: KindInternal,
+				Err:  errors.New("the shim reported success and sent no text"),
+			}
+		}
 		return &env, nil
 	}
 	if env.Error == nil {

@@ -121,10 +121,15 @@ with or without its version, even though the version is what gets fetched. Two
 entries that point at one work are one work, and the check says so rather than
 leaving a person to notice.
 
-| Field                 | Meaning                                                 |
-| --------------------- | ------------------------------------------------------- |
-| `stemma-retrieved`    | the date the source was fetched, as `YYYY-MM-DD`        |
-| `stemma-content-hash` | the hash of what was fetched, as `<algorithm>:<digest>` |
+| Field                  | Meaning                                                       |
+| ---------------------- | ------------------------------------------------------------- |
+| `stemma-retrieved`     | the date the source was fetched, as `YYYY-MM-DD`              |
+| `stemma-content-hash`  | the hash of what was fetched, as `<algorithm>:<digest>`       |
+| `stemma-vendored-hash` | the hash of the captured text in `sources/`, in the same form |
+
+The first two are on every entry the tool has fetched a record for. The third is
+optional: it is there exactly when the source's full text has been vendored, and
+its value is the hash of what is in `sources/`.
 
 These exist so that drift is detectable. Re-fetching a source and finding a
 different hash is a fact worth reporting, not a silent overwrite.
@@ -162,6 +167,22 @@ A vendored file is a capture rather than a generated artifact, so unlike
 nothing, which is the ordinary case, so the default KB root is unchanged by its
 existence. Files in `sources/` are not pages, and no rule above applies to them
 beyond their location.
+
+The file is named from the key it belongs to, `sources/<name>-<digest>.txt`, so
+one source always lands on one file. Both halves are derived from the key, which
+is what the digest is for: two keys that reduce to one filename, such as
+`smith:2020` and `smith-2020`, would otherwise have to share a capture. The name
+is derived rather than stated because the entry records the capture's hash and
+not its path, so the key is what tells you where to look.
+
+Capturing is the one thing a bibliography cannot do for itself: an address goes
+stale and a capture does not. It is therefore explicit, and it checks itself. When
+a capture and its recorded hash disagree — a hand-edit, a bad merge, a download
+that stopped early — `cite check` reports it and neither side is corrected, because
+the tool cannot know which of the two someone meant and overwriting either would
+destroy the evidence of what happened. Replacing a capture with different text
+takes `--force`, and the text is only written once all of it has been read: a
+capture that stops at a size limit would be a capture of something else.
 
 ## Pages
 

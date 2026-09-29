@@ -80,34 +80,22 @@ func Load(root string) (*KB, error) {
 	var unreadable []error
 
 	if hasPages {
-		err := fs.WalkDir(fsys, PagesDir, func(p string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if m.Ignores(p) {
-				if d.IsDir() {
-					return fs.SkipDir
-				}
-				return nil
-			}
-			if d.IsDir() || !strings.HasSuffix(p, ".md") {
-				return nil
-			}
+		paths, err := pageFiles(fsys, m)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", PagesDir, err)
+		}
+		for _, p := range paths {
 			raw, err := fs.ReadFile(fsys, p)
 			if err != nil {
 				unreadable = append(unreadable, fmt.Errorf("%s: %w", p, err))
-				return nil
+				continue
 			}
 			page, err := ParsePage(raw)
 			if err != nil {
 				unreadable = append(unreadable, fmt.Errorf("%s: %w", p, err))
-				return nil
+				continue
 			}
 			k.Graph.Add(p, page)
-			return nil
-		})
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", PagesDir, err)
 		}
 	}
 
@@ -199,6 +187,82 @@ func sortFindings(fs []Finding) {
 		}
 		return fs[i].Code < fs[j].Code
 	})
+}
+
+// pageFiles returns the KB-relative path of every page, in lexical order,
+// honouring the manifest's ignore list. It reads no file's contents.
+//
+// Load and Hashes both go through it, so the pages a KB contains and the pages
+// an index stamps cannot drift apart: a walk that disagreed would make a fresh
+// index look stale, or worse, hide a page from a rebuild.
+func pageFiles(fsys fs.FS, m Manifest) ([]string, error) {
+	hasPages, err := isDir(fsys, PagesDir)
+	if err != nil {
+		return nil, err
+	}
+	if !hasPages {
+		return nil, nil
+	}
+	var out []string
+	err = fs.WalkDir(fsys, PagesDir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if m.Ignores(p) {
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if d.IsDir() || !strings.HasSuffix(p, ".md") {
+			return nil
+		}
+		out = append(out, p)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Hashes returns the content digest of every page in a KB, keyed by path.
+//
+// It reads the manifest to honour the ignore list and reads each page's bytes,
+// but parses none of them. An index stamps pages by this digest, and checking
+// the stamps means reading the same bytes; a caller deciding whether a cache is
+// still true does not need the page model to decide it.
+func Hashes(root string) (map[string]string, error) {
+	fsys := os.DirFS(root)
+	name := filepath.Base(root)
+
+	var m Manifest
+	raw, err := fs.ReadFile(fsys, ManifestName)
+	switch {
+	case err == nil:
+		m, err = ParseManifest(name, raw)
+		if err != nil {
+			return nil, err
+		}
+	case errors.Is(err, fs.ErrNotExist):
+		m = DefaultManifest(name)
+	default:
+		return nil, fmt.Errorf("%s: %w", ManifestName, err)
+	}
+
+	paths, err := pageFiles(fsys, m)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", PagesDir, err)
+	}
+	out := make(map[string]string, len(paths))
+	for _, p := range paths {
+		raw, err := fs.ReadFile(fsys, p)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", p, err)
+		}
+		out[p] = HashOf(raw)
+	}
+	return out, nil
 }
 
 // isDir reports whether a path inside a KB is a directory, and whether the

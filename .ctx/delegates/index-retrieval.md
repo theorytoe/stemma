@@ -90,18 +90,27 @@ Expose snippets so results are useful without opening every page.
 `internal/index` gained `Tokenize` (one Go tokenizer shared by both tiers),
 `Score`/`Stats` (BM25 with title, tag and body weights), `Populate` (rebuilds the
 contents from a loaded KB) and `Snippet` (plain-text excerpt with the match
-marked). FTS5 holds contentless Go tokens rather than raw prose, so it cannot
-decide what a match is; the tokenizer and ranker moved out of FTS5 for exactly
-that reason, amending `D67`. Schema version is now 2.
+marked). FTS5 holds Go-produced tokens rather than raw prose, so it cannot decide
+what a match is; the tokenizer and ranker moved out of FTS5 for exactly that
+reason, amending `D67`.
 
 ## Task 3:
 
-Status: Not started
+Status: Done
 
 Incremental updates. Stamp each page by content hash rather than modification time,
 because files get touched without changing, and clock skew across machines makes
 mtimes unreliable in a synced directory. Support a full rebuild, an incremental
 refresh, and the detection of a KB that changed underneath the index.
+
+`internal/index` gained `Refresh` (rewrites only pages whose content hash moved),
+`Populate` (full rebuild), `Report` (pages/added/updated/removed), `State` with
+`Check`/`CheckKB`/`Synced` for changed-underneath detection, and `KBHashes`.
+`kb.Hashes` hashes page bytes without parsing and shares the page walk with
+`Load`, so the two cannot disagree about which pages exist. The `stemma index`
+command builds or refreshes, `--rebuild` discards first, and `status`/`env` now
+report the real state. The text table moved to external content (schema version
+3) so one page can be removed without rebuilding the whole index.
 
 ## Task 4:
 

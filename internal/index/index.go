@@ -43,7 +43,7 @@ const FileName = "index.sqlite"
 // SchemaVersion identifies the schema this build writes. It is stored in the
 // database's user_version header and bumped whenever the schema changes; a file
 // carrying any other value is rebuilt rather than interpreted.
-const SchemaVersion = 2
+const SchemaVersion = 3
 
 // Path returns the cache's location for a KB root. The file need not exist.
 func Path(root string) string {
@@ -208,6 +208,9 @@ var required = []string{
 	"citations",
 	"tags",
 	"pages_fts",
+	"pages_ai",
+	"pages_ad",
+	"pages_au",
 }
 
 // schema is the whole index, in the order it is created.
@@ -217,11 +220,14 @@ var required = []string{
 // search reads, the names pages answer to for resolution and backlinks, the
 // links and citations found in bodies, and the FTS5 text table.
 //
-// The text table holds the tokens Tokenize produced, not the raw prose, and is
-// contentless. FTS5 is an inverted index over tokens this package defined, so
-// its own tokenizer cannot decide what a page contains; that is what keeps the
-// two tiers from disagreeing about a match. Snippets come from the body stored
-// in pages, because a contentless table has no text to quote.
+// The text table is external content over pages.tokens, which holds the tokens
+// Tokenize produced rather than the raw prose. FTS5 is an inverted index over
+// tokens this package defined, so its own tokenizer cannot decide what a page
+// contains; that is what keeps the two tiers from disagreeing about a match.
+// Snippets come from the body stored in pages, not from FTS5, for the same
+// reason: one snippet function serves both tiers. The triggers keep the index in
+// step when a page is inserted, updated or deleted, which is what lets a
+// refresh touch only the pages that changed.
 //
 // pages is keyed by an integer id because FTS5 needs one for its rowid; path
 // stays unique and is what everything else joins on. length is the weighted
@@ -234,6 +240,7 @@ var schema = []string{
 		type   TEXT NOT NULL,
 		status TEXT NOT NULL,
 		body   TEXT NOT NULL DEFAULT '',
+		tokens TEXT NOT NULL DEFAULT '',
 		hash   TEXT NOT NULL,
 		length REAL NOT NULL DEFAULT 0
 	)`,
@@ -276,8 +283,22 @@ var schema = []string{
 
 	`CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(
 		tokens,
-		content='',
+		content='pages',
+		content_rowid='id',
 		tokenize='unicode61 remove_diacritics 0',
 		prefix='2 3 4'
 	)`,
+
+	`CREATE TRIGGER IF NOT EXISTS pages_ai AFTER INSERT ON pages BEGIN
+		INSERT INTO pages_fts(rowid, tokens) VALUES (new.id, new.tokens);
+	END`,
+	`CREATE TRIGGER IF NOT EXISTS pages_ad AFTER DELETE ON pages BEGIN
+		INSERT INTO pages_fts(pages_fts, rowid, tokens)
+		VALUES ('delete', old.id, old.tokens);
+	END`,
+	`CREATE TRIGGER IF NOT EXISTS pages_au AFTER UPDATE OF tokens ON pages BEGIN
+		INSERT INTO pages_fts(pages_fts, rowid, tokens)
+		VALUES ('delete', old.id, old.tokens);
+		INSERT INTO pages_fts(rowid, tokens) VALUES (new.id, new.tokens);
+	END`,
 }

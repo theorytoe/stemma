@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/theorytoe/stemma/internal/index"
 	"github.com/theorytoe/stemma/internal/kb"
 )
 
@@ -66,7 +67,7 @@ var statusCommand = &command{
 				Orphans:        nonNil(k.Graph.Orphans()),
 				Ambiguous:      nonNil(ambiguousNames(k)),
 				Drafts:         len(drafts),
-				Index:          readIndexState(k.Root),
+				Index:          readIndexState(k),
 				UncitedSources: []string{},
 			}
 			for _, p := range k.Graph.Paths() {
@@ -132,15 +133,24 @@ func (r statusReport) text() string {
 	return b.String()
 }
 
-// readIndexState reports whether this KB has an index.
+// readIndexState reports whether this KB has an index, and whether the index
+// still matches the KB it describes.
 //
-// Nothing can build one yet, so the honest answer is that none is there. This
-// used to be the newest modification anywhere under .stemma/, which stopped
-// meaning anything the moment that directory began holding things that are not an
-// index — the extraction script, and the text fetch reads. Finding the index by
-// its own name is the index task's to write; root is here for it.
-func readIndexState(root string) indexState {
-	return indexState{}
+// The check compares the index's content stamps with the pages as loaded, so it
+// answers the question a cache is for and never trusts a timestamp: a file
+// touched without changing is not a change. A check that cannot run is not a
+// freshness claim, so the index is reported absent rather than guessed at.
+func readIndexState(k *kb.KB) indexState {
+	switch st, err := index.CheckKB(k); {
+	case err != nil:
+		return indexState{}
+	case st == index.Fresh:
+		return indexState{Present: true, Fresh: true}
+	case st == index.Stale:
+		return indexState{Present: true}
+	default:
+		return indexState{}
+	}
 }
 
 // nonNil turns a nil slice into an empty one, so that --json always reports a

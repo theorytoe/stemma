@@ -11,45 +11,49 @@ import (
 //
 // It is a rebuild of the contents, not of the file: the schema stays and every
 // row is replaced inside one transaction, so a reader never sees the index half
-// written. Incremental refresh is a later task's job; this is what it will fall
-// back to, and what a first build does.
-func (s *Store) Populate(k *kb.KB) error {
+// written. Refresh is the incremental path; this is what it falls back to when
+// a caller asks for a rebuild.
+func (s *Store) Populate(k *kb.KB) (Report, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
-		return fmt.Errorf("%s: %w", s.path, err)
+		return Report{}, fmt.Errorf("%s: %w", s.path, err)
 	}
 	defer tx.Rollback()
 
-	// A contentless FTS table cannot be emptied with DELETE; 'delete-all' is
-	// the command it does understand.
+	// Deleting the pages fires the delete trigger, which is what empties the
+	// text index; the derived tables are cleared alongside.
 	for _, stmt := range []string{
 		`DELETE FROM pages`,
 		`DELETE FROM names`,
 		`DELETE FROM links`,
 		`DELETE FROM citations`,
 		`DELETE FROM tags`,
-		`INSERT INTO pages_fts(pages_fts) VALUES ('delete-all')`,
 	} {
 		if _, err := tx.Exec(stmt); err != nil {
-			return fmt.Errorf("%s: %w", s.path, err)
+			return Report{}, fmt.Errorf("%s: %w", s.path, err)
 		}
 	}
 
-	// Sorted, because Graph.Paths is, so a build is reproducible byte for byte
-	// when nothing changed.
+	// Sorted, because Graph.Paths is, so a build is reproducible when nothing
+	// changed.
 	for _, path := range k.Graph.Paths() {
 		page, ok := k.Graph.Page(path)
 		if !ok {
 			continue
 		}
 		if err := insertPage(tx, path, page); err != nil {
-			return fmt.Errorf("%s: %w", s.path, err)
+			return Report{}, fmt.Errorf("%s: %w", s.path, err)
 		}
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return Report{}, fmt.Errorf("%s: %w", s.path, err)
+	}
+	return Report{Pages: k.Graph.Len(), Added: k.Graph.Len(), Rebuilt: true}, nil
 }
 
-// insertPage writes one page and everything the graph knows about it.
+// insertPage writes one page and everything the graph knows about it. The text
+// index follows from the tokens column through the insert trigger, so this
+// writes the page once and lets the schema keep the two in step.
 func insertPage(tx *sql.Tx, path string, page *kb.Page) error {
 	title := page.Title()
 	body := string(page.Body())
@@ -71,18 +75,11 @@ func insertPage(tx *sql.Tx, path string, page *kb.Page) error {
 	all = append(all, tagTokens...)
 	all = append(all, bodyTokens...)
 
-	res, err := tx.Exec(
-		`INSERT INTO pages(path, title, type, status, body, hash, length)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		path, title, page.Type(), page.Status(), body, kb.HashOf(page.Bytes()), doc.Length())
-	if err != nil {
-		return err
-	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	if _, err := tx.Exec(`INSERT INTO pages_fts(rowid, tokens) VALUES (?, ?)`, id, Join(all)); err != nil {
+	if _, err := tx.Exec(
+		`INSERT INTO pages(path, title, type, status, body, tokens, hash, length)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		path, title, page.Type(), page.Status(), body, Join(all),
+		kb.HashOf(page.Bytes()), doc.Length()); err != nil {
 		return err
 	}
 

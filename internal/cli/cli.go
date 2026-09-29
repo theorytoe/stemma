@@ -86,6 +86,7 @@ func init() {
 		archiveCommand,
 		promoteCommand,
 		statusCommand,
+		indexCommand,
 		citeCommand,
 		fetchCommand,
 		lintCommand,

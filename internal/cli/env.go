@@ -92,7 +92,7 @@ var envCommand = &command{
 				if k, err := kb.Load(root); err == nil {
 					// Reported whether or not there is one: "no index" is the answer a
 					// reader of `stemma env` is looking for, and an absent field is not.
-					state := readIndexState(k.Root)
+					state := readIndexState(k)
 					report.Index = &state
 				}
 			}

@@ -114,7 +114,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D44 | Out-of-scope links are **pruned** from the extract.                                                                                                                   | Q21       |
 | D51 | Pruned links **retain their anchor text** as plain text. A summary is reported by default; a flag emits the full list.                                                | Q36       |
 | D33 | A **JSON/JSONL machine-readable dump** of pages, links, and citations is included.                                                                                    | Q21       |
-| D67 | The Tier-1 index is **one file, `<kb>/.stemma/index.sqlite`**, versioned by SQLite's `user_version`; any other version, or a file that is not a database, is deleted and rebuilt. Tokens are defined by **one Go tokenizer** shared by both tiers; FTS5 is a contentless inverted index over those tokens, and **BM25 ranking and snippets are Go code**. | review    |
+| D67 | The Tier-1 index is **one file, `<kb>/.stemma/index.sqlite`**, versioned by SQLite's `user_version`; any other version, or a file that is not a database, is deleted and rebuilt. Tokens are defined by **one Go tokenizer** shared by both tiers; FTS5 is an external-content index over a `tokens` column those tokens fill, and **BM25 ranking and snippets are Go code**. | review    |
 
 ### Platform
 
@@ -248,10 +248,10 @@ and reported as a PDF, with EPUB supported by accident rather than by design.
 **Decision.** The cache is a single SQLite file at `<kb>/.stemma/index.sqlite`. Its
 schema version lives in SQLite's `user_version`; a file carrying any other value,
 or one that is not a database at all, is deleted and rebuilt from the KB. Words
-are defined by one Go tokenizer that both tiers call. FTS5 is a contentless
-inverted index over the tokens that tokenizer produced, with a two-, three- and
-four-character prefix index; BM25 ranking and snippet extraction are Go code in
-`internal/index` as well.
+are defined by one Go tokenizer that both tiers call. FTS5 is an external-content
+inverted index over a `tokens` column that tokenizer fills, kept in step with
+`pages` by triggers, with a two-, three- and four-character prefix index; BM25
+ranking and snippet extraction are Go code in `internal/index` as well.
 
 **Why delete rather than migrate.** The cache is derived and nothing in it is a
 source of truth, so the only state a version mismatch can lose is state that the
@@ -281,7 +281,11 @@ in-memory Tier 0 cannot reproduce FTS5's Unicode folding in Go, so a shared
 engine was the only way to keep FTS5 authoritative — and building a database per
 Tier-0 query contradicts Tier 0 being files plus in-memory. The tokenizer and
 ranker moved into Go instead, and the text table became a contentless index over
-Go's tokens. The schema version went from 1 to 2 with the change.
+Go's tokens. The schema version went from 1 to 2 with the change, and to 3 when
+incremental refresh showed that a contentless table cannot cheaply delete one
+document: the tokens moved into a `tokens` column on `pages` and the text table
+became external-content over it, so the triggers remove a page's entry when the
+page goes.
 
 **Why `internal/index` and not `internal/kb`.** `D10` puts the index in the core
 library rather than in a surface, and `internal/index` is that core library's

@@ -162,6 +162,7 @@ func TestEveryCommandEmitsAnEnvelope(t *testing.T) {
 		{"archive", []string{"--kb", root, "Renamed", "--reason", "done"}},
 		{"promote", []string{"--kb", root, "draft"}},
 		{"status", []string{"--kb", root}},
+		{"index", []string{"--kb", root}},
 		{"lint", []string{"--kb", root}},
 		{"env", nil},
 		{"help", nil},

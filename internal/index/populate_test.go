@@ -14,19 +14,24 @@ func buildKB(t *testing.T, files map[string]string) *kb.KB {
 	t.Helper()
 	root := t.TempDir()
 	for name, body := range files {
-		full := filepath.Join(root, filepath.FromSlash(name))
-		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-			t.Fatalf("mkdir for %s: %v", name, err)
-		}
-		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
-			t.Fatalf("write %s: %v", name, err)
-		}
+		writeFile(t, root, name, body)
 	}
 	k, err := kb.Load(root)
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
 	return k
+}
+
+func writeFile(t *testing.T, root, name, body string) {
+	t.Helper()
+	full := filepath.Join(root, filepath.FromSlash(name))
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		t.Fatalf("mkdir for %s: %v", name, err)
+	}
+	if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
+		t.Fatalf("write %s: %v", name, err)
+	}
 }
 
 func pageFile(title, extra, body string) string {
@@ -56,7 +61,7 @@ func TestPopulateWritesEverything(t *testing.T) {
 		"bibliography.bib": "@article{key,}\n",
 	})
 	s := open(t, k.Root)
-	if err := s.Populate(k); err != nil {
+	if _, err := s.Populate(k); err != nil {
 		t.Fatalf("Populate: %v", err)
 	}
 
@@ -92,11 +97,11 @@ func TestPopulateIsRepeatable(t *testing.T) {
 		"pages/b.md": pageFile("B", "type: concept", "beta\n"),
 	})
 	s := open(t, k.Root)
-	if err := s.Populate(k); err != nil {
+	if _, err := s.Populate(k); err != nil {
 		t.Fatal(err)
 	}
 	first := count(t, s, `SELECT count(*) FROM pages`)
-	if err := s.Populate(k); err != nil {
+	if _, err := s.Populate(k); err != nil {
 		t.Fatal(err)
 	}
 	if got := count(t, s, `SELECT count(*) FROM pages`); got != first {
@@ -114,7 +119,7 @@ func TestPopulateIndexesFoldedAccents(t *testing.T) {
 		"pages/a.md": pageFile("Café", "type: concept", "a naïve turn\n"),
 	})
 	s := open(t, k.Root)
-	if err := s.Populate(k); err != nil {
+	if _, err := s.Populate(k); err != nil {
 		t.Fatal(err)
 	}
 	for _, term := range []string{"cafe", "naive"} {
@@ -131,7 +136,7 @@ func TestPopulateSkipsSourceNames(t *testing.T) {
 		"pages/s.md": pageFile("Some Key", "type: source\nkey: somekey", "text\n"),
 	})
 	s := open(t, k.Root)
-	if err := s.Populate(k); err != nil {
+	if _, err := s.Populate(k); err != nil {
 		t.Fatal(err)
 	}
 	if got := count(t, s, `SELECT count(*) FROM names WHERE path = 'pages/s.md'`); got != 0 {

@@ -33,22 +33,13 @@ func insertTestPage(t *testing.T, s *Store, path, title, body string, tags []str
 	}
 	bodyTokens := Tokenize(body)
 	doc := Doc{Title: titleTokens, Tags: tagTokens, Body: bodyTokens}
-
-	res, err := s.db.Exec(
-		`INSERT INTO pages(path, title, type, status, body, hash, length)
-		 VALUES (?, ?, 'concept', 'active', ?, 'sha256:x', ?)`,
-		path, title, body, doc.Length())
-	if err != nil {
-		t.Fatalf("insert %s: %v", path, err)
-	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		t.Fatalf("last insert id: %v", err)
-	}
-
 	all := append(append(append([]string{}, titleTokens...), tagTokens...), bodyTokens...)
-	if _, err := s.db.Exec(`INSERT INTO pages_fts(rowid, tokens) VALUES (?, ?)`, id, Join(all)); err != nil {
-		t.Fatalf("insert tokens for %s: %v", path, err)
+
+	if _, err := s.db.Exec(
+		`INSERT INTO pages(path, title, type, status, body, tokens, hash, length)
+		 VALUES (?, ?, 'concept', 'active', ?, ?, 'sha256:x', ?)`,
+		path, title, body, Join(all), doc.Length()); err != nil {
+		t.Fatalf("insert %s: %v", path, err)
 	}
 	if _, err := s.db.Exec(`INSERT INTO names(path, name, kind) VALUES (?, ?, 'title')`, path, strings.ToLower(title)); err != nil {
 		t.Fatalf("insert name for %s: %v", path, err)
@@ -225,8 +216,8 @@ func TestFTS5IndexesGoTokens(t *testing.T) {
 		t.Errorf("tag match = %q, want pages/retrieval.md", got)
 	}
 
-	if _, err := s.db.Exec(`INSERT INTO pages_fts(pages_fts) VALUES ('delete-all')`); err != nil {
-		t.Fatalf("delete-all: %v", err)
+	if _, err := s.db.Exec(`DELETE FROM pages`); err != nil {
+		t.Fatalf("delete pages: %v", err)
 	}
 	var remaining int
 	if err := s.db.QueryRow(

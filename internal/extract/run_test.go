@@ -213,7 +213,7 @@ func TestTheArgumentsAreWhatTheContractSays(t *testing.T) {
 
 func TestProbeReportsTheMachineRatherThanFailing(t *testing.T) {
 	r := fakeShim(t, `printf '%s' '{"contract":1,"ok":true,"kind":"probe","python":"3.14.7",`+
-		`"libs":{"pymupdf":"1.26.4","pypdf":null}}'`)
+		`"libs":{"pymupdf":"1.26.4","bs4":null}}'`)
 
 	got, err := r.Probe(context.Background())
 	if err != nil {
@@ -226,8 +226,8 @@ func TestProbeReportsTheMachineRatherThanFailing(t *testing.T) {
 		t.Errorf("pymupdf = %q, want a version", got.Version("pymupdf"))
 	}
 	// A library reported as absent is a fact, not a failure.
-	if got.Has("pypdf") || got.Version("pypdf") != "" {
-		t.Errorf("pypdf = %q, want it reported as not importable", got.Version("pypdf"))
+	if got.Has("bs4") || got.Version("bs4") != "" {
+		t.Errorf("bs4 = %q, want it reported as not importable", got.Version("bs4"))
 	}
 }
 
@@ -423,7 +423,7 @@ func TestProbeThroughTheRealShim(t *testing.T) {
 	}
 	// probe reports on every library the contract names, importing none of them
 	// being a fact rather than an error.
-	for _, name := range []string{"pymupdf", "pypdf", "httpx", "bs4"} {
+	for _, name := range []string{"pymupdf", "httpx", "bs4"} {
 		if _, ok := got.Libs[name]; !ok {
 			t.Errorf("probe did not report %s", name)
 		}

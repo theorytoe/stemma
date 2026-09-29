@@ -142,11 +142,12 @@ func findPython() toolInfo {
 	return toolInfo{Available: false, Why: "not found"}
 }
 
-// findPDF asks Python whether a PDF extractor is importable. The shim belongs
-// to a later task; until then the import check is the honest answer to "would
-// extraction work here".
+// findPDF asks Python whether the PDF extractor is importable. PyMuPDF is the
+// only library the shim reads PDFs with, and it answered to `fitz` before it
+// answered to `pymupdf`, so both names are tried. pypdf is deliberately absent:
+// reporting a library that nothing would read with is a lie.
 func findPDF(python string) toolInfo {
-	for _, module := range []string{"pymupdf", "pypdf"} {
+	for _, module := range []string{"pymupdf", "fitz"} {
 		out, err := runTool(python, "-c", "import "+module+", sys; print(getattr("+module+", \"__version__\", \"\"))")
 		if err != nil {
 			continue

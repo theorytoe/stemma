@@ -26,7 +26,6 @@ CONTRACT = 1
 # machine with either one has a PDF reader.
 LIBRARIES = {
     "pymupdf": ("pymupdf", "fitz"),
-    "pypdf": ("pypdf",),
     "httpx": ("httpx",),
     "bs4": ("bs4",),
 }
@@ -191,9 +190,7 @@ def looks_two_column(page):
     This is used to warn, never to reorder. An extractor's own block order is
     usually right for a two-column paper, because text is stored in the order it
     was drawn, and a heuristic that reordered a page wrongly would be worse than
-    one that says the order may be the library's. It is therefore also the one
-    place where the two extractors differ in what they report, since pypdf's block
-    geometry is not available here.
+    one that says the order may be the library's.
     """
     try:
         blocks = [
@@ -311,27 +308,6 @@ def pdf_with_pymupdf(path, limit):
         document.close()
 
 
-def pdf_with_pypdf(path, limit):
-    module = import_any(LIBRARIES["pypdf"])
-    try:
-        reader = module.PdfReader(path)
-        if reader.is_encrypted:
-            return failed("unreadable", "the PDF is encrypted")
-        pages = len(reader.pages)
-    except Exception as exc:
-        return failed("unreadable", "the PDF could not be opened: %s" % exc)
-
-    reading = Reading(limit)
-    for page in reader.pages:
-        try:
-            reading.add(page.extract_text() or "")
-        except Exception:
-            reading.broken_page()
-        if reading.full():
-            break
-    return reading.answer("pypdf %s" % version_of(module), pages)
-
-
 def pdf(argv):
     if len(argv) != 2:
         return failed("internal", "pdf takes a path and a limit, got %d arguments" % len(argv))
@@ -344,15 +320,13 @@ def pdf(argv):
     if refused is not None:
         return refused
 
-    if import_any(LIBRARIES["pymupdf"]) is not None:
-        return pdf_with_pymupdf(path, limit)
-    if import_any(LIBRARIES["pypdf"]) is not None:
-        return pdf_with_pypdf(path, limit)
-    return failed(
-        "missing_extractor",
-        "neither pymupdf nor pypdf is importable, so no PDF can be read; "
-        "`stemma env` says what this machine has",
-    )
+    if import_any(LIBRARIES["pymupdf"]) is None:
+        return failed(
+            "missing_extractor",
+            "pymupdf is not importable, so no PDF can be read; "
+            "`stemma env` says what this machine has",
+        )
+    return pdf_with_pymupdf(path, limit)
 
 
 def main(argv):

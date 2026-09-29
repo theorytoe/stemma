@@ -321,27 +321,6 @@ def case_pdf_refuses_an_encrypted_file():
                    "encrypted" in out["error"]["message"], out["error"]["message"])
 
 
-def case_pdf_falls_back_to_pypdf():
-    if shim.import_any(shim.LIBRARIES["pypdf"]) is None:
-        print("skip  pypdf fallback: pypdf is not installed")
-        return
-    module = need_pymupdf("pypdf fallback")
-    if module is None:
-        return
-    with tempfile.TemporaryDirectory() as directory:
-        _, path = one_column(directory)
-        saved = shim.LIBRARIES["pymupdf"]
-        shim.LIBRARIES["pymupdf"] = ()
-        try:
-            out = shim.main(["pdf", path, "1000000"])
-        finally:
-            shim.LIBRARIES["pymupdf"] = saved
-        check_true("pdf falls back to pypdf",
-                   str(out.get("extractor", "")).startswith("pypdf"), out)
-        check_true("and still carries the text",
-                   "Column" in out.get("text", ""), out.get("text", "")[:80])
-
-
 def case_pdf_refuses_what_is_not_a_pdf():
     with tempfile.TemporaryDirectory() as directory:
         path = write(directory, "notes.pdf", "this is not a PDF at all\n")
@@ -362,13 +341,12 @@ def case_pdf_refuses_a_zip_container():
                    "EPUB" in out["error"]["message"], out["error"]["message"])
 
 
-def case_pdf_without_any_library():
-    # No fixture and no library needed: the sniff passes, and then there is
-    # nothing that can read the file. On a machine with both libraries installed
-    # this is the only way to see that outcome at all.
+def case_pdf_without_pymupdf():
+    # No fixture needed: the sniff passes, and then there is nothing that can read
+    # the file. PyMuPDF is the only PDF reader the shim uses, so on a machine that
+    # has it, taking it away is the only way to see this outcome at all.
     saved = dict(shim.LIBRARIES)
     shim.LIBRARIES["pymupdf"] = ()
-    shim.LIBRARIES["pypdf"] = ()
     try:
         with tempfile.TemporaryDirectory() as directory:
             path = write(directory, "bare.pdf", b"%PDF-1.4\n% nothing here will read this\n")
@@ -376,8 +354,10 @@ def case_pdf_without_any_library():
     finally:
         shim.LIBRARIES.clear()
         shim.LIBRARIES.update(saved)
-    check("pdf with no library is missing_extractor",
+    check("pdf without pymupdf is missing_extractor",
           out["error"]["class"], "missing_extractor")
+    check_true("and names pymupdf", "pymupdf" in out["error"]["message"],
+               out["error"]["message"])
 
 
 def main():

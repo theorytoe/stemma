@@ -64,6 +64,9 @@ type Source interface {
 	// yields a zero Doc and no error.
 	Doc(path string) (Doc, error)
 
+	// Body returns a page's markdown body, which is what a snippet is cut from.
+	Body(path string) (string, error)
+
 	// Match returns the paths whose tokens include any of the terms, sorted.
 	Match(terms []string) ([]string, error)
 
@@ -114,6 +117,29 @@ func NewSource(k *kb.KB, onDowngrade func(reason string)) Source {
 	return newKBSource(k)
 }
 
+// NewSourceAt is NewSource for a caller that has only a KB root.
+//
+// It is the form a command uses. When the index is fresh no page is parsed: the
+// freshness check reads and hashes the page bytes, and the index answers from
+// there. When there is no usable index the KB is loaded, which is the cost Tier
+// 0 always pays and the cost the index exists to avoid.
+func NewSourceAt(root string, onDowngrade func(reason string)) (Source, error) {
+	state, err := Check(root)
+	if err == nil && state == Fresh {
+		if store, openErr := openReadOnly(root); openErr == nil && store != nil {
+			return newIndexSource(store), nil
+		}
+	}
+	k, loadErr := kb.Load(root)
+	if loadErr != nil {
+		return nil, loadErr
+	}
+	if onDowngrade != nil {
+		onDowngrade(downgradeReason(state, err))
+	}
+	return newKBSource(k), nil
+}
+
 // downgradeReason names why the index did not answer, in the words the index
 // state uses.
 func downgradeReason(state State, err error) string {
@@ -124,6 +150,32 @@ func downgradeReason(state State, err error) string {
 		return "absent"
 	default:
 		return state.String()
+	}
+}
+
+// MakeDoc tokenizes a document's fields the way both tiers do. It is exported
+// for the callers that supply documents the source does not hold, such as inbox
+// drafts, so those rank on the same tokens as a page.
+func MakeDoc(title string, tags []string, body string) Doc {
+	return Doc{Title: Tokenize(title), Tags: tagTokens(tags), Body: Tokenize(body)}
+}
+
+// Document is one searchable item supplied outside a source — an inbox draft.
+// Drafts are read directly rather than indexed (D49), so they are handed to
+// Search alongside the pages and ranked with them.
+type Document struct {
+	Meta PageMeta
+	Doc  Doc
+	Body string
+}
+
+// NewDocument builds a searchable document from raw fields, normalising its
+// tags and tokenizing its text the same way a page's are.
+func NewDocument(path, title, typ, status string, tags []string, body string) Document {
+	return Document{
+		Meta: PageMeta{Path: path, Title: title, Type: typ, Status: status, Tags: normalTags(tags)},
+		Doc:  MakeDoc(title, tags, body),
+		Body: body,
 	}
 }
 

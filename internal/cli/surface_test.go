@@ -163,6 +163,7 @@ func TestEveryCommandEmitsAnEnvelope(t *testing.T) {
 		{"promote", []string{"--kb", root, "draft"}},
 		{"status", []string{"--kb", root}},
 		{"index", []string{"--kb", root}},
+		{"search", []string{"--kb", root, "Alpha"}},
 		{"lint", []string{"--kb", root}},
 		{"env", nil},
 		{"help", nil},

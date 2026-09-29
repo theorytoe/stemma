@@ -49,6 +49,14 @@ func (s *kbSource) Pages() ([]PageMeta, error) { return s.pages, nil }
 
 func (s *kbSource) Doc(path string) (Doc, error) { return s.docs[path], nil }
 
+func (s *kbSource) Body(path string) (string, error) {
+	page, ok := s.k.Graph.Page(path)
+	if !ok {
+		return "", nil
+	}
+	return string(page.Body()), nil
+}
+
 func (s *kbSource) Match(terms []string) ([]string, error) {
 	want := termSet(terms)
 	if len(want) == 0 {

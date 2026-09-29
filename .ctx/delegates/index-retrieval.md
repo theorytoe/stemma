@@ -149,12 +149,19 @@ scale"), the new `README.md`, and `U1` in the register.
 
 ## Task 6:
 
-Status: Not started
+Status: Done
 
 `search`. Ranked full-text with filters for type, tag, and status, `--include-inbox`
 to reach drafts, and `--json` output. Support scoping to a directory within
 `pages/` for convenience, while never treating a directory as a semantic boundary
 (`P10`).
+
+`index.Search` ranks a `Source` plus optional extra documents (drafts) with the
+shared BM25, then filters by type/status/tag/directory and caps the result.
+`Source` gained `Body` for snippets, and `NewSourceAt` lets the command answer
+from a fresh index without parsing any page. The `stemma search` command reports
+the tier in `--json` and stays silent in text; `--limit` caps results. Result
+ranking and membership are identical on both tiers.
 
 ## Task 7:
 

@@ -92,6 +92,15 @@ func (s *indexSource) Doc(path string) (Doc, error) {
 	return Doc{Title: Tokenize(title), Tags: tagTokens(tags), Body: Tokenize(body)}, nil
 }
 
+func (s *indexSource) Body(path string) (string, error) {
+	var body string
+	err := s.s.db.QueryRow(`SELECT body FROM pages WHERE path = ?`, path).Scan(&body)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	return body, err
+}
+
 func (s *indexSource) Match(terms []string) ([]string, error) {
 	query := ftsQuery(terms)
 	if query == "" {

@@ -79,7 +79,7 @@ the absence-of-Python path before real extraction complexity is added.
 
 ## Task 3:
 
-Status: Not started
+Status: Done
 
 PDF extraction. Prefer `pymupdf`, fall back to `pypdf`, and report which was used.
 Handle the cases that matter in practice: no extractable text layer, multi-column

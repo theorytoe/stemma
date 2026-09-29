@@ -89,7 +89,7 @@ in the decision register.
 
 ## Task 4:
 
-Status: Not started
+Status: Done
 
 URL fetching and main-content extraction. Fetch politely with a timeout and a
 user agent, then reduce the page to its main content rather than its navigation.

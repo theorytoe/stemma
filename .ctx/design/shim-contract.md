@@ -255,6 +255,48 @@ Reading stops as soon as the limit is passed, so a nine-hundred-page PDF costs
 roughly what its first pages cost, and `pages` still reports the document's true
 length rather than the number of pages read.
 
+# The URL family
+
+`url` fetches a page with **httpx** and reduces it with **bs4**, and `extractor`
+reports `httpx+bs4`. Both are required and neither has a fallback: the same
+reasoning as the PDF family applies, that a second path is a second behaviour, and
+the standard library is not a quieter substitute for either.
+
+**Politeness is in the request, not in a delay.** The request carries the user
+agent Go supplied and an `Accept` for HTML, httpx is given a 30-second timeout for
+connect and read, and Go enforces its own 60-second wall clock above that. The
+library timeout is deliberately the shorter one, so a slow server produces a
+sentence about the server rather than a killed process. Redirects are followed —
+httpx does not do so unless asked, and a page behind a redirect is not a failure.
+
+**What comes back is checked before it is read.**
+
+- A response that does not declare `text/html` or `application/xhtml+xml` is
+  `unsupported`, with the declared type named in the message.
+- A status outside 2xx is `network`, with the status named. A 404 is a fact about
+the request rather than about the machine, and it is still a failed fetch, so it
+  is not given a class of its own.
+- A body past `limit` is `too_large`, and it is stopped at the limit rather than
+  after it, so a server that would stream a gigabyte is cut off instead of
+  buffered.
+
+**Main content means the document, not the page.** Elements that are never the
+document — `script`, `style`, `nav`, `header`, `footer`, `aside`, `form` and a few
+more — are removed, and then the text is taken from the first of `article`,
+`main`, `[role=main]`, `#content`, `.content` that the page has. Falling back to
+`body` is the honest last resort, and it is reported as a `note` rather than
+silently accepted, because "the body was read" and "the article was read" are
+different answers to the question this command exists to ask. Whitespace is
+tidied, since line breaks in markup say nothing about the document; nothing is
+reordered, nothing is added, and no Markdown or title is produced.
+
+**A page with no server-rendered text is `empty`, and the message says
+JavaScript.** This is the case the delegate singled out: a single-page application
+serves a shell and fills it in later, so an extractor returns nothing at all.
+Returning that nothing as an empty string would look like a document that happened
+to say nothing; `empty` says which of the two happened, and that rendering a page
+is out of scope.
+
 # What the text is
 
 `text` is the document's text as UTF-8, and it is not a document. The shim does

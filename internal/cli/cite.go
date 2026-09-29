@@ -2,8 +2,6 @@ package cli
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"io"
@@ -33,6 +31,7 @@ var citeCommand = &command{
 		citeListCommand,
 		citeShowCommand,
 		citeCitedByCommand,
+		citeVendorCommand,
 		citeExportCommand,
 		citeCheckCommand,
 	},
@@ -135,7 +134,7 @@ var citeAddCommand = &command{
 				entry.SetType(*typ)
 			}
 			if len(record) > 0 {
-				entry.Set(kb.FieldContentHash, "{sha256:"+hash(record)+"}")
+				entry.Set(kb.FieldContentHash, "{"+kb.HashOf(record)+"}")
 			}
 
 			return writeEntry(w, k, entry, *force, *dryRun)
@@ -251,12 +250,6 @@ func failResolution(w *output, id string, err error) int {
 	}
 	fmt.Fprintf(w.stderr, "stemma: %v\n", err)
 	return ExitFindings
-}
-
-// hash is the digest half of a stemma-content-hash.
-func hash(b []byte) string {
-	sum := sha256.Sum256(b)
-	return hex.EncodeToString(sum[:])
 }
 
 // envBool reads an environment variable as a flag would.

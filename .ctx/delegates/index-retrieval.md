@@ -75,17 +75,24 @@ link graph, citation keys, and the FTS table. Nothing that cannot be regenerated
 Landed as `internal/index`: `<kb>/.stemma/index.sqlite`, schema version in
 `user_version`, rebuilt by deletion on any mismatch or on a file that is not a
 database. Tables for pages (with type, status, tags), claimed names, links,
-citations and tags, plus an external-content FTS5 table over title, tags and body.
+citations and tags, plus a contentless FTS5 table over Go-produced tokens.
 The choices are recorded as `D67`.
 
 ## Task 2:
 
-Status: Not started
+Status: Done
 
 FTS5 population and ranking. Build the full-text table over page bodies plus the
 searchable frontmatter fields, use BM25 with sane weights, and choose a tokenizer
 with the consequences understood for code, identifiers, and non-English text.
 Expose snippets so results are useful without opening every page.
+
+`internal/index` gained `Tokenize` (one Go tokenizer shared by both tiers),
+`Score`/`Stats` (BM25 with title, tag and body weights), `Populate` (rebuilds the
+contents from a loaded KB) and `Snippet` (plain-text excerpt with the match
+marked). FTS5 holds contentless Go tokens rather than raw prose, so it cannot
+decide what a match is; the tokenizer and ranker moved out of FTS5 for exactly
+that reason, amending `D67`. Schema version is now 2.
 
 ## Task 3:
 

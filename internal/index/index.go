@@ -43,7 +43,7 @@ const FileName = "index.sqlite"
 // SchemaVersion identifies the schema this build writes. It is stored in the
 // database's user_version header and bumped whenever the schema changes; a file
 // carrying any other value is rebuilt rather than interpreted.
-const SchemaVersion = 1
+const SchemaVersion = 2
 
 // Path returns the cache's location for a KB root. The file need not exist.
 func Path(root string) string {
@@ -208,9 +208,6 @@ var required = []string{
 	"citations",
 	"tags",
 	"pages_fts",
-	"pages_ai",
-	"pages_ad",
-	"pages_au",
 }
 
 // schema is the whole index, in the order it is created.
@@ -218,18 +215,17 @@ var required = []string{
 // It stores what the KB already holds and nothing else: the pages with the
 // frontmatter the commands filter on (type, status, tags) and the body the
 // search reads, the names pages answer to for resolution and backlinks, the
-// links and citations found in bodies, and the FTS5 text table over title,
-// tags and body.
+// links and citations found in bodies, and the FTS5 text table.
 //
-// The text table is external-content over pages, which is what lets snippet()
-// quote a real page rather than a stored copy, and why the triggers below keep
-// it in step. The tokenizer is unicode61 with diacritics folded: case- and
-// accent-insensitive, no stemming, so non-English text and code identifiers
-// survive as written. The prefix index lets `retriev*` reach `retrieval`
-// without a stemmer mangling the token.
+// The text table holds the tokens Tokenize produced, not the raw prose, and is
+// contentless. FTS5 is an inverted index over tokens this package defined, so
+// its own tokenizer cannot decide what a page contains; that is what keeps the
+// two tiers from disagreeing about a match. Snippets come from the body stored
+// in pages, because a contentless table has no text to quote.
 //
-// pages is keyed by an integer id because FTS5 external content needs one;
-// path stays unique and is what everything else joins on.
+// pages is keyed by an integer id because FTS5 needs one for its rowid; path
+// stays unique and is what everything else joins on. length is the weighted
+// token count BM25 needs, computed by the same function that scores.
 var schema = []string{
 	`CREATE TABLE IF NOT EXISTS pages (
 		id     INTEGER PRIMARY KEY,
@@ -237,9 +233,9 @@ var schema = []string{
 		title  TEXT NOT NULL,
 		type   TEXT NOT NULL,
 		status TEXT NOT NULL,
-		tags   TEXT NOT NULL DEFAULT '',
 		body   TEXT NOT NULL DEFAULT '',
-		hash   TEXT NOT NULL
+		hash   TEXT NOT NULL,
+		length REAL NOT NULL DEFAULT 0
 	)`,
 	`CREATE INDEX IF NOT EXISTS pages_type ON pages(type)`,
 	`CREATE INDEX IF NOT EXISTS pages_status ON pages(status)`,
@@ -279,31 +275,9 @@ var schema = []string{
 	`CREATE INDEX IF NOT EXISTS tags_tag ON tags(tag)`,
 
 	`CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(
-		title,
-		tags,
-		body,
-		content='pages',
-		content_rowid='id',
-		tokenize='unicode61 remove_diacritics 2',
+		tokens,
+		content='',
+		tokenize='unicode61 remove_diacritics 0',
 		prefix='2 3 4'
 	)`,
-
-	// The triggers keep the external-content table equal to pages. A writer that
-	// uses INSERT OR REPLACE will not fire the delete half of this on the
-	// modernc driver unless recursive_triggers is on, so population deletes and
-	// inserts explicitly rather than replacing.
-	`CREATE TRIGGER IF NOT EXISTS pages_ai AFTER INSERT ON pages BEGIN
-		INSERT INTO pages_fts(rowid, title, tags, body)
-		VALUES (new.id, new.title, new.tags, new.body);
-	END`,
-	`CREATE TRIGGER IF NOT EXISTS pages_ad AFTER DELETE ON pages BEGIN
-		INSERT INTO pages_fts(pages_fts, rowid, title, tags, body)
-		VALUES ('delete', old.id, old.title, old.tags, old.body);
-	END`,
-	`CREATE TRIGGER IF NOT EXISTS pages_au AFTER UPDATE ON pages BEGIN
-		INSERT INTO pages_fts(pages_fts, rowid, title, tags, body)
-		VALUES ('delete', old.id, old.title, old.tags, old.body);
-		INSERT INTO pages_fts(rowid, title, tags, body)
-		VALUES (new.id, new.title, new.tags, new.body);
-	END`,
 }

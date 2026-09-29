@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -21,21 +22,33 @@ func open(t *testing.T, root string) *Store {
 	return s
 }
 
-// insertPage writes one page row directly. Population is a later task; these
-// tests only need the schema's own triggers to have something to fire on.
-func insertPage(t *testing.T, s *Store, path, title, body string, tags []string) {
+// insertTestPage writes one page row directly. Population is exercised separately;
+// these tests need the schema to have something to hold.
+func insertTestPage(t *testing.T, s *Store, path, title, body string, tags []string) {
 	t.Helper()
-	joined := strings.Join(tags, " ")
+	titleTokens := Tokenize(title)
+	var tagTokens []string
+	for _, tag := range tags {
+		tagTokens = append(tagTokens, Tokenize(tag)...)
+	}
+	bodyTokens := Tokenize(body)
+	doc := Doc{Title: titleTokens, Tags: tagTokens, Body: bodyTokens}
+
 	res, err := s.db.Exec(
-		`INSERT INTO pages(path, title, type, status, tags, body, hash)
-		 VALUES (?, ?, 'concept', 'active', ?, ?, 'sha256:x')`,
-		path, title, joined, body)
+		`INSERT INTO pages(path, title, type, status, body, hash, length)
+		 VALUES (?, ?, 'concept', 'active', ?, 'sha256:x', ?)`,
+		path, title, body, doc.Length())
 	if err != nil {
 		t.Fatalf("insert %s: %v", path, err)
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
 		t.Fatalf("last insert id: %v", err)
+	}
+
+	all := append(append(append([]string{}, titleTokens...), tagTokens...), bodyTokens...)
+	if _, err := s.db.Exec(`INSERT INTO pages_fts(rowid, tokens) VALUES (?, ?)`, id, Join(all)); err != nil {
+		t.Fatalf("insert tokens for %s: %v", path, err)
 	}
 	if _, err := s.db.Exec(`INSERT INTO names(path, name, kind) VALUES (?, ?, 'title')`, path, strings.ToLower(title)); err != nil {
 		t.Fatalf("insert name for %s: %v", path, err)
@@ -45,7 +58,6 @@ func insertPage(t *testing.T, s *Store, path, title, body string, tags []string)
 			t.Fatalf("insert tag for %s: %v", path, err)
 		}
 	}
-	_ = id
 }
 
 // queryString runs a query expected to return one row and one column.
@@ -76,7 +88,7 @@ func TestOpenCreatesTheSchema(t *testing.T) {
 	if _, err := os.Stat(Path(root)); err != nil {
 		t.Fatalf("the cache was not created: %v", err)
 	}
-	if got := queryString(t, s.db, "PRAGMA user_version"); got != "1" {
+	if got := queryString(t, s.db, "PRAGMA user_version"); got != strconv.Itoa(SchemaVersion) {
 		t.Errorf("user_version = %s, want %d", got, SchemaVersion)
 	}
 
@@ -107,7 +119,7 @@ func TestOpenCreatesTheSchema(t *testing.T) {
 func TestOpenIsIdempotent(t *testing.T) {
 	root := t.TempDir()
 	first := open(t, root)
-	insertPage(t, first, "pages/a.md", "A", "alpha", nil)
+	insertTestPage(t, first, "pages/a.md", "A", "alpha", nil)
 	if err := first.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +135,7 @@ func TestOpenIsIdempotent(t *testing.T) {
 func TestOpenRebuildsAnIncompatibleSchemaVersion(t *testing.T) {
 	root := t.TempDir()
 	s := open(t, root)
-	insertPage(t, s, "pages/a.md", "A", "alpha", nil)
+	insertTestPage(t, s, "pages/a.md", "A", "alpha", nil)
 	if err := s.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +152,7 @@ func TestOpenRebuildsAnIncompatibleSchemaVersion(t *testing.T) {
 	}
 
 	rebuilt := open(t, root)
-	if got := queryString(t, rebuilt.db, "PRAGMA user_version"); got != "1" {
+	if got := queryString(t, rebuilt.db, "PRAGMA user_version"); got != strconv.Itoa(SchemaVersion) {
 		t.Errorf("user_version after rebuild = %s, want %d", got, SchemaVersion)
 	}
 	var count int
@@ -164,10 +176,10 @@ func TestOpenRebuildsAFileThatIsNotADatabase(t *testing.T) {
 	}
 
 	s := open(t, root)
-	if got := queryString(t, s.db, "PRAGMA user_version"); got != "1" {
+	if got := queryString(t, s.db, "PRAGMA user_version"); got != strconv.Itoa(SchemaVersion) {
 		t.Errorf("user_version = %s, want %d", got, SchemaVersion)
 	}
-	insertPage(t, s, "pages/a.md", "A", "alpha", nil)
+	insertTestPage(t, s, "pages/a.md", "A", "alpha", nil)
 }
 
 // A version match with an object missing is still rebuilt: a build that died
@@ -190,41 +202,31 @@ func TestOpenRebuildsAPartialSchema(t *testing.T) {
 	}
 }
 
-// The text table is real FTS5 over external content: a page inserted into pages
-// is searchable, a prefix reaches a longer word, the tag column is indexed, a
-// deleted page leaves no match, and snippet() can quote the page itself.
-func TestFTS5IsAvailableAndStaysInStep(t *testing.T) {
+// The text table is real FTS5 over the tokens Go produced: a page is
+// searchable, a prefix reaches a longer word, a hyphenated phrase is found in
+// the right order, and the contentless table can be cleared.
+func TestFTS5IndexesGoTokens(t *testing.T) {
 	root := t.TempDir()
 	s := open(t, root)
-	insertPage(t, s, "pages/retrieval.md", "Retrieval", "indexing documents for retrieval", []string{"machine-learning"})
+	insertTestPage(t, s, "pages/retrieval.md", "Retrieval", "indexing documents for retrieval", []string{"machine-learning"})
 
-	if got := queryString(t, s.db,
-		`SELECT pages.path FROM pages_fts JOIN pages ON pages.id = pages_fts.rowid
-		 WHERE pages_fts MATCH 'retrieval'`); got != "pages/retrieval.md" {
+	const find = `SELECT pages.path FROM pages_fts JOIN pages ON pages.id = pages_fts.rowid
+		WHERE pages_fts MATCH ?`
+	if got := queryString(t, s.db, find, "retrieval"); got != "pages/retrieval.md" {
 		t.Errorf("word match = %q, want pages/retrieval.md", got)
 	}
-	if got := queryString(t, s.db,
-		`SELECT pages.path FROM pages_fts JOIN pages ON pages.id = pages_fts.rowid
-		 WHERE pages_fts MATCH 'retriev*'`); got != "pages/retrieval.md" {
+	if got := queryString(t, s.db, find, "retriev*"); got != "pages/retrieval.md" {
 		t.Errorf("prefix match = %q, want pages/retrieval.md", got)
 	}
-	// A hyphenated tag is two tokens to the tokenizer, and a bare `-` is FTS5's
-	// NOT operator, so the correct query is a quoted phrase. Escaping what a
-	// user types into a query is the search command's job, not the schema's.
-	if got := queryString(t, s.db,
-		`SELECT pages.path FROM pages_fts JOIN pages ON pages.id = pages_fts.rowid
-		 WHERE pages_fts MATCH '"machine-learning"'`); got != "pages/retrieval.md" {
+	// A hyphenated tag is two tokens, and a bare `-` is FTS5's NOT operator, so
+	// the correct query is a quoted phrase. Escaping a user's query into FTS5
+	// syntax is the search command's job, not the schema's.
+	if got := queryString(t, s.db, find, `"machine-learning"`); got != "pages/retrieval.md" {
 		t.Errorf("tag match = %q, want pages/retrieval.md", got)
 	}
 
-	snippet := queryString(t, s.db,
-		`SELECT snippet(pages_fts, 2, '[', ']', '...', 8) FROM pages_fts WHERE pages_fts MATCH 'documents'`)
-	if !strings.Contains(snippet, "[documents]") {
-		t.Errorf("snippet = %q, want the matched word marked", snippet)
-	}
-
-	if _, err := s.db.Exec(`DELETE FROM pages WHERE path = 'pages/retrieval.md'`); err != nil {
-		t.Fatal(err)
+	if _, err := s.db.Exec(`INSERT INTO pages_fts(pages_fts) VALUES ('delete-all')`); err != nil {
+		t.Fatalf("delete-all: %v", err)
 	}
 	var remaining int
 	if err := s.db.QueryRow(
@@ -232,7 +234,7 @@ func TestFTS5IsAvailableAndStaysInStep(t *testing.T) {
 		t.Fatal(err)
 	}
 	if remaining != 0 {
-		t.Errorf("a deleted page is still searchable: %d matches", remaining)
+		t.Errorf("delete-all left %d matches", remaining)
 	}
 }
 
@@ -241,7 +243,7 @@ func TestFTS5IsAvailableAndStaysInStep(t *testing.T) {
 func TestFilterColumns(t *testing.T) {
 	root := t.TempDir()
 	s := open(t, root)
-	insertPage(t, s, "pages/a.md", "A", "body", []string{"one", "two"})
+	insertTestPage(t, s, "pages/a.md", "A", "body", []string{"one", "two"})
 
 	if got := queryString(t, s.db, `SELECT tag FROM tags WHERE path = 'pages/a.md' ORDER BY tag LIMIT 1`); got != "one" {
 		t.Errorf("first tag = %q, want one", got)

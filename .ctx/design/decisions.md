@@ -114,7 +114,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D44 | Out-of-scope links are **pruned** from the extract.                                                                                                                   | Q21       |
 | D51 | Pruned links **retain their anchor text** as plain text. A summary is reported by default; a flag emits the full list.                                                | Q36       |
 | D33 | A **JSON/JSONL machine-readable dump** of pages, links, and citations is included.                                                                                    | Q21       |
-| D67 | The Tier-1 index is **one file, `<kb>/.stemma/index.sqlite`**, versioned by SQLite's `user_version`; any other version, or a file that is not a database, is deleted and rebuilt. Text search is FTS5 `unicode61 remove_diacritics 2` with a 2/3/4-character prefix index, over external content. | review    |
+| D67 | The Tier-1 index is **one file, `<kb>/.stemma/index.sqlite`**, versioned by SQLite's `user_version`; any other version, or a file that is not a database, is deleted and rebuilt. Tokens are defined by **one Go tokenizer** shared by both tiers; FTS5 is a contentless inverted index over those tokens, and **BM25 ranking and snippets are Go code**. | review    |
 
 ### Platform
 
@@ -247,11 +247,11 @@ and reported as a PDF, with EPUB supported by accident rather than by design.
 
 **Decision.** The cache is a single SQLite file at `<kb>/.stemma/index.sqlite`. Its
 schema version lives in SQLite's `user_version`; a file carrying any other value,
-or one that is not a database at all, is deleted and rebuilt from the KB. Full
-text is indexed with FTS5's `unicode61` tokenizer with `remove_diacritics 2` and a
-prefix index over two-, three- and four-character prefixes. The text table is
-external-content over the page rows, so `snippet()` can quote the real page rather
-than a stored copy.
+or one that is not a database at all, is deleted and rebuilt from the KB. Words
+are defined by one Go tokenizer that both tiers call. FTS5 is a contentless
+inverted index over the tokens that tokenizer produced, with a two-, three- and
+four-character prefix index; BM25 ranking and snippet extraction are Go code in
+`internal/index` as well.
 
 **Why delete rather than migrate.** The cache is derived and nothing in it is a
 source of truth, so the only state a version mismatch can lose is state that the
@@ -261,15 +261,27 @@ is on disk — a wrong version, a half-created schema, a file that is not a data
 tested. A partial schema at the *right* version is still rebuilt, because a header
 is not evidence that the objects behind it exist.
 
-**Why `unicode61`.** It is the FTS5 default: case- and accent-folded word tokens
-with no stemming, so non-English text and code identifiers survive as written. A
-token like `getUserName` stays whole and `café` is found by `cafe`. `porter` was
-rejected because English stemming mangles identifiers and does nothing for
-non-English text; `trigram` because substring matching buys code-fragment recall
-at the cost of index size and precision on prose. The prefix index recovers the
-word-prefix recall a stemmer would have given, without altering the tokens. The
-choice is sticky — changing it rebuilds the index — which is why it is recorded
-rather than left in a comment.
+**Why the tokenizer and the ranker are Go, not FTS5.** Tier 0 is defined as
+reading files and computing in memory (`Q18`, `D23`), so it has no FTS5 to
+tokenize or rank with. If Tier 1 used FTS5's tokenizer and Tier 0 a Go one, the
+two would return different pages whenever the tokenizers disagreed about a word —
+the exact failure the tier-parity test exists to catch. One Go tokenizer and one
+Go BM25 scorer, called by both tiers, make the answers identical by construction;
+FTS5 decides nothing about a match, it only finds candidate rows quickly. Accent
+folding therefore lives in a small Latin fold table rather than in `unicode61`.
+The fold is partial — the precomposed accents that occur in practice — because
+Go's standard library has no normaliser and the pinned allowlist has no room for
+`golang.org/x/text`. Snippets are Go code for the same reason: a contentless FTS
+table has no text to quote, and one snippet function keeps both tiers alike.
+
+**Changed during implementation.** The first version of this decision put the
+tokenizer in FTS5 (`unicode61 remove_diacritics 2`, external content, FTS5
+`bm25` and `snippet`). Working the parity requirement through showed that an
+in-memory Tier 0 cannot reproduce FTS5's Unicode folding in Go, so a shared
+engine was the only way to keep FTS5 authoritative — and building a database per
+Tier-0 query contradicts Tier 0 being files plus in-memory. The tokenizer and
+ranker moved into Go instead, and the text table became a contentless index over
+Go's tokens. The schema version went from 1 to 2 with the change.
 
 **Why `internal/index` and not `internal/kb`.** `D10` puts the index in the core
 library rather than in a surface, and `internal/index` is that core library's
@@ -281,7 +293,8 @@ database and of a build tag. `internal/kb` stays the pure on-disk format.
 **Provenance.** The delegate fixed the tiers, the storage engine and the fact
 that the cache must be deletable, and left the file name and the tokenizer to
 implementation. Both are recorded here because both are expensive to change once
-an index exists on disk.
+an index exists on disk; the tokenizer's move into Go was the tool author's
+choice, made after the parity cost of the first answer was shown.
 
 ### U5 — rewriting inbound links. `D19` stands.
 

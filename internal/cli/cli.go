@@ -87,6 +87,7 @@ func init() {
 		promoteCommand,
 		statusCommand,
 		citeCommand,
+		fetchCommand,
 		lintCommand,
 		envCommand,
 		helpCommand,

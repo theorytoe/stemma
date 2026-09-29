@@ -57,6 +57,46 @@ func Materialize(root string) (string, error) {
 	return path, nil
 }
 
+// Script is a runnable copy of the extraction script, and where it came from.
+type Script struct {
+	// Path is where it is.
+	Path string
+	// Temporary says the copy was made in a directory for the occasion, because
+	// there was no KB to put it in or the KB could not be written.
+	Temporary bool
+	// Cleanup removes a temporary copy, and does nothing otherwise.
+	Cleanup func()
+}
+
+// ScriptFor finds a runnable copy of the script, making one if it has to.
+//
+// The KB's own copy comes first, because that is the one an author can open and run
+// by hand. With no KB, or one that cannot be written, the script is put in a
+// temporary directory instead: a diagnostic has to work before a KB exists, and in
+// one that is read-only. Nothing here changes where an *extraction* writes, because
+// that goes into the KB either way, so a read-only KB still cannot be fetched into.
+func ScriptFor(root string) (Script, error) {
+	if override := os.Getenv(EnvShim); override != "" {
+		return Script{Path: override, Cleanup: func() {}}, nil
+	}
+	if root != "" {
+		if path, err := Materialize(root); err == nil {
+			return Script{Path: path, Cleanup: func() {}}, nil
+		}
+	}
+
+	dir, err := os.MkdirTemp("", "stemma-shim-")
+	if err != nil {
+		return Script{Cleanup: func() {}}, err
+	}
+	path := filepath.Join(dir, "extract.py")
+	if err := os.WriteFile(path, script, 0o644); err != nil {
+		os.RemoveAll(dir)
+		return Script{Cleanup: func() {}}, err
+	}
+	return Script{Path: path, Temporary: true, Cleanup: func() { os.RemoveAll(dir) }}, nil
+}
+
 // Condition is how the copy on disk stands against the one in the binary.
 type Condition int
 

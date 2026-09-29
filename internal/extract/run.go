@@ -189,7 +189,9 @@ func (r *Runner) URL(ctx context.Context, address string) (*Result, error) {
 //
 // Python is never a dependency of the core, so this is only reached on a path
 // that has already decided to read a document. When there is no interpreter the
-// answer is a typed failure rather than a workaround.
+// answer is a typed failure rather than a workaround, and it says how to change
+// the answer: the interpreter is looked up on PATH like any other tool, so
+// activating the environment that has one is what fixes it.
 func FindPython() (string, error) {
 	for _, name := range []string{"python3", "python"} {
 		if path, err := exec.LookPath(name); err == nil {
@@ -198,7 +200,8 @@ func FindPython() (string, error) {
 	}
 	return "", &Error{
 		Kind: KindMissingPython,
-		Err:  errors.New("no python3 on PATH; reading a document needs an interpreter, and `stemma env` says what this machine has"),
+		Err: errors.New("no python3 on PATH, and reading a document needs an interpreter; " +
+			"activate the environment that has one, and `stemma env` says what this machine can see"),
 	}
 }
 

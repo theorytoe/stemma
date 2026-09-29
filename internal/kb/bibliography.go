@@ -208,6 +208,11 @@ func (e *BibEntry) Year() string { return YearOf(fieldValue(e, "year")) }
 // Authors is the record's authors, in order.
 func (e *BibEntry) Authors() []string { return splitNameList(fieldValue(e, "author")) }
 
+// URL is the entry's `url` field, which is where a source's readable location
+// lives: an address, or a path to a file on this machine. It is the field a
+// capture is read from, so it is the one an entry needs before it can be vendored.
+func (e *BibEntry) URL() string { return fieldValue(e, "url") }
+
 // firstSurname is the family name of an entry's first author, normalised, which
 // is the part of an author list two records for one work agree on.
 func firstSurname(e *BibEntry) string {

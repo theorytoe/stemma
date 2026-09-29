@@ -2,6 +2,7 @@ package kb
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -17,6 +18,9 @@ const (
 	CodeMissingHash      = "missing-content-hash"
 	CodeBadRetrieved     = "malformed-retrieved"
 	CodeBadHash          = "malformed-content-hash"
+	CodeMissingVendored  = "missing-vendored"
+	CodeBadVendored      = "malformed-vendored-hash"
+	CodeVendoredDrift    = "vendored-drift"
 )
 
 // CheckFindings reports what is wrong with the bibliography itself: a key
@@ -48,7 +52,9 @@ func (k *KB) CheckFindings() []Finding {
 		if !ok {
 			continue
 		}
-		out = append(out, checkProvenance(k.Bibliography.PathOf(key), key, e)...)
+		path := k.Bibliography.PathOf(key)
+		out = append(out, checkProvenance(path, key, e)...)
+		out = append(out, vendoredFindings(k.Root, path, key, e)...)
 	}
 
 	for _, path := range k.Graph.Paths() {
@@ -204,6 +210,54 @@ func checkProvenance(path, key string, e *BibEntry) []Finding {
 	}
 
 	return out
+}
+
+// vendoredFindings checks a capture against the hash its entry recorded.
+//
+// It reads, and it reports. A capture and a record that disagree are both left
+// exactly as they are, because the tool cannot know which of the two someone
+// meant, and rewriting either of them would destroy the evidence of what happened.
+// The finding names both hashes and leaves the choice to a person.
+func vendoredFindings(root, path, key string, e *BibEntry) []Finding {
+	recorded, claimed := e.Value(FieldVendored)
+	if !claimed {
+		return nil
+	}
+	name := VendoredName(key)
+
+	finding := func(code, message string) []Finding {
+		return []Finding{{
+			Severity: Warning,
+			Code:     code,
+			Path:     path,
+			Field:    FieldVendored,
+			Message:  message,
+		}}
+	}
+
+	if !validHash(recorded) {
+		return finding(CodeBadVendored, quote(key)+" has a vendored hash that is not <algorithm>:<hex>")
+	}
+	if !strings.HasPrefix(recorded, "sha256:") {
+		return finding(CodeBadVendored,
+			quote(key)+" records a vendored hash this tool cannot compute, so "+name+" was not checked")
+	}
+
+	have, err := os.ReadFile(VendoredPath(root, key))
+	switch {
+	case os.IsNotExist(err):
+		return finding(CodeMissingVendored,
+			quote(key)+" claims a vendored copy, and "+name+" is not there")
+	case err != nil:
+		return finding(CodeMissingVendored,
+			quote(key)+" claims a vendored copy, and "+name+" could not be read: "+err.Error())
+	}
+
+	if found := HashOf(have); found != recorded {
+		return finding(CodeVendoredDrift,
+			quote(key)+" has a vendored copy in "+name+" whose hash is "+found+", not the recorded "+recorded)
+	}
+	return nil
 }
 
 func validRetrieved(s string) bool {

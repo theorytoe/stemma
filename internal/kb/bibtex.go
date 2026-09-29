@@ -15,6 +15,11 @@ import (
 const (
 	FieldRetrieved   = "stemma-retrieved"
 	FieldContentHash = "stemma-content-hash"
+	// FieldVendored is the hash of the text captured in sources/, and its presence
+	// on an entry is what claims that a capture exists. It is a separate field from
+	// FieldContentHash because a capture and the record it came from are different
+	// artifacts, fetched at different times and able to drift apart.
+	FieldVendored = "stemma-vendored-hash"
 )
 
 // BibFile is a parsed BibTeX file.

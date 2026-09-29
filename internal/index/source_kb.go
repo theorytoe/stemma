@@ -47,14 +47,16 @@ func (s *kbSource) Tier() Tier { return TierKB }
 
 func (s *kbSource) Pages() ([]PageMeta, error) { return s.pages, nil }
 
-func (s *kbSource) Doc(path string) (Doc, error) { return s.docs[path], nil }
-
-func (s *kbSource) Body(path string) (string, error) {
-	page, ok := s.k.Graph.Page(path)
-	if !ok {
-		return "", nil
+func (s *kbSource) Docs(paths []string) (map[string]DocText, error) {
+	out := make(map[string]DocText, len(paths))
+	for _, p := range paths {
+		page, ok := s.k.Graph.Page(p)
+		if !ok {
+			continue
+		}
+		out[p] = DocText{Doc: s.docs[p], Body: string(page.Body())}
 	}
-	return string(page.Body()), nil
+	return out, nil
 }
 
 func (s *kbSource) Match(terms []string) ([]string, error) {
@@ -83,8 +85,28 @@ func (s *kbSource) Links(path string) ([]kb.Link, error) {
 	return s.k.Graph.Links(path), nil
 }
 
+func (s *kbSource) LinksAll() (map[string][]kb.Link, error) {
+	out := make(map[string][]kb.Link, len(s.pages))
+	for _, m := range s.pages {
+		if links := s.k.Graph.Links(m.Path); len(links) > 0 {
+			out[m.Path] = links
+		}
+	}
+	return out, nil
+}
+
 func (s *kbSource) Backlinks(path string) ([]string, error) {
 	return s.k.Graph.Backlinks(path), nil
+}
+
+func (s *kbSource) BacklinksAll() (map[string][]string, error) {
+	out := make(map[string][]string, len(s.pages))
+	for _, m := range s.pages {
+		if back := s.k.Graph.Backlinks(m.Path); len(back) > 0 {
+			out[m.Path] = back
+		}
+	}
+	return out, nil
 }
 
 func (s *kbSource) Citations(path string) ([]CitationRef, error) {
@@ -98,25 +120,6 @@ func (s *kbSource) Citations(path string) ([]CitationRef, error) {
 
 func (s *kbSource) CitedBy(key string) ([]string, error) {
 	return s.k.Graph.CitedBy(key), nil
-}
-
-func (s *kbSource) Orphans() ([]string, error) { return s.k.Graph.Orphans(), nil }
-
-func (s *kbSource) DeadEnds() ([]string, error) {
-	var out []string
-	for _, path := range s.k.Graph.Paths() {
-		page, ok := s.k.Graph.Page(path)
-		if !ok {
-			continue
-		}
-		if page.Type() == kb.TypeSource || page.Status() == kb.StatusArchived {
-			continue
-		}
-		if len(page.Links()) == 0 {
-			out = append(out, path)
-		}
-	}
-	return out, nil
 }
 
 func (s *kbSource) Close() error { return nil }

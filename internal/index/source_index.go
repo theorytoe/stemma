@@ -1,8 +1,6 @@
 package index
 
 import (
-	"database/sql"
-	"errors"
 	"strings"
 
 	"github.com/theorytoe/stemma/internal/kb"
@@ -63,42 +61,86 @@ func (s *indexSource) pageTags() (map[string][]string, error) {
 	return out, rows.Err()
 }
 
-func (s *indexSource) Doc(path string) (Doc, error) {
-	var title, body string
-	err := s.s.db.QueryRow(`SELECT title, body FROM pages WHERE path = ?`, path).Scan(&title, &body)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Doc{}, nil
-	}
-	if err != nil {
-		return Doc{}, err
-	}
+// docsChunk bounds how many paths go into one IN list. SQLite's variable limit
+// is 999 on old builds; 500 stays clear of it and keeps the query plan simple.
+const docsChunk = 500
 
-	rows, err := s.s.db.Query(`SELECT tag FROM tags WHERE path = ? ORDER BY tag`, path)
-	if err != nil {
-		return Doc{}, err
-	}
-	defer rows.Close()
-	var tags []string
-	for rows.Next() {
-		var tag string
-		if err := rows.Scan(&tag); err != nil {
-			return Doc{}, err
+// Docs fetches the candidates' text in chunks, so ranking N candidates costs
+// O(N/docsChunk) queries rather than O(N). It is why a search on a common word
+// does not fetch one row per hit.
+func (s *indexSource) Docs(paths []string) (map[string]DocText, error) {
+	out := make(map[string]DocText, len(paths))
+	for start := 0; start < len(paths); start += docsChunk {
+		end := start + docsChunk
+		if end > len(paths) {
+			end = len(paths)
 		}
-		tags = append(tags, tag)
+		if err := s.docsChunk(paths[start:end], out); err != nil {
+			return nil, err
+		}
 	}
-	if err := rows.Err(); err != nil {
-		return Doc{}, err
-	}
-	return Doc{Title: Tokenize(title), Tags: tagTokens(tags), Body: Tokenize(body)}, nil
+	return out, nil
 }
 
-func (s *indexSource) Body(path string) (string, error) {
-	var body string
-	err := s.s.db.QueryRow(`SELECT body FROM pages WHERE path = ?`, path).Scan(&body)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "", nil
+// docsChunk reads one chunk's pages and tags into out.
+func (s *indexSource) docsChunk(paths []string, out map[string]DocText) error {
+	list, args := inList(paths)
+
+	rows, err := s.s.db.Query(`SELECT path, title, body FROM pages WHERE path IN (`+list+`)`, args...)
+	if err != nil {
+		return err
 	}
-	return body, err
+	for rows.Next() {
+		var path, title, body string
+		if err := rows.Scan(&path, &title, &body); err != nil {
+			rows.Close()
+			return err
+		}
+		out[path] = DocText{Doc: Doc{Title: Tokenize(title), Body: Tokenize(body)}, Body: body}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	rows.Close()
+
+	tags := make(map[string][]string, len(paths))
+	trows, err := s.s.db.Query(`SELECT path, tag FROM tags WHERE path IN (`+list+`) ORDER BY path, tag`, args...)
+	if err != nil {
+		return err
+	}
+	defer trows.Close()
+	for trows.Next() {
+		var path, tag string
+		if err := trows.Scan(&path, &tag); err != nil {
+			return err
+		}
+		tags[path] = append(tags[path], tag)
+	}
+	if err := trows.Err(); err != nil {
+		return err
+	}
+	for path, ts := range tags {
+		dt := out[path]
+		dt.Doc.Tags = tagTokens(ts)
+		out[path] = dt
+	}
+	return nil
+}
+
+// inList renders an IN list of placeholders and the arguments that fill it.
+func inList(paths []string) (string, []any) {
+	args := make([]any, len(paths))
+	var b strings.Builder
+	b.Grow(2 * len(paths))
+	for i, p := range paths {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteByte('?')
+		args[i] = p
+	}
+	return b.String(), args
 }
 
 func (s *indexSource) Match(terms []string) ([]string, error) {
@@ -163,6 +205,24 @@ func (s *indexSource) Links(path string) ([]kb.Link, error) {
 	return out, rows.Err()
 }
 
+func (s *indexSource) LinksAll() (map[string][]kb.Link, error) {
+	rows, err := s.s.db.Query(`SELECT from_path, target, name, line FROM links ORDER BY from_path, ordinal`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string][]kb.Link{}
+	for rows.Next() {
+		var from string
+		var l kb.Link
+		if err := rows.Scan(&from, &l.Target, &l.Name, &l.Line); err != nil {
+			return nil, err
+		}
+		out[from] = append(out[from], l)
+	}
+	return out, rows.Err()
+}
+
 // Backlinks joins a page's names to the links naming them, and excludes a page
 // that links to itself, which is the same rule the in-memory graph applies.
 func (s *indexSource) Backlinks(path string) ([]string, error) {
@@ -171,6 +231,27 @@ func (s *indexSource) Backlinks(path string) ([]string, error) {
 		 JOIN names ON links.name = names.name
 		 WHERE names.path = ? AND links.from_path <> ?
 		 ORDER BY links.from_path`, path, path)
+}
+
+func (s *indexSource) BacklinksAll() (map[string][]string, error) {
+	rows, err := s.s.db.Query(`
+		SELECT DISTINCT names.path, links.from_path FROM links
+		JOIN names ON links.name = names.name
+		WHERE links.from_path <> names.path
+		ORDER BY names.path, links.from_path`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string][]string{}
+	for rows.Next() {
+		var path, from string
+		if err := rows.Scan(&path, &from); err != nil {
+			return nil, err
+		}
+		out[path] = append(out[path], from)
+	}
+	return out, rows.Err()
 }
 
 func (s *indexSource) Citations(path string) ([]CitationRef, error) {
@@ -193,28 +274,6 @@ func (s *indexSource) Citations(path string) ([]CitationRef, error) {
 
 func (s *indexSource) CitedBy(key string) ([]string, error) {
 	return s.column(`SELECT DISTINCT path FROM citations WHERE key = ? ORDER BY path`, key)
-}
-
-// Orphans mirrors the in-memory rule: a page nothing links to, no index or
-// source page, and no archived page. The join finds a page whose claimed names
-// are named by a link from somewhere else.
-func (s *indexSource) Orphans() ([]string, error) {
-	return s.column(`
-		SELECT p.path FROM pages p
-		WHERE p.type NOT IN ('index', 'source') AND p.status <> 'archived'
-		  AND NOT EXISTS (
-		    SELECT 1 FROM links l JOIN names n ON l.name = n.name
-		    WHERE n.path = p.path AND l.from_path <> p.path
-		  )
-		ORDER BY p.path`)
-}
-
-func (s *indexSource) DeadEnds() ([]string, error) {
-	return s.column(`
-		SELECT p.path FROM pages p
-		WHERE p.type <> 'source' AND p.status <> 'archived'
-		  AND NOT EXISTS (SELECT 1 FROM links l WHERE l.from_path = p.path)
-		ORDER BY p.path`)
 }
 
 func (s *indexSource) Close() error { return s.s.Close() }

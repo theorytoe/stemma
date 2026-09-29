@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/theorytoe/stemma/internal/kb"
 )
 
 // Direction is which way a graph walk goes.
@@ -130,6 +132,57 @@ func neighborsOf(src Source, path string, dirs []Direction) ([]string, error) {
 				return nil, err
 			}
 			out = append(out, backs...)
+		}
+	}
+	return out, nil
+}
+
+// Orphans returns the pages nothing links to, sorted.
+//
+// It is one rule over the source's data — pages and backlinks — rather than an
+// SQL expression on one tier and a loop on the other, so the two cannot drift.
+// Index and source pages are left out, and so are archived pages, matching
+// lint's rule; a page linking to itself is not its own backlink.
+func Orphans(src Source) ([]string, error) {
+	pages, err := src.Pages()
+	if err != nil {
+		return nil, err
+	}
+	back, err := src.BacklinksAll()
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, m := range pages {
+		if m.Type == kb.TypeIndex || m.Type == kb.TypeSource || m.Status == kb.StatusArchived {
+			continue
+		}
+		if len(back[m.Path]) == 0 {
+			out = append(out, m.Path)
+		}
+	}
+	return out, nil
+}
+
+// DeadEnds returns the pages with no outgoing links, sorted. Source pages are
+// left out, and so are archived pages. Like Orphans, the rule lives here once
+// and both tiers feed it their data.
+func DeadEnds(src Source) ([]string, error) {
+	pages, err := src.Pages()
+	if err != nil {
+		return nil, err
+	}
+	links, err := src.LinksAll()
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, m := range pages {
+		if m.Type == kb.TypeSource || m.Status == kb.StatusArchived {
+			continue
+		}
+		if len(links[m.Path]) == 0 {
+			out = append(out, m.Path)
 		}
 	}
 	return out, nil

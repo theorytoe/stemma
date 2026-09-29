@@ -24,13 +24,15 @@ index saves parsing and tokenizing, not reading.
 
 The page count at which Tier 0 stops being comfortable (`U1`) was measured with
 `make bench`. On a 2020 six-core laptop, a Tier-0 search — load, tokenize, rank —
-takes about 3 ms at 100 pages, 27 ms at 1,000, and 0.27 s at 10,000; the indexed
-path takes 0.7 ms, 6 ms, and 59 ms, and building the index costs 19 ms, 0.19 s,
-and 2.6 s. Resolution is O(1) (about 10 µs at any size) and lint stays under
+takes about 3 ms at 100 pages, 35 ms at 1,000, and 0.35 s at 10,000; the indexed
+path takes 2 ms, 26 ms, and 0.23 s, and building the index costs 19 ms, 0.19 s,
+and 2.7 s. Resolution is O(1) (about 10 µs at any size) and lint stays under
 35 ms at 10,000 pages.
 
-So Tier 0 is comfortable to roughly a thousand pages. The index starts to pay in
-the low thousands of pages, and only when the KB is queried many times between
-edits: at ten thousand pages one build costs about ten searches. The numbers are
+So Tier 0 is comfortable to roughly a thousand pages. The index saves about a
+third of a search (the freshness check still reads every page, and ranking still
+re-tokenizes each candidate), so one build pays for itself after roughly twenty
+searches, at a thousand pages and at ten thousand alike — worth it when the KB is
+queried many times between edits, not above a particular size. The numbers are
 machine-specific; re-run `make bench` to get the ones that matter. The full table
 and the reasoning are in [FORMAT.md](FORMAT.md#tiers-and-scale).

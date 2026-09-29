@@ -75,7 +75,7 @@ var graphCommand = &command{
 					"start":     start,
 					"depth":     *depth,
 					"tier":      src.Tier().String(),
-					"neighbors": neighbors,
+					"neighbors": nonNil(neighbors),
 				})
 			}
 			for _, n := range neighbors {
@@ -91,12 +91,12 @@ func graphListings(src index.Source, w *output, orphans, deadEnds bool) int {
 	var o, d []string
 	var err error
 	if orphans {
-		if o, err = src.Orphans(); err != nil {
+		if o, err = index.Orphans(src); err != nil {
 			return w.fail(err)
 		}
 	}
 	if deadEnds {
-		if d, err = src.DeadEnds(); err != nil {
+		if d, err = index.DeadEnds(src); err != nil {
 			return w.fail(err)
 		}
 	}

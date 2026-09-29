@@ -102,22 +102,28 @@ func BenchmarkTiers(b *testing.B) {
 					}
 				}
 			})
-			b.Run("tier0_command_match", func(b *testing.B) {
+			// The search command end to end: the fixed cost a run pays — loading the
+			// KB, or checking the index — plus the ranking and snippet work. This is
+			// the number U1 is about, so it must not stop at candidate matching.
+			b.Run("tier0_search", func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					fresh, err := kb.Load(dir)
 					if err != nil {
 						b.Fatal(err)
 					}
-					src := newKBSource(fresh)
-					_, _ = src.Match([]string{"retrieval"})
+					if _, err := Search(newKBSource(fresh), nil, SearchRequest{Query: "retrieval"}); err != nil {
+						b.Fatal(err)
+					}
 				}
 			})
-			b.Run("tier1_command_match", func(b *testing.B) {
+			b.Run("tier1_search", func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					if _, err := kb.Hashes(dir); err != nil {
 						b.Fatal(err)
 					}
-					_, _ = tier1.Match([]string{"retrieval"})
+					if _, err := Search(tier1, nil, SearchRequest{Query: "retrieval"}); err != nil {
+						b.Fatal(err)
+					}
 				}
 			})
 			b.Run("tier0_lint", func(b *testing.B) {
@@ -158,6 +164,34 @@ func BenchmarkTiers(b *testing.B) {
 			b.Run("tier1_backlinks", func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					_, _ = tier1.Backlinks("pages/hub.md")
+				}
+			})
+			b.Run("tier0_neighbors", func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					if _, err := Neighbors(tier0, "pages/page-0.md", []Direction{In, Out}, 1); err != nil {
+						b.Fatal(err)
+					}
+				}
+			})
+			b.Run("tier1_neighbors", func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					if _, err := Neighbors(tier1, "pages/page-0.md", []Direction{In, Out}, 1); err != nil {
+						b.Fatal(err)
+					}
+				}
+			})
+			b.Run("tier0_orphans", func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					if _, err := Orphans(tier0); err != nil {
+						b.Fatal(err)
+					}
+				}
+			})
+			b.Run("tier1_orphans", func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					if _, err := Orphans(tier1); err != nil {
+						b.Fatal(err)
+					}
 				}
 			})
 		})

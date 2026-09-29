@@ -59,6 +59,10 @@ var indexCommand = &command{
 			if w.json {
 				return w.emit(indexReport{Report: report, Mode: mode, Path: s.Path()})
 			}
+			if report.Rebuilt {
+				fmt.Fprintf(w.stdout, "%s: rebuild, %d pages\n", s.Path(), report.Pages)
+				return ExitOK
+			}
 			fmt.Fprintf(w.stdout, "%s: %s, %d pages (%d added, %d updated, %d removed)\n",
 				s.Path(), mode, report.Pages, report.Added, report.Updated, report.Removed)
 			return ExitOK

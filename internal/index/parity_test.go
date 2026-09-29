@@ -118,16 +118,39 @@ func assertTierParity(t *testing.T, k *kb.KB, store *Store) {
 		}
 	}
 
-	oa, _ := a.Orphans()
-	ob, err := b.Orphans()
+	linksKB, _ := a.LinksAll()
+	linksIdx, err := b.LinksAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(linksKB, linksIdx) {
+		t.Errorf("LinksAll differs:\n kb  = %+v\n idx = %+v", linksKB, linksIdx)
+	}
+	backsKB, _ := a.BacklinksAll()
+	backsIdx, err := b.BacklinksAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(backsKB, backsIdx) {
+		t.Errorf("BacklinksAll differs:\n kb  = %+v\n idx = %+v", backsKB, backsIdx)
+	}
+
+	oa, err := Orphans(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ob, err := Orphans(b)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !sameSlice(oa, ob) {
 		t.Errorf("Orphans differ: %v vs %v", oa, ob)
 	}
-	da, _ := a.DeadEnds()
-	db, err := b.DeadEnds()
+	da, err := DeadEnds(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db, err := DeadEnds(b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +208,7 @@ func synthParityKB(t *testing.T, dir string, n int) *kb.KB {
 		if i%2 == 1 {
 			typ = "note"
 		}
-		extra := fmt.Sprintf("type: %s\ntags: [topic-%d]", typ, i%3)
+		extra := fmt.Sprintf("type: %s\ntags: [topic-%d, milestone]", typ, i%3)
 		if i == 0 {
 			extra += "\nstatus: archived"
 		}
@@ -307,13 +330,13 @@ func exampleWiki(t *testing.T) string {
 	return dst
 }
 
-func docOf(t *testing.T, src Source, path string) Doc {
+func docOf(t *testing.T, src Source, path string) DocText {
 	t.Helper()
-	doc, err := src.Doc(path)
+	docs, err := src.Docs([]string{path})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return doc
+	return docs[path]
 }
 
 func linksOf(t *testing.T, src Source, path string) []kb.Link {

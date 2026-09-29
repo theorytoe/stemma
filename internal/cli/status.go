@@ -155,9 +155,9 @@ func readIndexState(k *kb.KB) indexState {
 
 // nonNil turns a nil slice into an empty one, so that --json always reports a
 // list rather than null and a consumer never special-cases an empty KB.
-func nonNil(s []string) []string {
+func nonNil[T any](s []T) []T {
 	if s == nil {
-		return []string{}
+		return []T{}
 	}
 	return s
 }

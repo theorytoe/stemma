@@ -13,7 +13,7 @@ import (
 func TestSourcesAgreeOnTheSameCorpus(t *testing.T) {
 	k := buildKB(t, map[string]string{
 		"pages/index.md":   pageFile("Index", "type: index", "see [[Alpha]] and cite [@key]\n"),
-		"pages/alpha.md":   pageFile("Alpha", "type: concept\ntags: [Machine-Learning]\naliases: [A]", "alpha body cites [@key] and links [[Beta]]\n"),
+		"pages/alpha.md":   pageFile("Alpha", "type: concept\ntags: [Machine-Learning, Graphs]\naliases: [A]", "alpha body cites [@key] and links [[Beta]]\n"),
 		"pages/beta.md":    pageFile("Beta", "type: note", "beta body, plus a naïve café\n"),
 		"bibliography.bib": "@article{key,}\n",
 	})
@@ -37,16 +37,16 @@ func TestSourcesAgreeOnTheSameCorpus(t *testing.T) {
 	}
 
 	for _, path := range []string{"pages/index.md", "pages/alpha.md", "pages/beta.md"} {
-		d0, err := kbSrc.Doc(path)
+		d0, err := kbSrc.Docs([]string{path})
 		if err != nil {
 			t.Fatal(err)
 		}
-		d1, err := idxSrc.Doc(path)
+		d1, err := idxSrc.Docs([]string{path})
 		if err != nil {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(d0, d1) {
-			t.Errorf("Doc(%s) differs:\n kb  = %+v\n idx = %+v", path, d0, d1)
+			t.Errorf("Docs(%s) differs:\n kb  = %+v\n idx = %+v", path, d0, d1)
 		}
 
 		l0, _ := kbSrc.Links(path)
@@ -75,6 +75,25 @@ func TestSourcesAgreeOnTheSameCorpus(t *testing.T) {
 		if !sameSlice(c0, c1) {
 			t.Errorf("Citations(%s) differ: %+v vs %+v", path, c0, c1)
 		}
+	}
+
+	// The batch forms are what a rule over the whole corpus reads, so they have to
+	// agree too: a page with no links is absent from both, not empty in one.
+	la, _ := kbSrc.LinksAll()
+	lb, err := idxSrc.LinksAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(la, lb) {
+		t.Errorf("LinksAll differs:\n kb  = %+v\n idx = %+v", la, lb)
+	}
+	ba, _ := kbSrc.BacklinksAll()
+	bb, err := idxSrc.BacklinksAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(ba, bb) {
+		t.Errorf("BacklinksAll differs:\n kb  = %+v\n idx = %+v", ba, bb)
 	}
 
 	// A folded spelling is a hit on both tiers, because both tokenize in Go.

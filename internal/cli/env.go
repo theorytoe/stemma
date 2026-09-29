@@ -244,8 +244,9 @@ func libraries(libs map[string]string) string {
 }
 
 // sqliteLinked reports whether the pure-Go SQLite driver is part of this build.
-// It is a build-time property: the driver is behind the dependency-pinning tag
-// until the index task imports it for real.
+// It is a build-time property: the driver is imported by internal/index, so a
+// build that somehow dropped it would say so here rather than fail on the first
+// query.
 func sqliteLinked() bool {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {

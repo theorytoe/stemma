@@ -81,27 +81,31 @@ func Search(src Source, extra []Document, req SearchRequest) ([]Hit, error) {
 	}
 	want := termSet(terms)
 
-	hits := make([]Hit, 0, len(candidates))
+	kept := make([]string, 0, len(candidates))
 	for _, path := range candidates {
-		m, ok := meta[path]
-		if !ok || !passes(m, req) {
-			continue
+		if m, ok := meta[path]; ok && passes(m, req) {
+			kept = append(kept, path)
 		}
+	}
+	texts, err := docTexts(src, extraByPath, kept)
+	if err != nil {
+		return nil, err
+	}
 
-		doc, body, err := docAndBody(src, extraByPath, path)
-		if err != nil {
-			return nil, err
-		}
+	hits := make([]Hit, 0, len(kept))
+	for _, path := range kept {
+		m := meta[path]
+		text := texts[path]
 		hit := Hit{
 			Path:   m.Path,
 			Title:  m.Title,
 			Type:   m.Type,
 			Status: m.Status,
 			Tags:   m.Tags,
-			Score:  Score(terms, doc, stats),
+			Score:  Score(terms, text.Doc, stats),
 		}
 		if len(want) > 0 {
-			hit.Snippet = Snippet(body, terms, 0)
+			hit.Snippet = Snippet(text.Body, terms, 0)
 		}
 		hits = append(hits, hit)
 	}
@@ -146,21 +150,29 @@ func candidatesOf(src Source, terms []string, pages []PageMeta, extra []Document
 	return out, nil
 }
 
-// docAndBody returns a candidate's tokenized fields and raw body, from the
-// extra documents when it is one of them and from the source otherwise.
-func docAndBody(src Source, extra map[string]Document, path string) (Doc, string, error) {
-	if d, ok := extra[path]; ok {
-		return d.Doc, d.Body, nil
+// docTexts returns every kept candidate's tokenized fields and raw body. The
+// extra documents are already in hand; the source's are fetched in one batch,
+// which is what keeps ranking a candidate off the per-candidate query path.
+func docTexts(src Source, extra map[string]Document, paths []string) (map[string]DocText, error) {
+	out := make(map[string]DocText, len(paths))
+	var fromSource []string
+	for _, p := range paths {
+		if d, ok := extra[p]; ok {
+			out[p] = DocText{Doc: d.Doc, Body: d.Body}
+			continue
+		}
+		fromSource = append(fromSource, p)
 	}
-	doc, err := src.Doc(path)
-	if err != nil {
-		return Doc{}, "", err
+	if len(fromSource) > 0 {
+		got, err := src.Docs(fromSource)
+		if err != nil {
+			return nil, err
+		}
+		for p, text := range got {
+			out[p] = text
+		}
 	}
-	body, err := src.Body(path)
-	if err != nil {
-		return Doc{}, "", err
-	}
-	return doc, body, nil
+	return out, nil
 }
 
 // corpusStats builds the BM25 statistics over the pages and the extra

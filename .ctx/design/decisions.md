@@ -115,7 +115,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D51 | Pruned links **retain their anchor text** as plain text. A summary is reported by default; a flag emits the full list.                                                | Q36       |
 | D33 | A **JSON/JSONL machine-readable dump** of pages, links, and citations is included.                                                                                    | Q21       |
 | D67 | The Tier-1 index is **one file, `<kb>/.stemma/index.sqlite`**, versioned by SQLite's `user_version`; any other version, or a file that is not a database, is deleted and rebuilt. Tokens are defined by **one Go tokenizer** shared by both tiers; FTS5 is an external-content index over a `tokens` column those tokens fill, and **BM25 ranking and snippets are Go code**. | review    |
-| D68 | Retrieval is one **data-source interface** (`index.Source`) that both tiers implement, not an interface of queries. Search and graph are single functions over it, so the tiers agree by construction; `NewSource` prefers a fresh index and **silently falls back to the KB**, reporting the downgrade through one optional callback. | review    |
+| D68 | Retrieval is one **data-source interface** (`index.Source`) that both tiers implement, not an interface of queries. Search, graph traversal and the orphan and dead-end listings are single functions over it, so the tiers agree by construction. The interface includes **batch forms** (`Docs`, `LinksAll`, `BacklinksAll`), because a rule over the whole corpus must not become one query per page. `NewSource` prefers a fresh index and **silently falls back to the KB**, reporting the downgrade through one optional callback. | review    |
 
 ### Platform
 
@@ -161,7 +161,7 @@ be discovered during implementation, recorded so they are not mistaken for settl
 
 | #  | Unknown                                                                                           | Becomes known by                                                                 |
 | --- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| U1 | **Answered.** Tier 0 is comfortable to roughly 1,000 pages; the index starts to pay in the low thousands, and only under repeated queries. Measured by `make bench`; the table is in `FORMAT.md`. | Benchmarking the on-demand resolver.                                             |
+| U1 | **Answered.** Tier 0 is comfortable to roughly 1,000 pages. The index saves about a third of a search at 1,000 and at 10,000 pages, so one build (19 ms / 0.19 s / 2.7 s) pays for itself after roughly twenty searches: it is worth it under repeated queries, not above a particular size. Measured by `make bench` over the whole `search` and `graph` commands, not candidate matching alone; the table is in `FORMAT.md`. | Benchmarking the on-demand resolver.                                             |
 | U2 | Whether global title uniqueness becomes a real nuisance given arbitrary `pages/` structure (D50). | Real use. Path-qualified links are the escape hatch, deliberately not taken now. |
 | U3 | Which citation styles the built-in formatter should cover.                                        | Examining the author's actual sources.                                           |
 | U4 | Whether `env` and `fetch` earn their place in the surface.                                     | Use.                                                                             |
@@ -306,9 +306,13 @@ choice, made after the parity cost of the first answer was shown.
 **Decision.** Retrieval is one interface, `index.Source`, that both tiers
 implement: each answers what the corpus holds — pages, tokenised documents,
 candidate terms, names, links, backlinks, citations. Search and graph traversal
-are functions written once against that interface, not methods on it.
-`NewSource` returns the index when it is fresh and the KB otherwise, and reports
-the downgrade through one optional callback, never per query.
+are functions written once against that interface, not methods on it, and so are
+the orphan and dead-end listings. The interface carries the batch forms of the
+text and link relations (`Docs`, `LinksAll`, `BacklinksAll`) for the same reason:
+a rule over every page stays one query rather than one per page, which is what
+keeps the single implementation affordable. `NewSource` returns the index when it
+is fresh and the KB otherwise, and reports the downgrade through one optional
+callback, never per query.
 
 **Why a data interface, not a query interface.** An interface whose methods were
 "search" and "graph" would leave each tier free to rank or traverse differently,

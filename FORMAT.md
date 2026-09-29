@@ -201,22 +201,27 @@ not the read.
 
 How far Tier 0 scales was measured rather than guessed. `make bench` runs the
 benchmark behind these numbers, one iteration per size; re-run it on the machine
-that matters:
+that matters. `search` and `graph` are the commands end to end — the fixed cost a
+run pays (loading the KB, or checking the index) plus the work itself; graph is a
+one-hop walk in both directions from a page:
 
-| pages  | lint   | resolve | search, Tier 0 | search, Tier 1 | build the index |
-| ------ | ------ | ------- | -------------- | -------------- | --------------- |
-| 100    | 0.2 ms | 9 µs    | 2.7 ms         | 0.7 ms         | 19 ms           |
-| 1,000  | 2.5 ms | 9 µs    | 27 ms          | 6 ms           | 0.19 s          |
-| 10,000 | 32 ms  | 11 µs   | 0.27 s         | 59 ms          | 2.6 s           |
+| pages  | lint   | resolve | search, Tier 0 | search, Tier 1 | graph, Tier 0 | graph, Tier 1 | build the index |
+| ------ | ------ | ------- | -------------- | -------------- | ------------- | ------------- | --------------- |
+| 100    | 0.2 ms | 7 µs    | 3.4 ms         | 2.4 ms         | 21 µs         | 0.22 ms       | 19 ms           |
+| 1,000  | 2.4 ms | 9 µs    | 35 ms          | 26 ms          | 47 µs         | 0.23 ms       | 0.19 s          |
+| 10,000 | 31 ms  | 14 µs   | 0.35 s         | 0.23 s         | 0.36 ms       | 0.55 ms       | 2.7 s           |
 
 Measured on a 2020 six-core laptop; read the numbers as orders of magnitude.
 Together they answer `U1`: resolution is O(1) and never a reason to build an
 index; lint is linear and still comfortable at ten thousand pages; and a Tier-0
 search is comfortable to roughly a thousand pages, after which it costs a few
-hundred milliseconds. The index cuts a search by four to five times at ten
-thousand pages, but building it there costs about ten searches. The crossover is
-in the low thousands of pages, and depends on how often the KB is queried
-between edits.
+hundred milliseconds. The index cuts a search by about a third — the freshness
+check still reads and hashes every page, and ranking still re-tokenizes each
+candidate — so a build pays for itself after roughly twenty searches, at a
+thousand pages and at ten thousand alike. Whether that is worth it depends on
+how often the KB is queried between edits, not on how large it is. An orphan
+listing is 0.4 ms / 3.5 ms / 36 ms on the index and 69 µs / 0.67 ms / 9.8 ms on
+the KB; the index answers it from the whole backlink relation at once.
 
 ## Pages
 

@@ -48,7 +48,9 @@ func (s *Store) Populate(k *kb.KB) (Report, error) {
 	if err := tx.Commit(); err != nil {
 		return Report{}, fmt.Errorf("%s: %w", s.path, err)
 	}
-	return Report{Pages: k.Graph.Len(), Added: k.Graph.Len(), Rebuilt: true}, nil
+	// A rebuild rewrites everything, so the added/updated/removed split says
+	// nothing; only the page count and the fact that it was a rebuild do.
+	return Report{Pages: k.Graph.Len(), Rebuilt: true}, nil
 }
 
 // insertPage writes one page and everything the graph knows about it. The text

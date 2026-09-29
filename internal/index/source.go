@@ -60,12 +60,12 @@ type Source interface {
 	// Pages returns every page's metadata, sorted by path.
 	Pages() ([]PageMeta, error)
 
-	// Doc returns a page's tokenized fields. A path that is not in the corpus
-	// yields a zero Doc and no error.
-	Doc(path string) (Doc, error)
-
-	// Body returns a page's markdown body, which is what a snippet is cut from.
-	Body(path string) (string, error)
+	// Docs returns the tokenized fields and the raw body of the named pages,
+	// keyed by path. A path that is not in the corpus is absent from the result,
+	// which is how a caller tells "no such page" from an empty one. It is the
+	// batch form of a page's text: ranking a candidate costs a place in a query
+	// rather than a round trip of its own.
+	Docs(paths []string) (map[string]DocText, error)
 
 	// Match returns the paths whose tokens include any of the terms, sorted.
 	Match(terms []string) ([]string, error)
@@ -82,9 +82,18 @@ type Source interface {
 	// Links returns a page's outgoing links, in order.
 	Links(path string) ([]kb.Link, error)
 
+	// LinksAll returns every page's outgoing links, keyed by path. A page with
+	// no outgoing links is absent from the result. It is the batch form of
+	// Links, for a rule that ranges over the whole corpus.
+	LinksAll() (map[string][]kb.Link, error)
+
 	// Backlinks returns the pages linking to a page, sorted, excluding the page
 	// itself.
 	Backlinks(path string) ([]string, error)
+
+	// BacklinksAll returns every page's backlinkers, keyed by path. A page with
+	// no backlinks is absent from the result. It is the batch form of Backlinks.
+	BacklinksAll() (map[string][]string, error)
 
 	// Citations returns a page's citations, in order.
 	Citations(path string) ([]CitationRef, error)
@@ -92,16 +101,15 @@ type Source interface {
 	// CitedBy returns the pages citing a key, sorted.
 	CitedBy(key string) ([]string, error)
 
-	// Orphans returns the pages nothing links to, sorted. Index and source
-	// pages are left out, and so are archived pages, matching lint's rule.
-	Orphans() ([]string, error)
-
-	// DeadEnds returns the pages with no outgoing links, sorted. Source pages
-	// are left out, and so are archived pages.
-	DeadEnds() ([]string, error)
-
 	// Close releases whatever the source holds open.
 	Close() error
+}
+
+// DocText is a page's ranking fields and the raw body a snippet is cut from.
+// Docs returns it for a set of pages at once.
+type DocText struct {
+	Doc  Doc
+	Body string
 }
 
 // NewSource returns the best source for a KB: the index when it is fresh, the
@@ -115,8 +123,14 @@ type Source interface {
 func NewSource(k *kb.KB, onDowngrade func(reason string)) Source {
 	state, err := CheckKB(k)
 	if err == nil && state == Fresh {
-		if store, openErr := openReadOnly(k.Root); openErr == nil && store != nil {
+		store, openErr := openReadOnly(k.Root)
+		if openErr == nil && store != nil {
 			return newIndexSource(store)
+		}
+		// A fresh index that will not open is an unreadable one, not a fresh
+		// one; downgradeReason reads the error, not the state.
+		if openErr != nil {
+			err = openErr
 		}
 	}
 	if onDowngrade != nil {
@@ -134,8 +148,14 @@ func NewSource(k *kb.KB, onDowngrade func(reason string)) Source {
 func NewSourceAt(root string, onDowngrade func(reason string)) (Source, error) {
 	state, err := Check(root)
 	if err == nil && state == Fresh {
-		if store, openErr := openReadOnly(root); openErr == nil && store != nil {
+		store, openErr := openReadOnly(root)
+		if openErr == nil && store != nil {
 			return newIndexSource(store), nil
+		}
+		// A fresh index that will not open is an unreadable one, not a fresh
+		// one; downgradeReason reads the error, not the state.
+		if openErr != nil {
+			err = openErr
 		}
 	}
 	k, loadErr := kb.Load(root)
@@ -219,14 +239,16 @@ func normalTags(tags []string) []string {
 	return out
 }
 
-// tagTokens tokenizes a page's tags the way both tiers do: by their normalised
-// form, so the ranking sees the same tokens whichever tier produced the Doc.
+// tagTokens tokenizes a page's tags the way both tiers do: from the normalised
+// form, so the ranking sees the same tokens whichever tier produced the Doc,
+// and in the sorted order normalTags gives, so the token list itself is
+// identical too. Order does not change a BM25 score, but it does change the
+// bytes of a Doc, and two tiers that produced different bytes would be a parity
+// bug waiting for a stricter test to find.
 func tagTokens(tags []string) []string {
 	var out []string
-	for _, tag := range tags {
-		if n := kb.Normalize(tag); n != "" {
-			out = append(out, Tokenize(n)...)
-		}
+	for _, tag := range normalTags(tags) {
+		out = append(out, Tokenize(tag)...)
 	}
 	return out
 }

@@ -94,14 +94,14 @@ func TestResolvePage(t *testing.T) {
 func TestOrphansAndDeadEnds(t *testing.T) {
 	k, store := graphKB(t)
 	for _, src := range []Source{newKBSource(k), newIndexSource(store)} {
-		orphans, err := src.Orphans()
+		orphans, err := Orphans(src)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(orphans, []string{"pages/gamma.md"}) {
 			t.Errorf("tier %v: orphans = %v, want [pages/gamma.md]", src.Tier(), orphans)
 		}
-		dead, err := src.DeadEnds()
+		dead, err := DeadEnds(src)
 		if err != nil {
 			t.Fatal(err)
 		}

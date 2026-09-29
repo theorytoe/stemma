@@ -2,7 +2,6 @@ package index
 
 import (
 	"strings"
-	"unicode"
 )
 
 // DefaultSnippetWidth is how much of a page a snippet shows when a caller does
@@ -97,37 +96,14 @@ func Snippet(body string, terms []string, width int) string {
 	return strings.TrimSpace(out.String())
 }
 
-// tokenSpan is one token's place in a rune slice.
-type tokenSpan struct {
-	text  string
-	start int
-	end   int
-}
+// tokenSpan is one token's place in a rune slice. It is defined with the
+// scanner in token.go, because the scanner is what fills it.
 
-// tokenSpans returns every token in rs with its rune offsets. It uses the same
-// rule Tokenize does, so a match found here is a match a query would find.
+// tokenSpans returns every token in rs with its rune offsets. It reads the same
+// scanner Tokenize does, so a match found here is a match a query would find.
 func tokenSpans(rs []rune) []tokenSpan {
 	var out []tokenSpan
-	start := -1
-	var b strings.Builder
-	flush := func(end int) {
-		if start >= 0 {
-			out = append(out, tokenSpan{text: b.String(), start: start, end: end})
-			b.Reset()
-			start = -1
-		}
-	}
-	for i, r := range rs {
-		if unicode.IsLetter(r) || unicode.IsDigit(r) {
-			if start < 0 {
-				start = i
-			}
-			b.WriteRune(fold(unicode.ToLower(r)))
-			continue
-		}
-		flush(i)
-	}
-	flush(len(rs))
+	scanTokens(rs, func(sp tokenSpan) { out = append(out, sp) })
 	return out
 }
 

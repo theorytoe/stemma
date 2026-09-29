@@ -19,22 +19,44 @@ import (
 // splitting it would make a search for it fail.
 func Tokenize(s string) []string {
 	var out []string
+	scanTokens([]rune(s), func(sp tokenSpan) { out = append(out, sp.text) })
+	return out
+}
+
+// tokenSpan is one token's place in a rune slice.
+type tokenSpan struct {
+	text  string
+	start int
+	end   int
+}
+
+// scanTokens calls emit for every token in rs, with the rune offsets it covers.
+//
+// It is the one definition of what a token is: Tokenize collects the text and
+// Snippet the spans, so a snippet marks exactly the words a query matches.
+// Writing that rule twice is how the two come to disagree, so it is written
+// once. Offsets are rune indices, which is the unit Snippet works in.
+func scanTokens(rs []rune, emit func(tokenSpan)) {
+	start := -1
 	var b strings.Builder
-	flush := func() {
-		if b.Len() > 0 {
-			out = append(out, b.String())
+	flush := func(end int) {
+		if start >= 0 {
+			emit(tokenSpan{text: b.String(), start: start, end: end})
 			b.Reset()
+			start = -1
 		}
 	}
-	for _, r := range s {
+	for i, r := range rs {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			if start < 0 {
+				start = i
+			}
 			b.WriteRune(fold(unicode.ToLower(r)))
 			continue
 		}
-		flush()
+		flush(i)
 	}
-	flush()
-	return out
+	flush(len(rs))
 }
 
 // Join renders tokens as the single space-separated string the FTS table

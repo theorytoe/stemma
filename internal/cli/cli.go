@@ -90,6 +90,7 @@ func init() {
 		searchCommand,
 		graphCommand,
 		serveCommand,
+		buildCommand,
 		citeCommand,
 		fetchCommand,
 		lintCommand,

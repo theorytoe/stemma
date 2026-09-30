@@ -13,7 +13,7 @@ LDFLAGS  = -X github.com/theorytoe/stemma/internal/version.Version=$(VERSION)
 # tool defines and checked by the tool itself.
 WIKI   ?= wiki
 
-.PHONY: all build test test-shim vet check lint-wiki bench tidy fmt clean
+.PHONY: all build test test-shim vet check lint-wiki site bench tidy fmt clean
 
 all: build
 
@@ -39,13 +39,21 @@ vet:
 # What CI runs. Further gates (the static site, the export) belong in this
 # target rather than in the workflow, so that a local run and a CI run check the
 # same things.
-check: build vet test test-shim lint-wiki
+check: build vet test test-shim lint-wiki site
 
 # The documentation is a KB, so it has to lint clean under --strict. If the
 # project's own documentation cannot pass its own checks, the release is not
 # shippable. Raising the findings is not enough: this has to fail the build.
 lint-wiki: build
 	$(BIN) lint --kb $(WIKI) --strict
+
+# The example wiki's static site, written by the binary CI just built. Parsing,
+# rendering and writing are the end-to-end path, so this is part of check rather
+# than something someone remembers to run. What the output must contain is
+# asserted by internal/build's conformance test, which `test` runs; this target
+# is here so the shipped binary has to produce the site the wiki describes.
+site: build
+	$(BIN) build --kb $(WIKI)
 
 # The scale benchmark behind the tier finding in FORMAT.md. It measures, it
 # does not pass or fail, so it is not part of check. One iteration per size

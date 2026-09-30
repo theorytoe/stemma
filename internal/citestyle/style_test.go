@@ -172,6 +172,41 @@ func TestNumericEntry(t *testing.T) {
 	}
 }
 
+func TestLayoutMatchesCite(t *testing.T) {
+	a := entry(t, bush)
+	b := entry(t, "@article{doe2020, author = {Doe, Jane}, year = {2020}}\n")
+	list := refs(a, b)
+
+	groups := [][]kb.Citation{
+		{{Key: "bush1945"}},
+		{{Key: "bush1945"}, {Key: "doe2020"}},
+		{{Key: "bush1945", Narrative: true}},
+		{{Key: "bush1945", SuppressAuthor: true, Locator: "p. 33", Prefix: "see"}},
+		{{Key: "missing"}},
+	}
+	for _, name := range Names() {
+		f, err := Parse(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, group := range groups {
+			lay := f.Layout(group, list)
+			if got, want := lay.Text(), f.Cite(group, list); got != want {
+				t.Errorf("%s: Layout().Text() = %q, want Cite = %q", name, got, want)
+			}
+			if len(lay.Pieces) != len(group) {
+				t.Errorf("%s: %d pieces for %d citations", name, len(lay.Pieces), len(group))
+				continue
+			}
+			for i, p := range lay.Pieces {
+				if p.Key != group[i].Key {
+					t.Errorf("%s: piece %d names %q, want %q", name, i, p.Key, group[i].Key)
+				}
+			}
+		}
+	}
+}
+
 func TestNameHandling(t *testing.T) {
 	for _, tc := range []struct{ in, want string }{
 		{"Bush, Vannevar", "Bush, Vannevar"},

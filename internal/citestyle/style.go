@@ -32,11 +32,44 @@ const (
 // Names returns the styles this build has, in the order they are documented.
 func Names() []string { return []string{string(AuthorDate), string(Numeric)} }
 
+// Piece is one citation's rendered text and the key it came from, so that a
+// host can wrap each key's text -- with a link to its source page, say --
+// without the formatter knowing anything about HTML.
+type Piece struct {
+	Key  string
+	Text string
+}
+
+// Layout is a citation group kept in pieces: what stands before the items, the
+// items in order, what separates them, and what stands after. It is the same
+// rendering as Cite, only not yet joined, which is what lets a host that links
+// each source wrap the pieces individually.
+type Layout struct {
+	Before string
+	Pieces []Piece
+	Sep    string
+	After  string
+}
+
+// Text is the group as one string, which is exactly what Cite returns.
+func (l Layout) Text() string {
+	parts := make([]string, len(l.Pieces))
+	for i, p := range l.Pieces {
+		parts[i] = p.Text
+	}
+	return l.Before + strings.Join(parts, l.Sep) + l.After
+}
+
 // Formatter renders a page's citations and its reference list in one style.
 type Formatter interface {
 	// Cite renders the citations that share one group, in order. A single
 	// narrative citation is a group of one.
 	Cite(group []kb.Citation, refs []kb.Reference) string
+
+	// Layout renders the same group, kept in pieces. A host that renders plain
+	// text uses Cite; one that links each key to its source page uses this and
+	// wraps the pieces.
+	Layout(group []kb.Citation, refs []kb.Reference) Layout
 
 	// Entry renders one reference-list entry. number is its 1-based place in
 	// the list, which a numeric style uses and the others ignore.
@@ -89,23 +122,28 @@ func entryFor(key string, refs []kb.Reference) (*kb.BibEntry, bool) {
 type authorDate struct{}
 
 func (authorDate) Cite(group []kb.Citation, refs []kb.Reference) string {
+	return authorDate{}.Layout(group, refs).Text()
+}
+
+func (authorDate) Layout(group []kb.Citation, refs []kb.Reference) Layout {
 	if len(group) == 1 && group[0].Narrative {
-		e, ok := entryFor(group[0].Key, refs)
+		key := group[0].Key
+		e, ok := entryFor(key, refs)
 		if !ok {
-			return group[0].Key
+			return Layout{Pieces: []Piece{{Key: key, Text: key}}}
 		}
 		label := authorLabel(e)
 		if label == "" {
-			return year(e)
+			return Layout{Pieces: []Piece{{Key: key, Text: year(e)}}}
 		}
-		return label + " (" + year(e) + ")"
+		return Layout{Pieces: []Piece{{Key: key, Text: label + " (" + year(e) + ")"}}}
 	}
 
-	items := make([]string, 0, len(group))
+	pieces := make([]Piece, 0, len(group))
 	for _, c := range group {
-		items = append(items, authorDateItem(c, refs))
+		pieces = append(pieces, Piece{Key: c.Key, Text: authorDateItem(c, refs)})
 	}
-	return "(" + strings.Join(items, "; ") + ")"
+	return Layout{Before: "(", Pieces: pieces, Sep: "; ", After: ")"}
 }
 
 func authorDateItem(c kb.Citation, refs []kb.Reference) string {
@@ -141,7 +179,11 @@ func (authorDate) Entry(r kb.Reference, _ int) string {
 type numeric struct{}
 
 func (numeric) Cite(group []kb.Citation, refs []kb.Reference) string {
-	items := make([]string, 0, len(group))
+	return numeric{}.Layout(group, refs).Text()
+}
+
+func (numeric) Layout(group []kb.Citation, refs []kb.Reference) Layout {
+	pieces := make([]Piece, 0, len(group))
 	for _, c := range group {
 		label := number(c.Key, refs)
 		if c.Locator != "" {
@@ -150,9 +192,9 @@ func (numeric) Cite(group []kb.Citation, refs []kb.Reference) string {
 		if c.Prefix != "" {
 			label = c.Prefix + " " + label
 		}
-		items = append(items, label)
+		pieces = append(pieces, Piece{Key: c.Key, Text: label})
 	}
-	return "[" + strings.Join(items, "; ") + "]"
+	return Layout{Before: "[", Pieces: pieces, Sep: "; ", After: "]"}
 }
 
 func (numeric) Entry(r kb.Reference, number int) string {

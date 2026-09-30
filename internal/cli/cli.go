@@ -16,6 +16,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 
 	"github.com/theorytoe/stemma/internal/kb"
@@ -91,6 +92,7 @@ func init() {
 		graphCommand,
 		serveCommand,
 		buildCommand,
+		exportCommand,
 		citeCommand,
 		fetchCommand,
 		lintCommand,
@@ -202,6 +204,21 @@ func (o *options) mode() kb.Mode {
 		return kb.Strict
 	}
 	return kb.Lenient
+}
+
+// outputPath resolves where a command was told to write. A relative path is
+// relative to the KB root rather than to the working directory, so one
+// invocation means one place no matter which directory it was typed in. name is
+// what the command writes when it was not told.
+func outputPath(root, out, name string) string {
+	switch {
+	case out == "":
+		return filepath.Join(root, kb.GeneratedDir, name)
+	case filepath.IsAbs(out):
+		return out
+	default:
+		return filepath.Join(root, out)
+	}
 }
 
 // load finds and reads the KB, reporting the failure itself. A nil KB means the

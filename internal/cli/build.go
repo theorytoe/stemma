@@ -3,10 +3,8 @@ package cli
 import (
 	"flag"
 	"fmt"
-	"path/filepath"
 
 	"github.com/theorytoe/stemma/internal/build"
-	"github.com/theorytoe/stemma/internal/kb"
 )
 
 // buildCommand implements `stemma build`.
@@ -37,13 +35,7 @@ var buildCommand = &command{
 			// which directory it was typed in. The default is inside the
 			// generated directory, which is gitignored and re-derivable, so a
 			// build is never something the author has to remember not to commit.
-			dir := *out
-			switch {
-			case dir == "":
-				dir = filepath.Join(root, kb.GeneratedDir, "site")
-			case !filepath.IsAbs(dir):
-				dir = filepath.Join(root, dir)
-			}
+			dir := outputPath(root, *out, "site")
 
 			res, err := build.Write(root, dir)
 			if err != nil {

@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "kb": {
+    "title": "Export Test",
+    "description": "A KB for the dump tests.",
+    "citation_style": "author-date"
+  },
+  "counts": {
+    "pages": 3,
+    "links": 5,
+    "citations": 2,
+    "bibliography": 1
+  },
+  "pages": [
+    {
+      "path": "pages/alpha.md",
+      "url": "alpha.html",
+      "title": "Alpha",
+      "type": "concept",
+      "status": "active",
+      "tags": [],
+      "aliases": [
+        "First"
+      ],
+      "body": "Alpha cites [@bush1945] and [@missing2020]. See [[Beta]].\n"
+    },
+    {
+      "path": "pages/beta.md",
+      "url": "beta.html",
+      "title": "Beta",
+      "type": "concept",
+      "status": "active",
+      "tags": [],
+      "aliases": [
+        "Alpha"
+      ],
+      "body": "Beta also answers to [[First]].\n"
+    },
+    {
+      "path": "pages/index.md",
+      "url": "index.html",
+      "title": "Home",
+      "type": "index",
+      "status": "active",
+      "tags": [
+        "site"
+      ],
+      "aliases": [],
+      "body": "Home links [[Alpha]], [[Beta]] and [[Nowhere]].\n"
+    }
+  ],
+  "links": [
+    {
+      "from": "pages/alpha.md",
+      "target": "Beta",
+      "line": 6,
+      "resolution": "resolved",
+      "to": "pages/beta.md"
+    },
+    {
+      "from": "pages/beta.md",
+      "target": "First",
+      "line": 6,
+      "resolution": "resolved",
+      "to": "pages/alpha.md"
+    },
+    {
+      "from": "pages/index.md",
+      "target": "Alpha",
+      "line": 6,
+      "resolution": "ambiguous",
+      "matches": [
+        "pages/alpha.md",
+        "pages/beta.md"
+      ]
+    },
+    {
+      "from": "pages/index.md",
+      "target": "Beta",
+      "line": 6,
+      "resolution": "resolved",
+      "to": "pages/beta.md"
+    },
+    {
+      "from": "pages/index.md",
+      "target": "Nowhere",
+      "line": 6,
+      "resolution": "unresolved"
+    }
+  ],
+  "citations": [
+    {
+      "from": "pages/alpha.md",
+      "key": "bush1945",
+      "line": 6,
+      "resolved": true
+    },
+    {
+      "from": "pages/alpha.md",
+      "key": "missing2020",
+      "line": 6,
+      "resolved": false
+    }
+  ],
+  "bibliography": [
+    {
+      "key": "bush1945",
+      "type": "article",
+      "title": "As We May Think",
+      "year": "1945",
+      "authors": [
+        "Bush, Vannevar"
+      ],
+      "fields": {
+        "author": "Bush, Vannevar",
+        "title": "As We May Think",
+        "year": "1945"
+      }
+    }
+  ]
+}

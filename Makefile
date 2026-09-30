@@ -13,7 +13,7 @@ LDFLAGS  = -X github.com/theorytoe/stemma/internal/version.Version=$(VERSION)
 # tool defines and checked by the tool itself.
 WIKI   ?= wiki
 
-.PHONY: all build test test-shim vet check lint-wiki site bench tidy fmt clean
+.PHONY: all build test test-shim vet check lint-wiki site extract bench tidy fmt clean
 
 all: build
 
@@ -39,7 +39,7 @@ vet:
 # What CI runs. Further gates (the static site, the export) belong in this
 # target rather than in the workflow, so that a local run and a CI run check the
 # same things.
-check: build vet test test-shim lint-wiki site
+check: build vet test test-shim lint-wiki site extract
 
 # The documentation is a KB, so it has to lint clean under --strict. If the
 # project's own documentation cannot pass its own checks, the release is not
@@ -54,6 +54,18 @@ lint-wiki: build
 # is here so the shipped binary has to produce the site the wiki describes.
 site: build
 	$(BIN) build --kb $(WIKI)
+
+# A scoped extract is a KB root, so it has to lint clean and build like one. This
+# is the definition of done end to end: take the entry document out of the
+# example wiki, then check what came out as a KB in its own right. The
+# exhaustive half -- every extract of every page, at both depths, plus the round
+# trip -- is internal/export's gate test, which `test` runs.
+EXTRACT = .stemma/extract/gate
+
+extract: build
+	$(BIN) export page --kb $(WIKI) pages/index.md --depth all --out $(EXTRACT)
+	$(BIN) lint --kb $(WIKI)/$(EXTRACT) --strict
+	$(BIN) build --kb $(WIKI)/$(EXTRACT) --out site
 
 # The scale benchmark behind the tier finding in FORMAT.md. It measures, it
 # does not pass or fail, so it is not part of check. One iteration per size

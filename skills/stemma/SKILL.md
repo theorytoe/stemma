@@ -53,8 +53,8 @@ your working directory -- the example wiki in this repository sits below the
   `data`, and `findings` or `error` when they apply.
 - Exit codes: `0` clean, `1` validation findings, `2` operational error. Treat
   `1` as a fact about the KB and `2` as a fact about the invocation.
-- In this repository, build the binary with `make build` and run `bin/stemma`.
-  Everywhere else `stemma` is on `PATH`.
+- In this repository, `make build` writes `bin/stemma` and `make install` puts
+  `stemma` on your `PATH`; elsewhere `stemma` is already on `PATH`.
 
 ## The format in one screen
 

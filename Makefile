@@ -13,12 +13,19 @@ LDFLAGS  = -X github.com/theorytoe/stemma/internal/version.Version=$(VERSION)
 # tool defines and checked by the tool itself.
 WIKI   ?= wiki
 
-.PHONY: all build test test-shim vet check lint-wiki site extract skills check-skills bench tidy fmt clean
+.PHONY: all build install test test-shim vet check lint-wiki site extract skills check-skills bench tidy fmt clean
 
 all: build
 
 build:
 	$(GO) build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/stemma
+
+# Put the binary on PATH with the same version stamp the build uses. `go
+# install` writes to $(go env GOBIN), or to $(go env GOPATH)/bin when GOBIN is
+# unset. For a system location instead, address the built binary directly:
+#   make build && install -m 0755 bin/stemma /usr/local/bin/stemma
+install:
+	$(GO) install -ldflags "$(LDFLAGS)" ./cmd/stemma
 
 test:
 	$(GO) test ./...

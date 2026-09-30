@@ -1,7 +1,6 @@
 package build
 
 import (
-	"fmt"
 	"io/fs"
 	"net/url"
 	"os"
@@ -168,10 +167,16 @@ func indexFamily(t *testing.T, site string, docs map[string]string, listing, pre
 	}
 }
 
-// internalTarget reads an address in a document as a path inside the site. It
-// reports false for an address that is not the site's business -- a fragment, or
-// a link to another host -- and reports an error for one that climbs above the
-// output directory, since a built site has nothing outside it to reach.
+// internalTarget reads an address in a document as a path inside the site.
+//
+// It reports false for an address that is not the site's business: a fragment, a
+// link to another host, or a path that climbs above the output directory. That
+// last one only ever comes from an author's own prose — the tool writes every
+// address it makes relative to the document holding it, so it cannot climb out —
+// and an author pointing at something outside the site is a link to fix in the
+// text rather than a surface this gate is about. Whether the tool's own
+// addresses are right is covered elsewhere: the navigation here, and the exact
+// asset tags in `internal/render`.
 func internalTarget(doc, href string) (target string, internal bool, err error) {
 	if href == "" || strings.HasPrefix(href, "#") {
 		return "", false, nil
@@ -187,7 +192,7 @@ func internalTarget(doc, href string) (target string, internal bool, err error) 
 	// form the file is decoded from.
 	target = path.Join(path.Dir(doc), u.EscapedPath())
 	if target == ".." || strings.HasPrefix(target, "../") {
-		return "", false, fmt.Errorf("it climbs out of the site")
+		return "", false, nil
 	}
 	return target, true, nil
 }

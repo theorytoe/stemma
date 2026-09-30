@@ -126,6 +126,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D40 | One renderer, invoked as **`serve`** and **`build`**.                                                                  | Q25       |
 | D41 | **One KB per invocation.** Discovery: explicit path → environment variable → walk-up from cwd. No registry, no daemon. | Q26       |
 | D69 | A resolved wikilink renders as an anchor showing the **page's own title**; an unresolved or ambiguous one renders as the written text inside a marked span; a citation links each key to that key's virtual source page. | review    |
+| D72 | The site's home page is **generated** from what the KB holds — counts, browse by type and tag, the newest sources, and what needs attention — with the **entry document's body as its opening** when the KB has one. `pages/index.md` is **optional** and is not rendered as a page of its own. | review    |
 
 ---
 
@@ -462,6 +463,53 @@ lints clean under `--strict`" could not hold. Renaming the root and exempting th
 entry document was chosen over generating a cover page, retyping the root as an
 index, or softening the criterion; pruning and reporting was chosen over carrying
 broken constructs or refusing to extract.
+
+### The home page — generated, with the entry document as its opening. `D72` added.
+
+**Decision.** `index.html` is a landing page the tool writes: the KB's title and
+description, a line of counts, then blocks counted from what the KB holds —
+browse by type and tag, the newest sources, and the things lint would like fixed
+— and, when the KB has an entry document, that page's body as the opening. The
+entry document is `pages/index.md`, `init` writes one, it is optional, and it is
+not rendered as a page of its own: its address is the home page's, and it is the
+same document.
+
+**Why generated.** What a KB knows about itself is exactly the material a front
+page wants, and all of it is a consequence of the content rather than of anybody's
+choice: how many pages there are, which types and tags exist, which sources were
+read most recently, and what lint is unhappy about. Wikipedia's Main Page is the
+model and the warning at once — its blocks are generated from its content, and
+its "featured article" and "did you know" are the two a person chose. This page
+takes only the first kind.
+
+**Why the entry document stays, and stays the opening.** It is the one part of
+the page a program cannot write: a list of pages with a reason to read each is
+judgement, and the example wiki's entry document is exactly that list. Keeping it
+as the opening is also what makes the change free — that page's address is already
+`index.html`, so the page an author wrote and the page a reader arrives at become
+one document rather than two wanting one URL. No address changes, no links move,
+and there is nothing to migrate.
+
+**Why it is optional.** A KB with no entry document gets the generated page and
+no opening, so deleting `pages/index.md` is a supported choice rather than a
+broken KB. That is what makes it a page rather than a fixture: `init` writes one
+because a new KB deserves a worked example of the format, not because the format
+requires one. What cannot be dropped is its other role — the page nothing is
+expected to link to, which is what lets an extract's root lint clean under
+`--strict` (`D71`) — and an extract renames its root into that place for exactly
+that reason.
+
+**What is deliberately absent.** No "recently changed" list: the format records no
+dates for pages, and mtimes are worthless the moment a KB is cloned or untarred,
+when every file arrives with the same timestamp — so recency comes from the
+bibliography, where `cite add` and `fetch` write the day a source was read. No
+page of the day or random article, because date-seeded output would make a build
+irreproducible and break the golden tests. No drafts, because `Load` deliberately
+never reads `inbox/`. No images, because the format has no such concept.
+
+**Provenance.** Put to the tool author as a proposal with the alternatives, after
+reading what Wikipedia's Main Page is actually made of, and answered: a landing
+page in that shape, wrapping the entry document rather than replacing it.
 
 ### U5 — rewriting inbound links. `D19` stands.
 

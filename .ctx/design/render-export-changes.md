@@ -264,3 +264,19 @@ quietly."
 - Interface impact — none; additive, and `check` passes.
 - Tests — `internal/export`'s gate test is the exhaustive half.
 - Decision ref — D30, D71
+
+### FORMAT.md — the entry document's role restated
+
+- Date — 2026-09-29
+- Prior task — 1 (foundation)
+- What changed — the paragraph on the entry document under `pages/` now says it is
+  optional, that the home page is generated and that this page's body is the home
+  page's opening, and that its path is what makes it the entry document.
+- Why — `D72` changed what `pages/index.md` means to the renderer, and the format
+  document is where that meaning is written. The sentence it replaces said the
+  renderer roots the site at it, which is no longer true.
+- Interface impact — none: the format itself does not change, no address moves,
+  and no KB needs migrating.
+- Tests — `internal/render`'s home tests cover a KB with an entry document and one
+  without.
+- Decision ref — D72

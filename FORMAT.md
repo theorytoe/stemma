@@ -35,9 +35,14 @@ are not read, not linted, and not exported.
 A single directory holds every authored page. The structure inside it is the
 author's, at any depth, and the tool imposes none.
 
-One page is the entry document: `pages/index.md`, with `type: index`. `init`
-writes it and the author owns its content from then on. The renderer roots the
-site at it, so it is the page every other page is reachable from.
+One page can be the entry document: `pages/index.md`, which `init` writes with
+`type: index`. The author owns its content from then on, and it is optional —
+deleting it leaves a KB that works, with a home page that is generated and simply
+has no opening. What makes it the entry document is its path: the renderer's home
+page is generated, and when this page exists its body is that page's opening, so
+the page an author wrote as a way in is the page a reader arrives at. It is also
+the page nothing is expected to link to, which is why it is exempt from the orphan
+check.
 
 Directories inside `pages/` are organisational only. They confer no scope, no
 partitioning, no per-directory index, and no effect whatsoever on link

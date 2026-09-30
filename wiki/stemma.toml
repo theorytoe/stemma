@@ -4,5 +4,3 @@ title = "Stemma"
 
 # Added to the built-in types: topic, concept and note.
 types = ["principle"]
-
-citation_style = "author-date"

@@ -63,11 +63,17 @@ func testKB(t *testing.T) *kb.KB {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The renderer is pinned to one style on purpose. Which style is the default
+	// is a manifest question, and letting it decide what the renderer's golden
+	// holds would make a change to the default silently rewrite this test. The
+	// example wiki exercises the default itself.
+	manifest := kb.DefaultManifest("test")
+	manifest.CitationStyle = "author-date"
 	return &kb.KB{
 		Graph:        g,
 		Bibliography: bib,
 		Vocabulary:   kb.DefaultVocabulary(),
-		Manifest:     kb.DefaultManifest("test"),
+		Manifest:     manifest,
 	}
 }
 

@@ -21,7 +21,7 @@ const (
 )
 
 // DefaultCitationStyle is used when a manifest does not name one.
-const DefaultCitationStyle = "author-date"
+const DefaultCitationStyle = "numeric"
 
 // DefaultExportDepth is how many hops a scoped extract reaches when neither the
 // command line nor the manifest says otherwise (D29). A manifest may set

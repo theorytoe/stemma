@@ -83,10 +83,10 @@ type Formatter interface {
 // asked for is worse than refusing, because the output looks right.
 func Parse(name string) (Formatter, error) {
 	switch Style(strings.TrimSpace(name)) {
-	case "", AuthorDate:
-		return authorDate{}, nil
-	case Numeric:
+	case "", Numeric:
 		return numeric{}, nil
+	case AuthorDate:
+		return authorDate{}, nil
 	}
 	return nil, fmt.Errorf("unknown citation style %q; the styles this build has are %s",
 		name, strings.Join(Names(), ", "))

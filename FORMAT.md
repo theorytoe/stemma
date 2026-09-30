@@ -479,7 +479,7 @@ discovery marker. Unknown keys are preserved verbatim.
 | `description`    | string          | empty                        | a sentence or two about the KB            |
 | `default_type`   | string          | `topic`                      | the type `new` applies when none is given |
 | `types`          | list of strings | empty                        | types added to the built-in three         |
-| `citation_style` | string          | `author-date`                | a built-in formatter: `author-date` or `numeric` |
+| `citation_style` | string          | `numeric`                    | a built-in formatter: `author-date` or `numeric` |
 | `ignore`         | list of strings | empty                        | path globs, relative to the KB root       |
 
 One table holds the export family's defaults. `default_depth` is how many hops a

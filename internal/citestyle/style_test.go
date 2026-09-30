@@ -48,7 +48,7 @@ func TestParse(t *testing.T) {
 	}
 	if f, err := Parse(""); err != nil {
 		t.Fatal(err)
-	} else if _, ok := f.(authorDate); !ok {
+	} else if _, ok := f.(numeric); !ok {
 		t.Errorf("the empty name should be the default style, got %T", f)
 	}
 	if _, err := Parse("apa"); err == nil {

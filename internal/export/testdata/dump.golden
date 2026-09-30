@@ -3,7 +3,7 @@
   "kb": {
     "title": "Export Test",
     "description": "A KB for the dump tests.",
-    "citation_style": "author-date"
+    "citation_style": "numeric"
   },
   "counts": {
     "pages": 3,

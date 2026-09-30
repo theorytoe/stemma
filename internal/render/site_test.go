@@ -62,7 +62,9 @@ func TestDocumentsAreUniqueAndComplete(t *testing.T) {
 	}
 	for _, want := range []string{
 		"index.html",             // the home page
-		"all.html",               // the generated Index
+		"all.html",               // the generated page list
+		"types.html",             // the generated type list
+		"tags.html",              // the generated tag list
 		"sample.html",            // an authored page
 		"odd%20name.html",        // a file name with a space
 		"types/concept.html",     // a type index
@@ -116,6 +118,8 @@ func TestPageDocumentHasChrome(t *testing.T) {
 		`<link rel="stylesheet" href="assets/style.css">`,
 		`<a class="site-title" href="index.html">test</a>`,
 		`<a href="all.html">Index</a>`,
+		`<a href="types.html">Types</a>`,
+		`<a href="tags.html">Tags</a>`,
 		`<h1>Sample</h1>`,
 		`<section class="references">`,
 		`Built with stemma.`,
@@ -161,6 +165,45 @@ func TestMetaLine(t *testing.T) {
 	}
 	if !strings.Contains(string(transformer), `tags: <a href="tags/architecture.html">architecture</a>`) {
 		t.Errorf("the meta line does not list tags as links:\n%s", transformer)
+	}
+}
+
+// TestTypesAndTagsAreSeparatePages checks the lists were split apart: the page
+// list carries pages and neither of the other two, and each of the others
+// carries only its own.
+func TestTypesAndTagsAreSeparatePages(t *testing.T) {
+	r := siteRenderer(t)
+
+	index, err := r.All()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(index), `class="page-list"`) {
+		t.Errorf("the page list is missing from the Index:\n%s", index)
+	}
+	for _, unwanted := range []string{`class="type-list"`, `class="tag-list"`} {
+		if strings.Contains(string(index), unwanted) {
+			t.Errorf("the Index still carries %s:\n%s", unwanted, index)
+		}
+	}
+
+	types, err := r.Types()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(types), "<h1>Types</h1>") || !strings.Contains(string(types), ">concept<") {
+		t.Errorf("the types page is missing a type:\n%s", types)
+	}
+	if strings.Contains(string(types), `class="page-list"`) {
+		t.Errorf("the types page carries the page list:\n%s", types)
+	}
+
+	tags, err := r.Tags()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(tags), "<h1>Tags</h1>") || !strings.Contains(string(tags), ">architecture<") {
+		t.Errorf("the tags page is missing a tag:\n%s", tags)
 	}
 }
 

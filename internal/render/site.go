@@ -27,10 +27,15 @@ const (
 	// assetDir is where the static files live, in the build and in the embed.
 	assetDir = "assets"
 
-	// indexURL is the generated Index page: every page grouped by type, then
-	// the tags. It is not "index.html" because that is the home page, the
-	// authored entry document the whole site is rooted at.
+	// indexURL is the generated list of every page. It is not "index.html"
+	// because that is the home page, the authored entry document the whole site
+	// is rooted at.
 	indexURL = "all.html"
+
+	// typesURL and tagsURL are the generated lists of the types and the tags,
+	// each kept apart from the page list and from each other.
+	typesURL = "types.html"
+	tagsURL  = "tags.html"
 )
 
 // SiteData is what every document knows about the site around it. Every address
@@ -39,6 +44,8 @@ type SiteData struct {
 	Title     string
 	HomeURL   string
 	IndexURL  string
+	TypesURL  string
+	TagsURL   string
 	AssetURL  string
 	ScriptURL string
 	SearchURL string
@@ -95,14 +102,16 @@ type PageData struct {
 	Backlinks  []PageLink
 }
 
-// ListingData is an index page: a heading and the pages under it, and on the
-// Index page also the types and tags.
+// ListingData is an index page: a heading and one list under it. A page list,
+// a type list and a tag list are the same shape, so they share this and the
+// listing template; each page sets only the one it is.
 type ListingData struct {
 	common
 	Heading string
 	Pages   []PageLink
 	Types   []TypeLink
 	Tags    []TagLink
+	Empty   string
 }
 
 // SearchHit is one result on the search page.
@@ -175,6 +184,8 @@ func (r *Renderer) siteFor(docURL string) SiteData {
 		Title:     r.title,
 		HomeURL:   rel(docURL, r.home),
 		IndexURL:  rel(docURL, indexURL),
+		TypesURL:  rel(docURL, typesURL),
+		TagsURL:   rel(docURL, tagsURL),
 		AssetURL:  rel(docURL, assetDir+"/style.css"),
 		ScriptURL: rel(docURL, assetDir+"/theme.js"),
 	}
@@ -213,14 +224,47 @@ func (r *Renderer) Page(pagePath string) ([]byte, error) {
 }
 
 // All renders the Index page: every page, then the types and the tags.
+// All renders the list of every page.
 func (r *Renderer) All() ([]byte, error) {
 	docURL := indexURL
+	pages := r.pageLinks(r.kb.Graph.Paths(), docURL)
 	data := ListingData{
 		common:  common{Site: r.siteFor(docURL), DocTitle: tabTitle("Index", r.title)},
 		Heading: "Index",
-		Pages:   r.pageLinks(r.kb.Graph.Paths(), docURL),
-		Types:   r.typeLinks(docURL),
-		Tags:    r.tagLinks(docURL),
+		Pages:   pages,
+	}
+	if len(pages) == 0 {
+		data.Empty = "No pages yet."
+	}
+	return r.execute("listing", data)
+}
+
+// Types renders the list of every type that has pages.
+func (r *Renderer) Types() ([]byte, error) {
+	docURL := typesURL
+	types := r.typeLinks(docURL)
+	data := ListingData{
+		common:  common{Site: r.siteFor(docURL), DocTitle: tabTitle("Types", r.title)},
+		Heading: "Types",
+		Types:   types,
+	}
+	if len(types) == 0 {
+		data.Empty = "No types yet."
+	}
+	return r.execute("listing", data)
+}
+
+// Tags renders the list of every tag in use.
+func (r *Renderer) Tags() ([]byte, error) {
+	docURL := tagsURL
+	tags := r.tagLinks(docURL)
+	data := ListingData{
+		common:  common{Site: r.siteFor(docURL), DocTitle: tabTitle("Tags", r.title)},
+		Heading: "Tags",
+		Tags:    tags,
+	}
+	if len(tags) == 0 {
+		data.Empty = "No tags yet."
 	}
 	return r.execute("listing", data)
 }
@@ -306,6 +350,16 @@ func (r *Renderer) Documents() ([]Document, error) {
 		return nil, err
 	}
 	addHTML(indexURL, body)
+
+	if body, err = r.Types(); err != nil {
+		return nil, err
+	}
+	addHTML(typesURL, body)
+
+	if body, err = r.Tags(); err != nil {
+		return nil, err
+	}
+	addHTML(tagsURL, body)
 
 	for _, typ := range r.typeNames() {
 		body, err := r.TypeIndex(typ)

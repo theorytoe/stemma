@@ -209,9 +209,7 @@ a {
 }
 
 .references,
-.backlinks,
-.type-list,
-.tag-list {
+.backlinks {
   margin-top: 2.5rem;
   padding-top: 1rem;
   border-top: 1px solid var(--rule);
@@ -219,9 +217,7 @@ a {
 }
 
 .references h2,
-.backlinks h2,
-.type-list h2,
-.tag-list h2 {
+.backlinks h2 {
   margin-top: 0;
   font-family: ui-sans-serif, system-ui, sans-serif;
   font-size: 0.8rem;
@@ -231,10 +227,7 @@ a {
 }
 
 .references ul,
-.backlinks ul,
-.type-list ul,
-.tag-list ul,
-.page-list {
+.backlinks ul {
   padding-left: 1.1rem;
 }
 
@@ -243,8 +236,8 @@ a {
 }
 
 .page-list,
-.type-list ul,
-.tag-list ul {
+.type-list,
+.tag-list {
   list-style: none;
   padding-left: 0;
 }
@@ -253,6 +246,10 @@ a {
 .type-list li,
 .tag-list li {
   margin-bottom: 0.35rem;
+}
+
+.empty {
+  color: var(--muted);
 }
 
 code,
@@ -321,15 +318,36 @@ td {
   flex-basis: 100%;
 }
 
+.search-input {
+  position: relative;
+  display: flex;
+  flex: 1;
+}
+
+.search-input .icon-search {
+  position: absolute;
+  left: 0.55rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  color: var(--muted);
+  pointer-events: none;
+}
+
 .search input[type="search"] {
   font: inherit;
   font-size: 0.85rem;
-  padding: 0.3rem 0.5rem;
+  width: 100%;
+  padding: 0.3rem 0.5rem 0.3rem 1.9rem;
   border: 1px solid var(--rule);
   border-radius: 4px;
   background: var(--paper);
   color: var(--ink);
-  flex: 1;
 }
 
 .search button {

@@ -8,7 +8,7 @@
 <main>
   <h1>Search</h1>
   <form class="search" action="{{.Site.SearchURL}}" method="get" role="search">
-    <input type="search" name="q" value="{{.Query}}" aria-label="Search the pages" autofocus>
+    <span class="search-input"><svg class="icon-search" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><input type="search" name="q" value="{{.Query}}" aria-label="Search the pages" autofocus></span>
     <button type="submit">Search</button>
   </form>
   {{if .Searched}}

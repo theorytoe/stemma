@@ -72,6 +72,11 @@ func TestServesPagesAndAssets(t *testing.T) {
 	if status, _, _ := get(t, ts.URL+"/alpha.html"); status != http.StatusOK {
 		t.Errorf("GET /alpha.html = %d", status)
 	}
+	for _, u := range []string{"/all.html", "/types.html", "/tags.html"} {
+		if status, _, _ := get(t, ts.URL+u); status != http.StatusOK {
+			t.Errorf("GET %s = %d, want 200", u, status)
+		}
+	}
 	if status, ctype, _ := get(t, ts.URL+"/assets/style.css"); status != http.StatusOK || !strings.HasPrefix(ctype, "text/css") {
 		t.Errorf("GET /assets/style.css = %d %s", status, ctype)
 	}

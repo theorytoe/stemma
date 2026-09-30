@@ -11,25 +11,18 @@
   <ul class="page-list">
     {{range .Pages}}<li><a href="{{.URL}}">{{.Title}}</a>{{if .Type}} <span class="page-type">{{.Type}}</span>{{end}}</li>{{end}}
   </ul>
-  {{else}}
-  <p class="empty">Nothing here yet.</p>
   {{end}}
   {{if .Types}}
-  <section class="type-list">
-    <h2>Types</h2>
-    <ul>
-      {{range .Types}}<li><a href="{{.URL}}">{{.Name}}</a> <span class="count">{{.Count}}</span></li>{{end}}
-    </ul>
-  </section>
+  <ul class="type-list">
+    {{range .Types}}<li><a href="{{.URL}}">{{.Name}}</a> <span class="count">{{.Count}}</span></li>{{end}}
+  </ul>
   {{end}}
   {{if .Tags}}
-  <section class="tag-list">
-    <h2>Tags</h2>
-    <ul>
-      {{range .Tags}}<li><a href="{{.URL}}">{{.Name}}</a> <span class="count">{{.Count}}</span></li>{{end}}
-    </ul>
-  </section>
+  <ul class="tag-list">
+    {{range .Tags}}<li><a href="{{.URL}}">{{.Name}}</a> <span class="count">{{.Count}}</span></li>{{end}}
+  </ul>
   {{end}}
+  {{if .Empty}}<p class="empty">{{.Empty}}</p>{{end}}
 </main>
 {{template "footer" .}}
 </body>

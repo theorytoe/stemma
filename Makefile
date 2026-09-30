@@ -13,7 +13,7 @@ LDFLAGS  = -X github.com/theorytoe/stemma/internal/version.Version=$(VERSION)
 # tool defines and checked by the tool itself.
 WIKI   ?= wiki
 
-.PHONY: all build install test test-shim vet check lint-wiki site extract skills check-skills bench tidy fmt clean
+.PHONY: all build install install-skills test test-shim vet check lint-wiki site extract skills check-skills bench tidy fmt clean
 
 all: build
 
@@ -26,6 +26,21 @@ build:
 #   make build && install -m 0755 bin/stemma /usr/local/bin/stemma
 install:
 	$(GO) install -ldflags "$(LDFLAGS)" ./cmd/stemma
+
+# Install the skill suite into the user's agent-skills directory, so every
+# harness on this machine can load it. The umbrella's references are generated
+# first, because they are not committed. Override the destination with
+# SKILLS_DIR, for example `make install-skills SKILLS_DIR=~/.config/skills`.
+# Each skill replaces the copy already there, so a stale reference file cannot
+# survive an update.
+install-skills: skills
+	@mkdir -p "$(SKILLS_DIR)"
+	@for d in $(SKILLS)/*/; do \
+		name=$$(basename "$$d"); \
+		rm -rf "$(SKILLS_DIR)/$$name"; \
+		cp -R "$$d" "$(SKILLS_DIR)/$$name"; \
+		echo "installed $$name to $(SKILLS_DIR)"; \
+	done
 
 test:
 	$(GO) test ./...
@@ -75,6 +90,10 @@ EXTRACT = .stemma/extract/gate
 # specification is a copy of FORMAT.md until docs.md moves it into the wiki. Run
 # this before copying skills/ into a harness, because a fresh clone has neither.
 SKILLS ?= skills
+
+# Where `make install-skills` puts the suite. The open Agent Skills standard does
+# not fix a location; this is the per-user one the author's harnesses read.
+SKILLS_DIR ?= $(HOME)/.agents/skills
 
 skills: build
 	@mkdir -p $(SKILLS)/stemma/references

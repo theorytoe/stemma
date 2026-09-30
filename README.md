@@ -7,10 +7,11 @@ citations; sources live in BibTeX. The format is specified in
 
 ## Build and check
 
-    make build     # build bin/stemma
-    make install   # put stemma on PATH
-    make check     # build, vet, test, the shim's tests, and lint the example wiki
-    make bench     # measure the two retrieval tiers (below)
+    make build          # build bin/stemma
+    make install        # put stemma on PATH
+    make install-skills # copy the agent skills into ~/.agents/skills
+    make check          # build, vet, test, the shim's tests, and lint the example wiki
+    make bench          # measure the two retrieval tiers (below)
 
 ## Tiers and scale
 

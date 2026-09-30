@@ -192,3 +192,58 @@ quietly."
 - Tests — the dump's golden test is the shape's regression; nothing in the format
   reads this section.
 - Decision ref — D70
+
+### internal/kb — a body rewrite, an orphan exemption, and a manifest writer
+
+- Date — 2026-09-29
+- Prior task — 1 (foundation)
+- What changed — three additions to `internal/kb`. `Page.RewriteBody` replaces
+  the inline constructs a body holds, offering each one its own bytes;
+  `Graph.exemptFromOrphan` lifts the orphan exemption out of `Orphans` and adds
+  the entry document to it; `Manifest.TOML` renders a new manifest as file
+  text, and `init`'s private `manifestFor` and `tomlString` now live with it.
+- Why — an extract has to rewrite the constructs it cannot keep, and
+  `RewriteLinks` only changes the target *inside* a wikilink's brackets, so it
+  cannot prune one to plain text. The orphan exemption is `D71`: the page every
+  other page is reachable from has no inbound links by construction, and an
+  extract's root is that page with a type that is not `index`. A manifest
+  renderer exists because an extract is a KB root and needs one; the invariant
+  that a manifest which has been *read* is never re-emitted is untouched, and
+  `init` now writes its manifest through the same code, which adds
+  `default_type` to a new KB's file.
+- Interface impact — additive: one new `Page` method, one new `Manifest` method,
+  and a behaviour change in `Orphans` that only removes a finding. No signature
+  changed. `init`'s manifest text gains a `default_type` line.
+- Tests — `internal/export`'s scoped tests cover the rewrite on every case an
+  extract decides on, and assert the source KB comes back byte-identical. The
+  exemption is covered by hand on a KB whose entry document is not an index.
+- Decision ref — D71
+
+### internal/cli — the export page command registered
+
+- Date — 2026-09-29
+- Prior task — 2 (CLI surface)
+- What changed — `exportPageCommand` added to the `export` family in
+  `internal/cli/export.go`.
+- Why — the family was registered for `export json` in the same task that added
+  this member, so what changed for the earlier tasks is only that the table's
+  `export` entry now has two members rather than one.
+- Interface impact — `export page` joins `export json`; nothing else moves.
+- Tests — `internal/cli/export_test.go` covers the default destination, a
+  relative `--out`, `--depth` in all three spellings, and the JSON payload.
+- Decision ref — D71
+
+### FORMAT.md — the scoped extract documented
+
+- Date — 2026-09-29
+- Prior task — 1 (foundation)
+- What changed — `### The scoped extract` added under `## Exports`; the orphan
+  exemption in "Leniency and preservation" now names the entry document; and
+  `.stemma/extract.json` joined the named artifacts under `.stemma/`.
+- Why — `D71` settles what an extract is, and the format is where that is
+  written. The leniency sentence changed because the rule it stated changed.
+- Interface impact — none to the KB format; the exemption change is a lint rule,
+  and it removes findings rather than adding them.
+- Tests — `internal/export`'s scoped tests write an extract and lint it under
+  `kb.Strict`, which is the sentence being true.
+- Decision ref — D71

@@ -115,6 +115,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D51 | Pruned links **retain their anchor text** as plain text. A summary is reported by default; a flag emits the full list.                                                | Q36       |
 | D33 | A **JSON/JSONL machine-readable dump** of pages, links, and citations is included.                                                                                    | Q21       |
 | D70 | The dump is **one JSON document**, not JSONL, carrying the **page bodies** as well as the metadata so it stands alone, with a **schema version of its own** and a shape documented in `FORMAT.md`. It is written to **`<kb>/.stemma/export.json`** by default, and `--out -` writes it to standard output. | review    |
+| D71 | A **scoped extract** writes its root page as the **entry document**, **prunes** every construct it cannot keep into its anchor text, and **closes** references to the keys it still cites. The **entry document is exempt from the orphan check**, because nothing links to the page every other page is reachable from. | review    |
 | D67 | The Tier-1 index is **one file, `<kb>/.stemma/index.sqlite`**, versioned by SQLite's `user_version`; any other version, or a file that is not a database, is deleted and rebuilt. Tokens are defined by **one Go tokenizer** shared by both tiers; FTS5 is an external-content index over a `tokens` column those tokens fill, and **BM25 ranking and snippets are Go code**. | review    |
 | D68 | Retrieval is one **data-source interface** (`index.Source`) that both tiers implement, not an interface of queries. Search, graph traversal and the orphan and dead-end listings are single functions over it, so the tiers agree by construction. The interface includes **batch forms** (`Docs`, `LinksAll`, `BacklinksAll`), because a rule over the whole corpus must not become one query per page. `NewSource` prefers a fresh index and **silently falls back to the KB**, reporting the downgrade through one optional callback. | review    |
 
@@ -400,6 +401,67 @@ knowledge.
 
 **Provenance.** Put to the tool author with the alternatives before the package
 existed, and answered: one document, bodies included, a file by default.
+
+### The scoped extract — a KB, not a rendering. `D71` added.
+
+**Decision.** `stemma export page PAGE` writes a KB root holding one page, the
+pages it links to, and the sources they cite, in the same format as any other KB
+(`D30`). The root page is written as the entry document, `pages/index.md`. A link
+that resolves to a page inside the slice is left as written; a link out of the
+slice becomes the title of the page it named, and a link that named nothing or
+named more than one page becomes the text the author wrote. A citation group is
+kept only when every key in it is defined, and otherwise becomes its own text
+with the `@`s taken out. `bibliography.bib` holds exactly the keys the extract
+still cites. The entry document is exempt from the orphan check. Depth is hops,
+defaulting to one, with `--depth all` for the whole reachable set.
+
+**Why the root becomes the entry document.** An extract is *of* a page, so that
+page is the page a reader should arrive at; the format already gives the entry
+document that meaning, and `homeURL` already treats it as the site's home. It
+costs nothing, because a file name carries no meaning in this format — links
+resolve by title and alias (`D19`, `U5`) — so the page keeps its name, its type
+and every field, and only its path moves. A page that would land on the entry
+document, meaning the source's own entry document when the slice holds it, moves
+aside to `pages/index-2.md`.
+
+**Why the entry document has to be exempt from the orphan check.** It is the
+page every other page is reachable from, so nothing links to it by construction;
+an orphan finding on it says nothing an author could act on. `init` gives the
+entry document `type: index`, which is why the finding never appeared for a KB
+the tool made itself, but that is an accident of what `init` chooses rather than
+a property of being the entry document — and an extract's root is exactly the
+case where the two come apart. Raising it was necessary rather than optional:
+without it no extract could satisfy the criterion that an extract lints clean
+under `--strict`.
+
+**Why prune rather than refuse or carry.** Carrying a construct that cannot be
+kept would leave the extract with the dangling link that `D31`'s closure exists
+to prevent; refusing would make one unresolved link anywhere in the closure block
+an otherwise useful export. Pruning keeps the extract's promise — it stands alone
+and it is clean — whatever state the source is in. The text used is the anchor
+text a reader of the source would have seen, which is `D69`'s rule applied one
+layer out, and it is what `D44` and `D51` already ask for.
+
+**Why the citation group is the unit.** `kb.Inline` calls a group "one
+parenthetical ... read and rewritten as one unit", and that is the honest unit:
+rebuilding `[@a; @b]` out of the keys that survived would be writing markdown the
+author did not write. A group with one undefined key is therefore pruned whole,
+and the report says so.
+
+**Why the extract records what it wrote.** A second extraction into the same
+directory would otherwise accumulate the pages of the first, and a stale page
+becomes an orphan or a name collision — the extract would get *less* clean each
+time it was refreshed. The record lives in the extract's own `.stemma/`, which is
+where a KB keeps what it derives, and it is the only thing a write is allowed to
+remove (`P4`). A directory that is neither empty nor an extract is refused
+rather than written into.
+
+**Provenance.** Put to the tool author as a contradiction rather than worked
+around: an extract's root has no inbound links, so the criterion "an extract
+lints clean under `--strict`" could not hold. Renaming the root and exempting the
+entry document was chosen over generating a cover page, retyping the root as an
+index, or softening the criterion; pruning and reporting was chosen over carrying
+broken constructs or refusing to extract.
 
 ### U5 — rewriting inbound links. `D19` stands.
 

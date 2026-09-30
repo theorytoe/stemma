@@ -66,7 +66,7 @@ with no loss, because it is a cache and never a source of truth.
 
 No command may require it. A KB with no `.stemma/` directory is fully usable.
 
-Three of the things inside it are worth naming, because commands put them there
+Four of the things inside it are worth naming, because commands put them there
 and a person may want to read them:
 
 - `.stemma/shim/extract.py` — the extraction script. `init` writes it and the tool
@@ -78,6 +78,9 @@ and a person may want to read them:
   (`--clear` empties the directory and leaves the rest of `.stemma/` alone).
 - `.stemma/export.json` — the machine-readable dump `export json` writes. Its
   shape is under "Exports", and `--out` puts it somewhere else.
+- `.stemma/extract.json` — what an extract recorded about itself: the page it was
+  taken from, and every file it wrote. It is what makes a second extraction into
+  the same directory a refresh rather than an accumulation.
 
 The fetched text is a cache and never a record. What a source *is* lives in the
 bibliography, with its pointer, its retrieval date and its content hash; what it
@@ -526,7 +529,6 @@ Two things leave a KB, and only two. Whole-KB sharing is `git clone` or `tar` an
 needs no tooling at all (`D25`), which is why there is no bundling subsystem.
 What the tool produces is a dump for a program, and a scoped KB for another
 person.
-
 ### The JSON dump
 
 `stemma export json` writes one JSON document, by default to
@@ -578,6 +580,50 @@ export is a view of the knowledge.
 `--out -` writes the document to standard output instead of to a file, which is
 what makes `stemma export json --out - | jq` work.
 
+### The scoped extract
+
+`stemma export page PAGE` writes a KB root holding one page, the pages it links
+to, and the sources they cite. It is the other half of the export family
+(`D27`): where the dump is for a program, this is a KB for another person, in the
+same format, so every tool that reads a KB reads it and every command works on it
+unchanged (`D30`).
+
+Depth is hops and defaults to one — the page and what it links to directly.
+`--depth N` reaches N hops and `--depth all` (or `0`) takes the whole reachable
+set (`D29`); the manifest's `[export] default_depth` is what an absent `--depth`
+falls back to.
+
+Three things change on the way out, and nothing else.
+
+- **The root page takes the entry document's place.** It is written as
+  `pages/index.md`, whatever it was called, because the extract is *of* that page
+  and a reader should arrive at it. Its title, type and fields are untouched —
+  links resolve by name, so a file name is free to change. If the slice also
+  holds the source's own entry document, that page moves aside to
+  `pages/index-2.md`.
+- **A link that cannot come along becomes its anchor text.** A link out of the
+  slice becomes the title of the page it named, which is what a reader of the
+  source saw (`D69`); a link that named nothing, or named more than one page,
+  becomes the text the author wrote. Either way the prose still reads and nothing
+  dangles (`D44`, `D51`). A link that resolves to a page in the slice is left
+  exactly as written.
+- **A citation the bibliography does not define becomes its own text** with the
+  `@`s taken out, so it no longer parses as a citation pointing at nothing. The
+  group is the unit: `[@a; @b]` is one parenthetical, and it is kept only when
+  every key in it is defined.
+
+Reference closure (`D31`) is automatic: the extract's `bibliography.bib` holds
+exactly the keys the extract still cites, so no reference dangles and no uncited
+entry is carried along.
+
+An extract is refused when the destination directory is neither empty nor an
+extract. A directory that does hold one is refreshed: the files the extract wrote
+last time and not this time are removed, and everything else in it is left alone.
+
+A summary is reported by default and `--report-pruned` lists every pruned link
+and citation. The `--json` payload always carries that list, so a program can act
+on it without asking twice.
+
 ## Leniency and preservation
 
 The tool is lenient by default and `--strict` turns warnings into errors. The
@@ -603,10 +649,13 @@ page.
 | **ambiguous wikilink**                        | **error**      | **error**      |
 | unreadable or non-UTF-8 file                  | error (exit 2) | error (exit 2) |
 
-`index` pages are exempt from the orphan check, as are virtual source pages and
-archived pages. A page linking to itself does not stop it being an orphan, and
-`index` needs no misuse rule of its own: an index page on disk is legitimate,
-and the tool simply never writes one on an author's behalf.
+The entry document is exempt from the orphan check, as are `index` pages, virtual
+source pages and archived pages. The entry document is exempt because of what it
+is rather than what it says: it is the page every other page is reachable from,
+so nothing links to it by construction, and a finding that it has no inbound
+links says nothing an author could act on. A page linking to itself does not stop
+it being an orphan, and `index` needs no misuse rule of its own: an index page on
+disk is legitimate, and the tool simply never writes one on an author's behalf.
 
 A row in that table is a page the tool can still read, show and repair. Some
 files are not, and they fail with exit code `2` instead:

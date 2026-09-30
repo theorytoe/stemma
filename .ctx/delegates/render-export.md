@@ -164,11 +164,30 @@ command is registered in the CLI table and runs until stopped.
 
 ## Task 4:
 
-Status: Not started
+Status: Done
 
 `build`. Static site generation into an output directory, with an explicit,
 predictable structure, no absolute paths that break when moved, and no dependency
 on a running server.
+
+It closed with `internal/build`: `Write` renders the KB through the same
+`Documents()` the server answers from and writes each document at its URL, so the
+site on disk is the site in the browser less the two things only a running server
+can provide — the search page and the reload helper. A URL is decoded on the way
+to disk, because a page with a space in its name is served at `two%20words.html`
+and stored as `two words.html`; that decode is `render.FilePath`, shared with
+`serve`, which had been 404ing exactly those pages. The directory is reconciled
+rather than replaced: the manifest of what a build wrote is read back on the next
+one, so a renamed page leaves no stale file behind and a file the author put
+there by hand is never removed (`P4`). The default output is `<kb>/.stemma/site`,
+inside the generated directory that is already gitignored and re-derivable, and a
+relative `--out` is relative to the KB root rather than to the working directory.
+`stemma build` is registered in the CLI table, so help and the generated
+reference picked it up with no further change.
+
+One thing was found rather than planned: writing to disk is what surfaced the
+`serve` 404 on escaped names, which is why the decode is one exported function
+both entry points read rather than a private detail of the writer.
 
 ## Task 5:
 

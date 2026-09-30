@@ -60,12 +60,12 @@
   // outgoing links -- square-rooted into a fixed range so one hub cannot dwarf
   // the rest. The local graph is left uniform: its shape already says what
   // connects to what, so size there would say nothing new.
-  var MIN_R = 5;
-  var MAX_R = 18;
+  var MIN_R = 4;
+  var MAX_R = 14;
   var top = Math.max(1, data.max_degree || 1);
   function radius(n) {
     if (!sized) {
-      return n.self ? 12 : 9;
+      return n.self ? 10 : 7;
     }
     return MIN_R + (MAX_R - MIN_R) * Math.sqrt(Math.max(0, n.degree || 0) / top);
   }

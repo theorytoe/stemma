@@ -81,6 +81,15 @@
   var CENTER_PULL = 0.004;
   var MAX_SPEED = 16;
 
+  // A little irregularity, so the web does not settle into a symmetric ring:
+  // every spring gets its own rest length, and every node starts a little off
+  // where it was seeded. Both are drawn once at start-up rather than per frame,
+  // so the layout can still come to rest instead of twitching forever.
+  var edgeRest = edges.map(function () {
+    return REST * (0.8 + Math.random() * 0.4);
+  });
+  var JITTER = 0.12;
+
   function clamp(v, lo, hi) {
     return v < lo ? lo : v > hi ? hi : v;
   }
@@ -102,8 +111,8 @@
     }
     var angle = (around / Math.max(1, others)) * Math.PI * 2;
     around++;
-    nodes[i].x = W / 2 + Math.cos(angle) * W * 0.32;
-    nodes[i].y = H / 2 + Math.sin(angle) * H * 0.34;
+    nodes[i].x = W / 2 + Math.cos(angle) * W * 0.32 + (Math.random() - 0.5) * W * JITTER;
+    nodes[i].y = H / 2 + Math.sin(angle) * H * 0.34 + (Math.random() - 0.5) * H * JITTER;
   }
   nodes.forEach(function (n) { n.vx = 0; n.vy = 0; });
 
@@ -136,7 +145,7 @@
       dx = a.x - b.x;
       dy = a.y - b.y;
       d = Math.sqrt(dx * dx + dy * dy) || 0.01;
-      f = (d - REST) * SPRING;
+      f = (d - edgeRest[i]) * SPRING;
       ux = dx / d;
       uy = dy / d;
       a.fx -= ux * f;

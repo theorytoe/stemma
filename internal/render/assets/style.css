@@ -88,7 +88,7 @@ body {
 .site-header,
 .site-footer,
 main {
-  max-width: 40rem;
+  max-width: 56rem;
   margin: 0 auto;
   padding: 0 1.25rem;
 }

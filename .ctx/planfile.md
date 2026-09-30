@@ -233,7 +233,7 @@ packaging questions of its own. This task tracks that plan.
 
 ## Task 9:
 
-Status: Not started
+Status: In progress
 
 Documentation and CI. The example wiki as the project's own documentation,
 `FORMAT.md` restructured as a wiki document, the README, the four CI gates, and the

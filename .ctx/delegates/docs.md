@@ -68,7 +68,7 @@ delegate closed too early, and should be raised rather than patched here.
 
 ## Task 1:
 
-Status: Partly done by foundation Task 10
+Status: Partly done
 
 Structure the example wiki. Decide the page set and the type of each page —
 rationale, format specification, command reference, and worked examples — then
@@ -76,15 +76,14 @@ place and link them. Per page, choose a type from the vocabulary, link it into t
 graph, and keep the wiki lint-clean as it grows. This is also the first real
 exercise of the authoring workflow, so record friction as it appears.
 
-Already in place at `wiki/`: seven pages (an index, a rationale page using a
-manifest-added type, two concept pages, a note, a drafts page, and an archived page
-with an unknown nested field), a manifest, and a bibliography with one citation.
-It lints clean under `--strict`. What is missing is the specification, the command
-reference, and the worked examples.
+The wiki has grown to 17 pages, a manifest, and a bibliography, all reachable from
+the index and lint-clean under `--strict`. The specification and the command
+reference are present. What is missing is a dedicated worked-examples page; the
+closest thing is the walkthrough in `lifecycle.md`.
 
 ## Task 2:
 
-Status: Not started
+Status: Partly done
 
 Restructure `FORMAT.md` into a wiki document. Preserve the substance from
 foundation Task 2 — page anatomy, the frontmatter field table, the type vocabulary
@@ -93,18 +92,27 @@ and its extension, wikilink resolution including ambiguity, citation syntax, the
 preservation — and place it in the graph so it is reachable and so its internal
 links are checked.
 
+Now: `wiki/pages/format.md` is a 32-line summary, while the root `FORMAT.md` is 728
+lines, still declares itself the canonical specification, and is still copied into
+the skill references by the Makefile. No wiki page references `FORMAT.md`. The
+restructure has not happened.
+
 ## Task 3:
 
-Status: Not started
+Status: Partly done
 
 The README. What the project is, how to install from source, and the two-minute
 path to a first KB. State two things plainly so neither is a surprise later: that
 the name collides with an existing `stemma` project and why that was accepted, and
 what the dependency allowlist contains and why it is small.
 
+Now: the README states what the project is and how to build and install it. It is
+missing the two-minute first-KB path, the name-collision note, and the dependency
+allowlist note.
+
 ## Task 4:
 
-Status: Gate 1 already in place
+Status: Partly done
 
 CI gates. Add the four gates above plus the tier-parity tests to the workflow
 established in foundation Task 1, and confirm each one actually fails when it
@@ -112,9 +120,12 @@ should — a gate that cannot fail is decoration. Verify the failure output is
 actionable, since a lint failure on the documentation is the first thing a
 contributor will see.
 
-Gate 1 is done: `make lint-wiki` lints `wiki/` under `--strict` and `make check`
-depends on it, so CI runs it. It was confirmed to fail on both an unresolved link
-and an unknown type. Gates 2, 3, and 4 need surfaces that do not exist yet.
+All four gates are now wired. `make check` runs `lint-wiki` (gate 1), `site` (gate
+2), `test`, which includes `internal/build`'s no-JS conformance test (gate 3), and
+`extract`, which is backed by `internal/export`'s gate tests (gate 4). The
+tier-parity tests run under `test` as well. `ci.yml` runs `make check`. Gate 1 was
+confirmed to fail on an unresolved link and on an unknown type; what remains is to
+confirm that gates 2 to 4 fail when they should.
 
 ## Task 5:
 

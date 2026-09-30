@@ -41,14 +41,15 @@ const (
 // SiteData is what every document knows about the site around it. Every address
 // is written relative to the document it is used in.
 type SiteData struct {
-	Title     string
-	HomeURL   string
-	IndexURL  string
-	TypesURL  string
-	TagsURL   string
-	AssetURL  string
-	ScriptURL string
-	SearchURL string
+	Title          string
+	HomeURL        string
+	IndexURL       string
+	TypesURL       string
+	TagsURL        string
+	AssetURL       string
+	ScriptURL      string
+	GraphScriptURL string
+	SearchURL      string
 }
 
 // common is embedded in each document's data so the shared partials can reach
@@ -100,6 +101,8 @@ type PageData struct {
 	Body       template.HTML
 	References []ReferenceData
 	Backlinks  []PageLink
+	Graph      template.HTML
+	GraphJSON  template.JS
 }
 
 // ListingData is an index page: a heading and one list under it. A page list,
@@ -181,13 +184,14 @@ func rel(from, to string) string {
 // to where the document sits.
 func (r *Renderer) siteFor(docURL string) SiteData {
 	s := SiteData{
-		Title:     r.title,
-		HomeURL:   rel(docURL, r.home),
-		IndexURL:  rel(docURL, indexURL),
-		TypesURL:  rel(docURL, typesURL),
-		TagsURL:   rel(docURL, tagsURL),
-		AssetURL:  rel(docURL, assetDir+"/style.css"),
-		ScriptURL: rel(docURL, assetDir+"/theme.js"),
+		Title:          r.title,
+		HomeURL:        rel(docURL, r.home),
+		IndexURL:       rel(docURL, indexURL),
+		TypesURL:       rel(docURL, typesURL),
+		TagsURL:        rel(docURL, tagsURL),
+		AssetURL:       rel(docURL, assetDir+"/style.css"),
+		ScriptURL:      rel(docURL, assetDir+"/theme.js"),
+		GraphScriptURL: rel(docURL, assetDir+"/graph.js"),
 	}
 	if r.search {
 		s.SearchURL = rel(docURL, "search")
@@ -314,11 +318,15 @@ func (r *Renderer) Source(key string) ([]byte, error) {
 		return nil, err
 	}
 	docURL := SourceURL(key)
+	g := r.sourceGraph(key, page.Title(), docURL)
 	data := PageData{
 		common: common{Site: r.siteFor(docURL), DocTitle: tabTitle(page.Title(), r.title)},
 		Title:  page.Title(),
 		Meta:   []MetaItem{{Text: kb.TypeSource}, {Label: "key", Text: page.Key()}},
 		Body:   template.HTML(r.bodyHTML(page, nil, docURL)),
+
+		Graph:     graphSVG(g),
+		GraphJSON: graphJSON(g),
 	}
 	return r.execute("page", data)
 }
@@ -438,6 +446,7 @@ func checkUnique(docs []Document) error {
 // pageData builds the view of one authored page.
 func (r *Renderer) pageData(pagePath string, page *kb.Page, refs []kb.Reference) PageData {
 	docURL := PageURL(pagePath)
+	g := r.localGraph(pagePath, docURL)
 	return PageData{
 		common:     common{Site: r.siteFor(docURL), DocTitle: tabTitle(page.Title(), r.title)},
 		Title:      page.Title(),
@@ -445,6 +454,8 @@ func (r *Renderer) pageData(pagePath string, page *kb.Page, refs []kb.Reference)
 		Body:       template.HTML(r.bodyHTML(page, refs, docURL)),
 		References: r.referenceData(refs),
 		Backlinks:  r.backlinks(pagePath, docURL),
+		Graph:      graphSVG(g),
+		GraphJSON:  graphJSON(g),
 	}
 }
 

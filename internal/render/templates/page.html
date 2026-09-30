@@ -27,6 +27,14 @@
     </ul>
   </nav>
   {{end}}
+  {{if .Graph}}
+  <section class="graph">
+    <h2>Local graph</h2>
+    {{.Graph}}
+    <script type="application/json" class="graph-data">{{.GraphJSON}}</script>
+    <script src="{{.Site.GraphScriptURL}}" defer></script>
+  </section>
+  {{end}}
 </main>
 {{template "footer" .}}
 </body>

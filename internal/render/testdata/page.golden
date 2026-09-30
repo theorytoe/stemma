@@ -51,6 +51,14 @@
   </section>
   
   
+  
+  <section class="graph">
+    <h2>Local graph</h2>
+    <svg class="graph-svg" viewBox="0 0 640 120" role="group" aria-label="Local graph"><title>Local graph</title><line class="graph-edge" x1="406" y1="60" x2="456" y2="60"/><a class="graph-node" href="attention.html"><rect x="456" y="46" width="172" height="28" rx="5"/><text x="465" y="64">Attention Is All Yo...</text></a><g class="graph-node graph-self"><rect x="234" y="46" width="172" height="28" rx="5"/><text x="243" y="64">Sample</text></g></svg>
+    <script type="application/json" class="graph-data">{"center":{"title":"Sample","url":"sample.html"},"backlinks":null,"links":[{"title":"Attention Is All You Need","url":"attention.html"}]}</script>
+    <script src="assets/graph.js" defer></script>
+  </section>
+  
 </main>
 
   <footer class="site-footer">

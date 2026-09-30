@@ -209,7 +209,8 @@ a {
 }
 
 .references,
-.backlinks {
+.backlinks,
+.graph {
   margin-top: 2.5rem;
   padding-top: 1rem;
   border-top: 1px solid var(--rule);
@@ -217,7 +218,8 @@ a {
 }
 
 .references h2,
-.backlinks h2 {
+.backlinks h2,
+.graph h2 {
   margin-top: 0;
   font-family: ui-sans-serif, system-ui, sans-serif;
   font-size: 0.8rem;
@@ -250,6 +252,89 @@ a {
 
 .empty {
   color: var(--muted);
+}
+
+/* The local graph. The SVG is the baseline; graph.js redraws it when it runs. */
+.graph-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--code-bg);
+  border-radius: 4px;
+}
+
+.graph-node {
+  cursor: pointer;
+  touch-action: none;
+}
+
+.graph-node rect {
+  fill: var(--code-bg);
+  stroke: var(--rule);
+  stroke-width: 1.5;
+}
+
+/* The script's dots carry their own solid fill and have no outline; the rules
+   above are for the static SVG's labelled boxes. */
+.graph-node circle {
+  fill: var(--muted);
+  stroke: none;
+}
+
+.graph-node text {
+  fill: var(--ink);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.graph-node:hover rect {
+  stroke: var(--link);
+}
+
+.graph-self {
+  cursor: default;
+}
+
+.graph-self rect {
+  fill: var(--mark);
+  stroke: var(--link);
+}
+
+.graph-self circle {
+  fill: var(--link);
+}
+
+.graph-self text {
+  font-weight: 600;
+}
+
+.graph-edge {
+  stroke: var(--rule);
+  stroke-width: 1.5;
+}
+
+.graph-more {
+  fill: var(--muted);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 11px;
+}
+
+/* The script's hover title, moved to whichever dot the pointer is on. */
+.graph-tip {
+  pointer-events: none;
+}
+
+.graph-tip rect {
+  fill: var(--paper);
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.graph-tip text {
+  fill: var(--ink);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 12px;
 }
 
 code,

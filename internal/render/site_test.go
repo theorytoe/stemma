@@ -1,6 +1,7 @@
 package render
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -74,6 +75,7 @@ func TestDocumentsAreUniqueAndComplete(t *testing.T) {
 		"sources/vaswani2017.html",
 		"assets/style.css",
 		"assets/theme.js",
+		"assets/graph.js",
 	} {
 		if !seen[want] {
 			t.Errorf("Documents did not produce %s", want)
@@ -204,6 +206,66 @@ func TestTypesAndTagsAreSeparatePages(t *testing.T) {
 	}
 	if !strings.Contains(string(tags), "<h1>Tags</h1>") || !strings.Contains(string(tags), ">architecture<") {
 		t.Errorf("the tags page is missing a tag:\n%s", tags)
+	}
+}
+
+// TestPageGraph checks the baseline the script upgrades: the SVG is drawn, its
+// nodes are real links, and the embedded JSON is the same graph.
+func TestPageGraph(t *testing.T) {
+	r := siteRenderer(t)
+	got, err := r.Page("pages/attention.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(got)
+	for _, want := range []string{
+		`<section class="graph">`,
+		`<h2>Local graph</h2>`,
+		`<svg class="graph-svg"`,
+		`<g class="graph-node graph-self">`,
+		`<a class="graph-node" href="sample.html">`,
+		`<script type="application/json" class="graph-data">`,
+		`assets/graph.js`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the graph is missing %q:\n%s", want, page)
+		}
+	}
+
+	const open = `<script type="application/json" class="graph-data">`
+	i := strings.Index(page, open)
+	j := strings.Index(page[i:], "</script>")
+	if i < 0 || j < 0 {
+		t.Fatalf("no embedded graph JSON:\n%s", page)
+	}
+	raw := page[i+len(open) : i+j]
+
+	var data GraphData
+	if err := json.Unmarshal([]byte(raw), &data); err != nil {
+		t.Fatalf("the embedded graph is not JSON: %v\n%s", err, raw)
+	}
+	if data.Center.Title != "Attention Is All You Need" {
+		t.Errorf("center = %q", data.Center.Title)
+	}
+	if len(data.Backlinks) != 1 || data.Backlinks[0].Title != "Sample" {
+		t.Errorf("backlinks = %+v", data.Backlinks)
+	}
+}
+
+// TestGraphWithoutNeighbours checks a page with no links still gets a graph:
+// itself, and no others.
+func TestGraphWithoutNeighbours(t *testing.T) {
+	r := siteRenderer(t)
+	got, err := r.Page("pages/transformer.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(got)
+	if !strings.Contains(page, `<g class="graph-node graph-self">`) {
+		t.Errorf("a lone page has no self node:\n%s", page)
+	}
+	if strings.Contains(page, `<a class="graph-node"`) {
+		t.Errorf("a page with no neighbours has neighbour nodes:\n%s", page)
 	}
 }
 

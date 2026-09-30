@@ -220,13 +220,31 @@ backlinks, so the size explains itself.
 
 ## Task 6:
 
-Status: Not started
+Status: Done
 
 No-JS conformance gate. Build the site, then assert in a test that the entry
 document, per-type indexes, backlink lists, page navigation, and reference lists
 are all reachable and readable with JavaScript disabled. Fail the build if any of
 them only work with JS. This task is the enforcement mechanism for `P9`; without
 it the requirement erodes on the first convenient exception.
+
+It closed as `TestNoJSConformance`, an assertion over a *built* site rather than
+over the templates, because the output is what a reader is handed. It builds the
+example wiki and reads every document back: each address in the document is
+followed to the file it names, so a link that does not resolve fails the gate
+wherever it sits — navigation, a type index, a backlink list, a source page, or a
+graph node; the five navigation addresses must be reachable from every page;
+every script must be either a static asset or inert JSON; the theme toggle must
+be hidden until a script shows it; and no page may carry a marked link, which
+from a reader's side is a page that is not there. Backlink and reference sections
+are checked to hold links and text rather than a placeholder, and the fixture is
+checked to produce both, so the gate cannot pass by checking nothing. It was run
+against four deliberate breaks — a dropped navigation link, an inline script, an
+unhidden toggle, and a link to a page that does not exist — and failed all four.
+
+The gate is what made the static site part of `make check`: the new `site` target
+builds the example wiki with the binary the same run just produced, so parsing,
+rendering and writing are exercised end to end by CI, not only by the tests.
 
 ## Task 7:
 

@@ -40,6 +40,7 @@ type SiteData struct {
 	HomeURL   string
 	IndexURL  string
 	AssetURL  string
+	ScriptURL string
 	SearchURL string
 }
 
@@ -171,10 +172,11 @@ func rel(from, to string) string {
 // to where the document sits.
 func (r *Renderer) siteFor(docURL string) SiteData {
 	s := SiteData{
-		Title:    r.title,
-		HomeURL:  rel(docURL, r.home),
-		IndexURL: rel(docURL, indexURL),
-		AssetURL: rel(docURL, assetDir+"/style.css"),
+		Title:     r.title,
+		HomeURL:   rel(docURL, r.home),
+		IndexURL:  rel(docURL, indexURL),
+		AssetURL:  rel(docURL, assetDir+"/style.css"),
+		ScriptURL: rel(docURL, assetDir+"/theme.js"),
 	}
 	if r.search {
 		s.SearchURL = rel(docURL, "search")

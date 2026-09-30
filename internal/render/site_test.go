@@ -71,6 +71,7 @@ func TestDocumentsAreUniqueAndComplete(t *testing.T) {
 		"tags/architecture.html", // another tag
 		"sources/vaswani2017.html",
 		"assets/style.css",
+		"assets/theme.js",
 	} {
 		if !seen[want] {
 			t.Errorf("Documents did not produce %s", want)
@@ -78,17 +79,29 @@ func TestDocumentsAreUniqueAndComplete(t *testing.T) {
 	}
 }
 
-// TestNoJavaScript is the P9 gate at the template level: nothing the site emits
-// contains a script, so every surface works with JavaScript disabled.
-func TestNoJavaScript(t *testing.T) {
+// TestScriptsAreProgressive is the P9 gate at the template level. JavaScript is
+// polish, so no document carries inline code, and the one control that needs a
+// script -- the theme toggle -- is hidden until the script shows it. A reader
+// with JavaScript off therefore sees no dead control and the OS theme applies.
+func TestScriptsAreProgressive(t *testing.T) {
 	r := siteRenderer(t)
 	docs, err := r.Documents()
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, d := range docs {
-		if strings.Contains(d.Type, "html") && strings.Contains(strings.ToLower(string(d.Body)), "<script") {
-			t.Errorf("%s contains a script", d.URL)
+		if !strings.Contains(d.Type, "html") {
+			continue
+		}
+		body := string(d.Body)
+		if strings.Contains(body, "<script>") {
+			t.Errorf("%s carries an inline script", d.URL)
+		}
+		if !strings.Contains(body, "theme.js") {
+			t.Errorf("%s does not load the theme script", d.URL)
+		}
+		if strings.Contains(body, "data-theme-toggle") && !strings.Contains(body, "data-theme-toggle hidden>") {
+			t.Errorf("%s shows the theme toggle without a script to drive it", d.URL)
 		}
 	}
 }

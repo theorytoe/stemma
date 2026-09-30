@@ -1,26 +1,49 @@
 /* A small semantic stylesheet for a stemma site.
    No framework and no build step. Classes are named for what a thing is, not
-   for how it looks, so the look can change without touching the markup. */
+   for how it looks, so the look can change without touching the markup.
 
-:root {
-  color-scheme: light dark;
-  --ink: #1a1a1a;
-  --muted: #6b6b6b;
-  --paper: #fdfdfc;
-  --rule: #e2e2df;
-  --link: #1a4f8a;
-  --code-bg: #f2f2ef;
+   Colours are the "hard" light and dark palettes of Everglade
+   (~/projects/everglade/autoload/everglade.vim), mapped onto this file's
+   semantic names. Each value names the palette key it comes from.
+
+   The OS preference decides by default. An explicit choice -- the header
+   toggle, remembered and written to data-theme -- overrides it; with no
+   JavaScript at all, the OS preference is all there is. */
+
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ink: #5c6a72; /* fg */
+  --muted: #939f91; /* grey1 */
+  --paper: #fff9e8; /* bg0 */
+  --rule: #e9e8d2; /* bg3 */
+  --link: #8da101; /* green */
+  --code-bg: #f0eed9; /* bg_dim */
+  --mark: #fbefd0; /* bg_yellow */
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --ink: #e6e6e6;
-    --muted: #9a9a9a;
-    --paper: #16161a;
-    --rule: #2c2c32;
-    --link: #8ab4f8;
-    --code-bg: #23232a;
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ink: #d3c6aa; /* fg */
+    --muted: #859289; /* grey1 */
+    --paper: #2b3339; /* bg0 */
+    --rule: #445055; /* bg3 */
+    --link: #a7c080; /* green */
+    --code-bg: #21282c; /* bg_dim */
+    --mark: #4a4940; /* bg_yellow */
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #d3c6aa; /* fg */
+  --muted: #859289; /* grey1 */
+  --paper: #2b3339; /* bg0 */
+  --rule: #445055; /* bg3 */
+  --link: #a7c080; /* green */
+  --code-bg: #21282c; /* bg_dim */
+  --mark: #4a4940; /* bg_yellow */
 }
 
 * {
@@ -69,6 +92,69 @@ main {
   gap: 1rem;
   font-family: ui-sans-serif, system-ui, sans-serif;
   font-size: 0.85rem;
+}
+
+.site-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.theme-toggle .icon-sun,
+.theme-toggle .icon-moon {
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The icon follows the resolved theme, so the script only ever sets data-theme.
+   A sun means light, a moon means dark; without JavaScript the button is
+   hidden and neither is shown. */
+.theme-toggle .icon-sun {
+  display: inline-block;
+}
+
+.theme-toggle .icon-moon {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-toggle .icon-sun {
+    display: none;
+  }
+  :root:not([data-theme="light"]) .theme-toggle .icon-moon {
+    display: inline-block;
+  }
+}
+
+:root[data-theme="dark"] .theme-toggle .icon-sun {
+  display: none;
+}
+
+:root[data-theme="dark"] .theme-toggle .icon-moon {
+  display: inline-block;
+}
+
+/* The toggle is shown by the script, so a reader with JavaScript off never
+   sees a control that would do nothing. */
+.theme-toggle[hidden] {
+  display: none;
 }
 
 main {
@@ -272,13 +358,7 @@ td {
 }
 
 mark {
-  background: #ffe9a8;
+  background: var(--mark);
   color: inherit;
   padding: 0 0.1em;
-}
-
-@media (prefers-color-scheme: dark) {
-  mark {
-    background: #6b5a1e;
-  }
 }

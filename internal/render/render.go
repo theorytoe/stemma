@@ -1,0 +1,179 @@
+// Package render turns a KB's pages into HTML.
+//
+// Rendering and lint read the same resolution: a wikilink is resolved by the
+// page graph and a citation by the bibliography, through the same functions and
+// over the same scan. A page that lints clean therefore renders without a
+// dangling link, and a page that does not has the broken link marked rather
+// than dropped.
+//
+// The format leaves the HTML shape open, so what is fixed here is the site's
+// choice: a resolved wikilink points at its page and shows that page's title; a
+// link that does not resolve keeps the text the author wrote inside a span a
+// stylesheet can reach; and a citation links each key to that key's source
+// page.
+package render
+
+import (
+	"bytes"
+	"fmt"
+	"html"
+	"net/url"
+	"strings"
+
+	blackfriday "github.com/russross/blackfriday/v2"
+
+	"github.com/theorytoe/stemma/internal/citestyle"
+	"github.com/theorytoe/stemma/internal/kb"
+)
+
+// PageURL is the URL a page is served at in the generated site.
+//
+// A path under pages/ loses that prefix and its ".md" and gains ".html":
+// "pages/index.md" is "index.html" and "pages/notes/one.md" is "notes/one.html".
+// Each segment is escaped, so a file name with a space in it becomes a URL that
+// still works.
+func PageURL(path string) string {
+	p := strings.TrimPrefix(path, kb.PagesDir+"/")
+	p = strings.TrimSuffix(p, ".md")
+	segs := strings.Split(p, "/")
+	for i, s := range segs {
+		segs[i] = url.PathEscape(s)
+	}
+	return strings.Join(segs, "/") + ".html"
+}
+
+// SourceURL is the URL a citation key's virtual source page is served at.
+func SourceURL(key string) string {
+	return kb.SourcesDir + "/" + url.PathEscape(key) + ".html"
+}
+
+// Renderer renders one KB's pages in one citation style.
+type Renderer struct {
+	kb        *kb.KB
+	formatter citestyle.Formatter
+}
+
+// New returns a renderer for k, using the citation style its manifest names. An
+// empty name is the default style. An unknown one is an error, because
+// rendering in a style nobody asked for is worse than refusing.
+func New(k *kb.KB) (*Renderer, error) {
+	f, err := citestyle.Parse(k.Manifest.CitationStyle)
+	if err != nil {
+		return nil, err
+	}
+	return &Renderer{kb: k, formatter: f}, nil
+}
+
+// Formatter is the citation formatter in use, so that a caller rendering a
+// page's reference list renders it in the same style as the page's citations.
+func (r *Renderer) Formatter() citestyle.Formatter { return r.formatter }
+
+// Body renders the body of the page at path to HTML, and returns the findings
+// the page's links and citations raise under mode.
+//
+// The findings are the ones lint reports for the page, read from the same
+// helpers, so a page cannot be clean to one and broken to the other.
+func (r *Renderer) Body(mode kb.Mode, path string) ([]byte, []kb.Finding, error) {
+	page, ok := r.kb.Graph.Page(path)
+	if !ok {
+		return nil, nil, fmt.Errorf("no page at %s", path)
+	}
+	refs, _ := r.kb.References(path)
+	src := r.expand(page, refs)
+	out := blackfriday.Run(src, blackfriday.WithExtensions(blackfriday.CommonExtensions))
+	return out, r.kb.FindingsFor(path, mode), nil
+}
+
+// expand replaces every wikilink and citation in the page body with the HTML it
+// stands for, leaving everything else, code included, exactly as it was.
+//
+// Replacing the constructs before the markdown parse, rather than rewriting the
+// tree after it, is what keeps rendering and lint in step. Blackfriday does not
+// keep the "[[" or the "[@", so a tree walk would see a link the scanner had
+// split or re-spelled -- "[[a *b* c]]" is three nodes, not one link. The body
+// the scanner read is the body that is expanded.
+func (r *Renderer) expand(page *kb.Page, refs []kb.Reference) []byte {
+	body := page.Body()
+	var buf bytes.Buffer
+	last := 0
+	for _, in := range page.Inlines() {
+		if in.Start < last {
+			// A construct overlapping one already replaced. The scanner reports
+			// both because lint does; the first one written wins here.
+			continue
+		}
+		buf.Write(body[last:in.Start])
+		if in.Link != nil {
+			buf.WriteString(r.link(in.Link))
+		} else {
+			buf.WriteString(r.citations(in.Cites, refs))
+		}
+		last = in.End
+	}
+	buf.Write(body[last:])
+	return buf.Bytes()
+}
+
+// link renders one wikilink. A resolved link points at its page and shows that
+// page's title; a link that resolves to nothing, or to several pages, keeps its
+// written text inside a span so the prose still reads and a stylesheet can mark
+// it.
+func (r *Renderer) link(l *kb.Link) string {
+	switch res := r.kb.Graph.Resolve(l.Name); res.Kind {
+	case kb.Resolved:
+		text := l.Target
+		if target, ok := r.kb.Graph.Page(res.Path); ok && target.Title() != "" {
+			text = target.Title()
+		}
+		return anchor(PageURL(res.Path), text)
+	case kb.Ambiguous:
+		return marked("stemma-ambiguous", l.Target)
+	default:
+		return marked("stemma-unresolved", l.Target)
+	}
+}
+
+// citations renders one citation group. Each key the bibliography defines
+// becomes a link to that key's source page; a key it does not define stays
+// text, and the page's findings already name it.
+func (r *Renderer) citations(cites []kb.Citation, refs []kb.Reference) string {
+	l := r.formatter.Layout(cites, refs)
+	var b strings.Builder
+	b.WriteString(html.EscapeString(l.Before))
+	for i, p := range l.Pieces {
+		if i > 0 {
+			b.WriteString(html.EscapeString(l.Sep))
+		}
+		if r.defined(p.Key) {
+			b.WriteString(anchor(SourceURL(p.Key), p.Text))
+		} else {
+			b.WriteString(html.EscapeString(singleLine(p.Text)))
+		}
+	}
+	b.WriteString(html.EscapeString(l.After))
+	return b.String()
+}
+
+// defined reports whether the bibliography has an entry for a key, and so
+// whether that key has a source page to point at.
+func (r *Renderer) defined(key string) bool {
+	return r.kb.Bibliography != nil && r.kb.Bibliography.Has(key)
+}
+
+// anchor is a link with its URL and its text escaped. The text is flattened to
+// one line, because an anchor's text cannot be a block.
+func anchor(href, text string) string {
+	return `<a href="` + html.EscapeString(href) + `">` + html.EscapeString(singleLine(text)) + `</a>`
+}
+
+// marked is text that stands where a link would have, marked with a class.
+func marked(class, text string) string {
+	return `<span class="` + class + `">` + html.EscapeString(singleLine(text)) + `</span>`
+}
+
+// singleLine keeps a value that may have come from frontmatter out of the
+// line structure of the HTML. A title can be written as a block scalar, and
+// neither an anchor's text nor a link's label can carry a newline.
+func singleLine(s string) string {
+	return strings.NewReplacer("\n", " ", "\r", " ").Replace(s)
+}

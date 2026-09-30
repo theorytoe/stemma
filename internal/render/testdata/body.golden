@@ -1,0 +1,11 @@
+<p>The method <a href="attention.html">Attention Is All You Need</a> and <span class="stemma-unresolved">Nowhere</span> and the alias <a href="attention.html">Attention Is All You Need</a>.</p>
+
+<p>See (<a href="sources/vaswani2017.html">Vaswani and Shazeer 2017</a>) and (missing2020) and a group (<a href="sources/vaswani2017.html">Vaswani and Shazeer 2017</a>; missing2020).</p>
+
+<p>Inline <code>[[attention]]</code> and <code>[@vaswani2017]</code> stay code.</p>
+
+<p><em><a href="attention.html">Attention Is All You Need</a></em> in emphasis.</p>
+
+<pre><code>[[attention]]
+[@vaswani2017]
+</code></pre>

@@ -95,6 +95,21 @@ quietly."
   each piece names its key, for both styles.
 - Decision ref — D69
 
+### internal/cli — the serve command registered
+
+- Date — 2026-09-29
+- Prior task — 2 (CLI surface)
+- What changed — `serveCommand` added in `internal/cli/serve.go` and to the
+  `commands` table in `internal/cli/cli.go`.
+- Why — the renderer needs a local entry point, and the command table is where a
+  surface is added: dispatch, help and the generated CLI reference are all
+  derived from it.
+- Interface impact — the table gains `serve`; nothing else moves. Help and the
+  reference pick it up without further change.
+- Tests — the `internal/serve` suite exercises the server; the CLI surface tests
+  pass unchanged.
+- Decision ref — none
+
 ### internal/deps — the blackfriday pin removed
 
 - Date — 2026-09-29

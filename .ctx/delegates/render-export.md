@@ -145,10 +145,22 @@ design is expected to change once the site can be seen in a browser.
 
 ## Task 3:
 
-Status: Not started
+Status: Done
 
 `serve`. A local HTTP server with live reload on change, over the same renderer.
 Server-side search, so search works here without any JavaScript at all.
+
+It closed with `internal/serve`: a `Server` over `kb.Hashes` and the renderer's
+`Documents()`, so the KB is reloaded when its content changes and served
+unchanged when it has not. It answers a document, the assets, `/search`, and
+`/__reload`. Search runs on the server through `index.Search`, so the form works
+with JavaScript off; the one script anywhere is the reload helper, which the
+server injects and `build` never writes. While the snippet's `[term]` marks and
+a body's own `[[wikilinks]]` share a bracket, a pair is a mark only when it
+holds exactly one of the query's terms. Every link the site emits was moved to
+be relative to the document that carries it, because a page under `types/` has
+to reach `../attention.html` for the output to survive being moved. The `serve`
+command is registered in the CLI table and runs until stopped.
 
 ## Task 4:
 

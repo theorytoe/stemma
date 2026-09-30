@@ -172,20 +172,32 @@ on a running server.
 
 ## Task 5:
 
-Status: Not started
+Status: Done
 
-The local graph. A small graph on every page, showing that page and the pages it
-is connected to: its backlinks and its outgoing links, one hop. The baseline is a
-server-rendered SVG, so the graph is present and navigable with JavaScript off —
-its nodes are real links, not a picture. A script may replace it with its own
-interactive layout, reading the graph data embedded in the page as inert JSON.
+The graph view. A small graph on every page, showing that page and the pages it
+is connected to: its backlinks and its outgoing links, one hop. And a whole-KB
+graph page, `graph.html`, drawing every page and every wikilink. Both have the
+same baseline: a server-rendered SVG, so the graph is present and navigable with
+JavaScript off — its nodes are real links, not a picture. A script may replace
+either with its own interactive layout, reading the graph data embedded in the
+page as inert JSON.
 
 The static graph is the feature and the script is the upgrade, as with the theme
 toggle: nothing about the page depends on the script running, and the no-JS gate
 in the next task checks that the graph is present and usable without it. Go
-computes the layout from `Graph.Backlinks` and `Graph.Links` and emits `<svg>`
-with `<a>` nodes. The embedded JSON carries the same nodes and edges the SVG
-draws, so a script that redraws the graph cannot show what the baseline did not.
+computes both layouts and emits `<svg>` with `<a>` nodes, and the embedded JSON
+carries the same nodes and edges the SVG draws, so a script that redraws the
+graph cannot show what the baseline did not.
+
+It closed with one script drawing both shapes. The local graph is a two-column
+star; the whole-KB graph is a ring of every page with the links as chords. There
+a node is sized by degree — backlinks plus resolved outgoing links — and tinted
+from the Everglade accents, both chosen in Go so the static SVG and the script
+agree and a node keeps them between visits; the local graph stays uniform,
+because its shape already says what connects to what. The script jitters its
+seed positions and gives each spring its own rest length, so the web settles
+lopsided rather than in a ring, and its hover tip names the page and its
+backlinks, so the size explains itself.
 
 ## Task 6:
 

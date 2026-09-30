@@ -162,7 +162,7 @@ recorded as `D67` and `D68`.
 Status: Not started
 
 Render and export. The blackfriday renderer with custom link and citation
-handling, `serve`, `build`, the local graph view, the no-JS conformance gate, the
+handling, `serve`, `build`, the graph view, the no-JS conformance gate, the
 JSON dump, and scoped extraction with depth control, citation closure, and link
 pruning. See `delegates/render-export.md`.
 

@@ -8,6 +8,7 @@ defines.
 
 - [[Why Stemma]] — what the tool is for, and what it refuses to do.
 - [[Design principles]] — the commitments that decide everything else.
+- [[Files outlive their tools]] — why the KB is plain files, not an app.
 - [[The format]] — what a page is, and what the tool will not touch.
 - [[Wikilinks]] — how one page names another, and what happens when two
   pages want the same name.
@@ -17,6 +18,7 @@ defines.
 - [[Creating and maintaining a KB]] — how one starts, grows, and stays healthy.
 - [[Invoking the tool]] — how a command is spelled, and where it finds the KB.
 - [[The command surface]] — the verbs, by what they are for.
+- [[Search and ranking]] — how retrieval works, and what it does not do.
 - [[The rendered site]] — what the files become, and the pages no author
   wrote.
 - [[Serving the site]] — reading a KB locally, with search and live reload.

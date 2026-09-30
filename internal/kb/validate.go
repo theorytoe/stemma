@@ -25,6 +25,16 @@ const (
 	Strict
 )
 
+// softSeverity is the severity a soft finding takes under a mode: a warning by
+// default and an error under Strict. Every rule the format softens reads it
+// here, so lint and a render's own findings escalate together.
+func softSeverity(mode Mode) Severity {
+	if mode == Strict {
+		return Error
+	}
+	return Warning
+}
+
 // Finding codes. They are stable strings, because they travel in --json output.
 const (
 	CodeMissingField   = "missing-field"
@@ -139,10 +149,7 @@ func IsReservedType(name string) bool {
 // one failure the format never softens — a link that does not resolve to
 // exactly one page — belongs to lint.
 func (p *Page) Validate(v Vocabulary, mode Mode) []Finding {
-	soft := Warning
-	if mode == Strict {
-		soft = Error
-	}
+	soft := softSeverity(mode)
 	var out []Finding
 	add := func(sev Severity, code, field, msg string) {
 		out = append(out, Finding{

@@ -176,6 +176,22 @@ func (k *KB) Lint(mode Mode) []Finding {
 	return out
 }
 
+// FindingsFor returns the findings that belong to one page: the links on it
+// that do not resolve to exactly one page, and the citations on it that the
+// bibliography does not define.
+//
+// The text and the severities are the ones Lint reports, read from the same
+// helpers, but only the one page is examined. A renderer asks for this rather
+// than for Lint so that rendering a whole KB stays proportional to the KB
+// instead of quadratic in it.
+func (k *KB) FindingsFor(path string, mode Mode) []Finding {
+	soft := softSeverity(mode)
+	out := k.Graph.linkFindings(path, soft)
+	out = append(out, k.Graph.missingCitationFindings(path, k.Bibliography, soft)...)
+	sortFindings(out)
+	return out
+}
+
 // sortFindings puts findings in the order a reader would work through them.
 func sortFindings(fs []Finding) {
 	sort.SliceStable(fs, func(i, j int) bool {

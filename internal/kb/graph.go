@@ -214,10 +214,7 @@ func (g *Graph) Orphans() []string {
 // guess which page was meant and must not pick one. Every other finding here is
 // a warning by default and an error under Strict.
 func (g *Graph) Findings(mode Mode) []Finding {
-	soft := Warning
-	if mode == Strict {
-		soft = Error
-	}
+	soft := softSeverity(mode)
 	var out []Finding
 
 	for _, name := range g.Names() {
@@ -234,26 +231,7 @@ func (g *Graph) Findings(mode Mode) []Finding {
 	}
 
 	for _, path := range g.Paths() {
-		for _, l := range g.links[path] {
-			switch r := g.Resolve(l.Name); r.Kind {
-			case Unresolved:
-				out = append(out, Finding{
-					Severity: soft,
-					Code:     CodeUnresolvedLink,
-					Path:     path,
-					Line:     l.Line,
-					Message:  unresolvedMessage(l),
-				})
-			case Ambiguous:
-				out = append(out, Finding{
-					Severity: Error,
-					Code:     CodeAmbiguousLink,
-					Path:     path,
-					Line:     l.Line,
-					Message:  quote(l.Target) + " matches " + listOf(r.Matches),
-				})
-			}
-		}
+		out = append(out, g.linkFindings(path, soft)...)
 	}
 
 	for _, path := range g.Orphans() {
@@ -266,6 +244,37 @@ func (g *Graph) Findings(mode Mode) []Finding {
 	}
 
 	sortFindings(out)
+	return out
+}
+
+// linkFindings reports the links one page makes that do not resolve to exactly
+// one page. soft is the severity an unresolved link takes; an ambiguous link is
+// an error in every mode, because the tool cannot guess which page was meant.
+//
+// Lint and a renderer both read a page's link findings here, so the two cannot
+// describe the same broken link differently.
+func (g *Graph) linkFindings(path string, soft Severity) []Finding {
+	var out []Finding
+	for _, l := range g.links[path] {
+		switch r := g.Resolve(l.Name); r.Kind {
+		case Unresolved:
+			out = append(out, Finding{
+				Severity: soft,
+				Code:     CodeUnresolvedLink,
+				Path:     path,
+				Line:     l.Line,
+				Message:  unresolvedMessage(l),
+			})
+		case Ambiguous:
+			out = append(out, Finding{
+				Severity: Error,
+				Code:     CodeAmbiguousLink,
+				Path:     path,
+				Line:     l.Line,
+				Message:  quote(l.Target) + " matches " + listOf(r.Matches),
+			})
+		}
+	}
 	return out
 }
 

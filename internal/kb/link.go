@@ -28,16 +28,9 @@ type Link struct {
 // mean is that something was typed by accident.
 func (p *Page) Links() []Link {
 	var out []Link
-	for _, pl := range p.proseLines() {
-		for _, run := range proseRuns(pl.text) {
-			for _, target := range findWikilinks(run) {
-				target = strings.TrimSpace(target)
-				out = append(out, Link{
-					Target: target,
-					Name:   Normalize(target),
-					Line:   pl.line,
-				})
-			}
+	for _, in := range p.Inlines() {
+		if in.Link != nil {
+			out = append(out, *in.Link)
 		}
 	}
 	return out
@@ -82,16 +75,6 @@ type textSpan struct {
 	start, end int
 }
 
-// findWikilinks returns the targets of the wikilinks in one run of prose.
-func findWikilinks(s string) []string {
-	spans := wikilinkSpans(s)
-	out := make([]string, 0, len(spans))
-	for _, sp := range spans {
-		out = append(out, s[sp.start+2:sp.end-2])
-	}
-	return out
-}
-
 // wikilinkSpans returns the byte ranges of the "[[...]]" in one run of prose,
 // each range covering both pairs of brackets.
 func wikilinkSpans(s string) []textSpan {
@@ -107,21 +90,6 @@ func wikilinkSpans(s string) []textSpan {
 			continue
 		}
 		i++
-	}
-	return out
-}
-
-// proseRuns splits a line into the runs of text that are outside inline code
-// spans.
-//
-// The runs are returned separately and never joined back together: a code span
-// in the middle of something really does separate the two halves, and glueing
-// them would invent a link or a citation that the page does not contain.
-func proseRuns(s string) []string {
-	spans := proseSpans(s)
-	out := make([]string, 0, len(spans))
-	for _, sp := range spans {
-		out = append(out, s[sp.start:sp.end])
 	}
 	return out
 }

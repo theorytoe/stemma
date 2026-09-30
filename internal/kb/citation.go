@@ -49,32 +49,27 @@ type Citation struct {
 // written there is not a link.
 func (p *Page) Citations() []Citation {
 	var out []Citation
-	base := 0
-	for _, pl := range p.proseLines() {
-		for _, run := range proseRuns(pl.text) {
-			cites, groups := parseCitations(run)
-			for _, c := range cites {
-				c.Line = pl.line
-				c.Group += base
-				out = append(out, c)
-			}
-			base += groups
-		}
+	for _, in := range p.Inlines() {
+		out = append(out, in.Cites...)
 	}
 	return out
 }
 
-// parseCitations reads one run of prose, returning the citations in it and how
-// many groups they formed. Groups are numbered from zero within the run, so the
-// caller can offset them to number a whole page.
+// citationGroup is one group of citations found in a run of prose: the keys it
+// names and the byte range the group occupies, brackets and all.
+type citationGroup struct {
+	span  textSpan
+	cites []Citation
+}
+
+// scanCitationGroups returns the citation groups in one run of prose.
 //
-// A citation is either a bracketed group, which may hold several keys separated
-// by ";", or a bare "@key" in the prose. Brackets that hold no key are not a
-// citation at all, which is what keeps "[user@example.com]" from being read as
-// one.
-func parseCitations(s string) ([]Citation, int) {
-	var out []Citation
-	groups := 0
+// A group is either a bracketed "[...]" holding one or more ";"-separated
+// items, or a bare "@key" written in the prose. Brackets that hold no key are
+// not a citation at all, which is what keeps "[user@example.com]" from being
+// read as one.
+func scanCitationGroups(s string) []citationGroup {
+	var out []citationGroup
 	for i := 0; i < len(s); {
 		switch {
 		case s[i] == '[':
@@ -89,12 +84,7 @@ func parseCitations(s string) ([]Citation, int) {
 				i++
 				continue
 			}
-			for j := range items {
-				items[j].Group = groups
-				items[j].Position = j
-			}
-			out = append(out, items...)
-			groups++
+			out = append(out, citationGroup{span: textSpan{i, end + 1}, cites: items})
 			i = end + 1
 
 		case s[i] == '@':
@@ -109,17 +99,14 @@ func parseCitations(s string) ([]Citation, int) {
 				i++
 				continue
 			}
-			c.Group = groups
-			c.Position = 0
-			out = append(out, c)
-			groups++
+			out = append(out, citationGroup{span: textSpan{i, i + n}, cites: []Citation{c}})
 			i += n
 
 		default:
 			i++
 		}
 	}
-	return out, groups
+	return out
 }
 
 // parseGroup reads the inside of a bracketed citation, which is one or more
@@ -404,25 +391,39 @@ func (k *KB) References(path string) ([]Reference, []Citation) {
 // A finding about the bibliography itself is attributed to the file that
 // actually defines the key, because a KB may keep its bibliography in a
 // directory and "the bibliography" is then not one place.
-func (g *Graph) CitationFindings(b *Bibliography, mode Mode) []Finding {
-	soft := Warning
-	if mode == Strict {
-		soft = Error
+// missingCitationFindings reports the keys one page cites that the bibliography
+// does not define. It is the per-page half of CitationFindings, and what a
+// renderer reads so that rendering one page does not mean linting the whole KB.
+func (g *Graph) missingCitationFindings(path string, b *Bibliography, soft Severity) []Finding {
+	if b == nil {
+		return nil
 	}
+	var out []Finding
+	for _, c := range g.citations[path] {
+		if !b.Has(c.Key) {
+			out = append(out, Finding{
+				Severity: soft,
+				Code:     CodeCitationMissing,
+				Path:     path,
+				Line:     c.Line,
+				Message:  "the bibliography has no entry for " + quote(c.Key),
+			})
+		}
+	}
+	return out
+}
+
+func (g *Graph) CitationFindings(b *Bibliography, mode Mode) []Finding {
+	soft := softSeverity(mode)
 	var out []Finding
 
 	for _, path := range g.Paths() {
-		for _, c := range g.citations[path] {
-			if !b.Has(c.Key) {
-				out = append(out, Finding{
-					Severity: soft,
-					Code:     CodeCitationMissing,
-					Path:     path,
-					Line:     c.Line,
-					Message:  "the bibliography has no entry for " + quote(c.Key),
-				})
-			}
-		}
+		out = append(out, g.missingCitationFindings(path, b, soft)...)
+	}
+
+	if b == nil {
+		sortFindings(out)
+		return out
 	}
 
 	for _, key := range b.Keys() {

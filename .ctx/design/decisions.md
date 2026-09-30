@@ -328,6 +328,37 @@ reason to answer from the KB, not to fail, because every command must work with
 no index (`D23`, `P1`). The downgrade is silent; a caller that wants a diagnostic
 passes a callback and gets one line per invocation.
 
+### Render and export — what a link and a citation become. `D69` added.
+
+**Decision.** A resolved wikilink renders as an anchor to its page and shows that
+page's title, whatever spelling of the name was written. A link that does not
+resolve, or resolves to more than one page, renders as the text that was written
+inside a span carrying a class (`stemma-unresolved`, `stemma-ambiguous`) rather
+than as a link to nothing. A citation renders as the built-in formatter's label,
+and every key the bibliography defines is a link to that key's virtual source
+page; a key it does not define stays text and is reported as a finding.
+
+**Why the title rather than the spelling.** `FORMAT.md` calls the slug "a form
+that is forgiving to type", and `D13` makes the rendered site the human
+interface. A forgiving spelling is for typing and the title is for reading; an
+alias names the same page, so it reads as the title too.
+
+**Why a marked span for a broken link.** An unresolved link is a warning by
+default (`D26`), so dropping it would hide from a reader what lint only complains
+about, and an anchor with no destination is worse than text that looks like text.
+The class is the hook a stylesheet uses; the page stays readable with no
+stylesheet at all.
+
+**Why citations link per key.** `FORMAT.md` says a citation resolves to the
+entry's virtual source page (`D36`, `D45`), so a group of keys is a group of
+destinations. One anchor around a multi-key group would leave every key but one
+unreachable from the body.
+
+**Provenance.** Chosen with the tool author before the renderer core was written.
+The format deliberately leaves the HTML shape to the presentation layer, so these
+are the site's choices rather than the format's, and they are recorded the way the
+index choices were: because they are expensive to change once pages are published.
+
 ### U5 — rewriting inbound links. `D19` stands.
 
 **Verdict: rewriting inbound links is reliable enough to justify title-based links.** No

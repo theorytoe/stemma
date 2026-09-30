@@ -96,12 +96,30 @@ quietly. New files owned only by this delegate are not logged there.
 
 ## Task 1:
 
-Status: Not started
+Status: Done
 
 Renderer core. Blackfriday with a custom renderer that resolves wikilinks and
 citations through the shared resolver, reports unresolved links rather than
 emitting them silently, and produces stable output for golden tests. Link
 resolution and validation must agree by construction, not by convention.
+
+It closed with `internal/render`: one `Renderer` that turns a page body into
+HTML, resolving wikilinks through `Graph.Resolve` and citations through the
+bibliography and `citestyle`, with `PageURL` and `SourceURL` fixing the site's
+addresses. Rendering and lint read one scan — `kb.Inlines()`, added for this
+task — because blackfriday has no inline hook and splits a link that contains
+emphasis, so a tree walk would miss what lint counts. A page's findings come from
+`kb.FindingsFor`, the same helpers lint reads, and `TestFindingsMatchLint` holds
+the two together. `testdata/body.golden` fixes the output. The prior-code changes
+and the new decision `D69`, which settles what a link and a citation become, are
+recorded in `.ctx/design/render-export-changes.md` and the register.
+
+One deviation from the plan as written: the resolution is not done inside a
+blackfriday `Renderer`. Blackfriday exposes no inline-extension point, so the
+shared scan expands the constructs to HTML before the parse and blackfriday's own
+`HTMLRenderer` renders the result, which keeps its text escaping and smart
+punctuation intact. The custom-renderer seam remains available for subtask 2 if
+the site needs it.
 
 ## Task 2:
 

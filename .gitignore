@@ -8,3 +8,7 @@ bin/
 
 # Bytecode from running the extraction script's own tests.
 __pycache__/
+
+# The umbrella skill's references, written by `make skills` from the tool's own
+# command table and from FORMAT.md. Generated, so not committed (P8).
+skills/stemma/references/

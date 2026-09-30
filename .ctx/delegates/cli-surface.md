@@ -129,6 +129,11 @@ Generate the CLI reference. Emit a single markdown document describing every ver
 flag, exit code, and JSON envelope, generated from the command definitions so it
 cannot drift. Task 7 of the project copies this into the umbrella skill.
 
+Task 7 extended the generator: the first cut documented a noun family's members by
+name only, so `referenceMarkdown` now emits each member's usage and flags as well.
+The edit is recorded in `design/skills-changes.md`, and the surface test asserts
+the member sections stay.
+
 ## Task 10:
 
 Status: Done

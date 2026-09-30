@@ -261,18 +261,38 @@ func referenceMarkdown() string {
 				b.WriteString("`" + s.name + "`")
 			}
 			b.WriteString(".\n")
-		}
-		b.WriteString("\n| Flag | Type | Default | Meaning |\n")
-		b.WriteString("| ---- | ---- | ------- | ------- |\n")
-		for _, f := range flagsOf(c) {
-			def := f.Default
-			if def == "" {
-				def = "—"
-			} else {
-				def = "`" + def + "`"
+			// A family's own flags are only --json, so the flags that matter
+			// belong to its members and are documented with each one.
+			for _, s := range c.sub {
+				b.WriteString("\n#### `stemma " + c.name + " " + s.name)
+				if s.args != "" {
+					b.WriteString(" " + s.args)
+				}
+				b.WriteString("`\n\n")
+				b.WriteString(s.summary + ".\n")
+				b.WriteString(flagTable(s))
 			}
-			fmt.Fprintf(&b, "| `--%s` | %s | %s | %s |\n", f.Name, f.Type, def, f.Usage)
+			continue
 		}
+		b.WriteString(flagTable(c))
+	}
+	return b.String()
+}
+
+// flagTable renders one command's flags as the markdown table the reference
+// uses, derived from the flag set the command builds.
+func flagTable(c *command) string {
+	var b strings.Builder
+	b.WriteString("\n| Flag | Type | Default | Meaning |\n")
+	b.WriteString("| ---- | ---- | ------- | ------- |\n")
+	for _, f := range flagsOf(c) {
+		def := f.Default
+		if def == "" {
+			def = "—"
+		} else {
+			def = "`" + def + "`"
+		}
+		fmt.Fprintf(&b, "| `--%s` | %s | %s | %s |\n", f.Name, f.Type, def, f.Usage)
 	}
 	return b.String()
 }

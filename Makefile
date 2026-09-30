@@ -13,7 +13,7 @@ LDFLAGS  = -X github.com/theorytoe/stemma/internal/version.Version=$(VERSION)
 # tool defines and checked by the tool itself.
 WIKI   ?= wiki
 
-.PHONY: all build test test-shim vet check lint-wiki site extract bench tidy fmt clean
+.PHONY: all build test test-shim vet check lint-wiki site extract skills check-skills bench tidy fmt clean
 
 all: build
 
@@ -39,7 +39,7 @@ vet:
 # What CI runs. Further gates (the static site, the export) belong in this
 # target rather than in the workflow, so that a local run and a CI run check the
 # same things.
-check: build vet test test-shim lint-wiki site extract
+check: build vet test test-shim lint-wiki site extract check-skills
 
 # The documentation is a KB, so it has to lint clean under --strict. If the
 # project's own documentation cannot pass its own checks, the release is not
@@ -61,6 +61,28 @@ site: build
 # exhaustive half -- every extract of every page, at both depths, plus the round
 # trip -- is internal/export's gate test, which `test` runs.
 EXTRACT = .stemma/extract/gate
+
+# The agent skill suite: one directory per skill, following the open Agent Skills
+# standard. The umbrella skill's two references are generated, not committed
+# (P8): the CLI reference comes from the tool's own command table, and the format
+# specification is a copy of FORMAT.md until docs.md moves it into the wiki. Run
+# this before copying skills/ into a harness, because a fresh clone has neither.
+SKILLS ?= skills
+
+skills: build
+	@mkdir -p $(SKILLS)/stemma/references
+	$(BIN) help --markdown > $(SKILLS)/stemma/references/cli.md
+	cp FORMAT.md $(SKILLS)/stemma/references/format.md
+
+# The format rules are a gate; an agent's behaviour is not. This checks every
+# SKILL.md against the standard: name, description, and body limits. The
+# non-deterministic half of the delegate -- running the skills against a real KB
+# and reading where they mislead an agent -- is recorded in the delegate, not
+# asserted here.
+check-skills: skills
+	$(GO) test ./internal/skills/
+	test -s $(SKILLS)/stemma/references/cli.md
+	test -s $(SKILLS)/stemma/references/format.md
 
 extract: build
 	$(BIN) export page --kb $(WIKI) pages/index.md --depth all --out $(EXTRACT)

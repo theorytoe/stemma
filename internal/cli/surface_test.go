@@ -72,6 +72,32 @@ func TestReferenceMarkdownCoversTheSurface(t *testing.T) {
 	}
 }
 
+// A family's flags belong to its members, so the reference has to document each
+// member's usage and flags, not just name it. The skill suite reads this
+// document and cannot run `help cite add` the way a person at a prompt can.
+func TestReferenceMarkdownDocumentsFamilyMembers(t *testing.T) {
+	code, stdout, stderr := run("help", "--markdown")
+	if code != ExitOK {
+		t.Fatalf("exit = %d: %s", code, stderr)
+	}
+	for _, want := range []string{
+		"#### `stemma cite add [IDENTIFIER]`",
+		"`--doi`",
+		"`--arxiv`",
+		"`--isbn`",
+		"`--dry-run`",
+		"#### `stemma cite export`",
+		"`--format`",
+		"`--cited`",
+		"#### `stemma export page PAGE`",
+		"`--depth`",
+	} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("the reference is missing %q", want)
+		}
+	}
+}
+
 func TestNoCommandAndUnknownCommand(t *testing.T) {
 	code, _, stderr := run()
 	if code != ExitError || !strings.Contains(stderr, "no command") {

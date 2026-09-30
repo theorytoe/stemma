@@ -21,6 +21,11 @@
   --code-bg: #f0eed9; /* bg_dim */
   --mark: #fbefd0; /* bg_yellow */
 
+  /* The graph panels sit on bg_dim rather than bg0, where bg3 -- the page's
+     rule colour -- is nearly invisible. The edges take the next step of the
+     background scale instead. */
+  --graph-edge: #bec5b2; /* bg5 */
+
   /* The accent colours, used to tint the whole-KB graph's nodes. */
   --red: #f85552;
   --orange: #f57d26;
@@ -41,6 +46,7 @@
     --link: #a7c080; /* green */
     --code-bg: #21282c; /* bg_dim */
     --mark: #4a4940; /* bg_yellow */
+    --graph-edge: #445055; /* bg3 */
     --red: #e67e80;
     --orange: #e69875;
     --yellow: #dbbc7f;
@@ -60,6 +66,7 @@
   --link: #a7c080; /* green */
   --code-bg: #21282c; /* bg_dim */
   --mark: #4a4940; /* bg_yellow */
+  --graph-edge: #445055; /* bg3 */
   --red: #e67e80;
   --orange: #e69875;
   --yellow: #dbbc7f;
@@ -372,7 +379,7 @@ a {
 }
 
 .graph-edge {
-  stroke: var(--rule);
+  stroke: var(--graph-edge);
   stroke-width: 1.5;
 }
 

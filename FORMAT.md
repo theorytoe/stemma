@@ -76,7 +76,7 @@ and a person may want to read them:
 
 - `.stemma/shim/extract.py` — the extraction script. `init` writes it and the tool
   rewrites it whenever it does not match the binary, so an edit there is lost;
-  the script is changed in the repository.
+  it is replaced from the copy embedded in the tool.
 - `.stemma/fetched/<name>-<digest>.txt` — text that `fetch` read, named after the
   source it came from. Both halves are derived from the pointer, so fetching one
   source twice lands on the same file and two sources cannot land on one

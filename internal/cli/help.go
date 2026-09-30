@@ -41,7 +41,7 @@ var helpCommand = &command{
 				if w.json {
 					return w.emit(describeCommand(target))
 				}
-				fmt.Fprint(w.stdout, commandHelp(target))
+				fmt.Fprint(w.stdout, commandHelp(target.name, target))
 				return ExitOK
 			default:
 				return w.fail(fmt.Errorf("help takes at most one command, got %d", len(args)))
@@ -63,10 +63,12 @@ func topUsage() string {
 	return b.String()
 }
 
-// commandHelp is the help for one verb.
-func commandHelp(c *command) string {
+// commandHelp is the help for one verb or family member. name is how the command
+// was invoked, which for a family member includes the family, so the usage line
+// reads "stemma cite add" rather than "stemma add".
+func commandHelp(name string, c *command) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "usage: stemma %s", c.name)
+	fmt.Fprintf(&b, "usage: stemma %s", name)
 	if c.args != "" {
 		fmt.Fprintf(&b, " %s", c.args)
 	}

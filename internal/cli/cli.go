@@ -148,7 +148,7 @@ func lookup(cmds []*command, args []string) (*command, string, []string, error) 
 // named in output, which is the full "family member" name.
 func (c *command) invoke(name string, args []string, stdout, stderr io.Writer) int {
 	if wantsHelp(args) {
-		fmt.Fprint(stdout, commandHelp(c))
+		fmt.Fprint(stdout, commandHelp(name, c))
 		return ExitOK
 	}
 

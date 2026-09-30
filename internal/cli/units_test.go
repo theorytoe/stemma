@@ -89,11 +89,21 @@ func TestCommandHelpForAFamily(t *testing.T) {
 		summary: "export the KB",
 		sub:     []*command{{name: "json", summary: "dump the KB as JSON"}},
 	}
-	out := commandHelp(family)
+	out := commandHelp(family.name, family)
 	for _, want := range []string{"usage: stemma export", "commands:", "json"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("help is missing %q:\n%s", want, out)
 		}
+	}
+}
+
+// A family member's help names the family it belongs to, so the usage line is
+// unambiguous about which verb was asked for.
+func TestCommandHelpForAFamilyMemberNamesItsFamily(t *testing.T) {
+	member := &command{name: "add", summary: "add a source"}
+	out := commandHelp("cite add", member)
+	if !strings.Contains(out, "usage: stemma cite add") {
+		t.Errorf("member help omits the family:\n%s", out)
 	}
 }
 

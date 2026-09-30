@@ -46,27 +46,27 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | --- | ------------------------------------------------------------------------------------------ | ---------- |
 | D6  | **Go is primary.** Python where the document ecosystem demands it. JS only for web polish. | Q4         |
 | D7  | **No harness-specific extensions.**                                                        | Q4, Q5     |
-| D8  | **Native tools surface via MCP.** CLI is the universal fallback.                           | Q4, Q5, Q8 |
+| D8  | **Native tools surface via MCP** (planned, not yet built). CLI is the universal fallback.  | Q4, Q5, Q8 |
 | D9  | **No `package.json`.** Install via git or local path. No npm, no bundler.                  | Q8(a)      |
 | D10 | **One core library** owns format, links, index, invariants; CLI and MCP are thin surfaces. | Q6         |
 | D11 | Skills conform to the **open Agent Skills standard**.                                      | Q5(c)      |
 
 ### Format
 
-| ID  | Decision                                                                                                                            | Rationale |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| D12 | **Git is optional.** Documents record the reasoning for meaning changes in their own text.                                          | Q9        |
-| D13 | Tool-free raw readability is **not required**; preview/export is the human interface.                                               | Q10       |
-| D14 | Frontmatter mandatory set is **small**. `type` is **closed but extensible by config**.                                              | Q11       |
-| D15 | **Sources are cited, not compiled.** Pages are the origin. Original research is first-class.                                        | Q12       |
-| D16 | A **robust bibliography subsystem** tracks documents as cited.                                                                      | Q12       |
-| D17 | The KB is **contiguous — no topic boundaries, no sub-wikis**.                                                                       | Q13       |
-| D18 | The format is **documented but not strictly versioned or gated**.                                                                   | Q14       |
-| D19 | Links are **`[[wikilinks]]`**, resolved by title/slug/alias, exported to portable markdown. Ambiguous titles are a hard lint error. | Q15(b)    |
-| D20 | Citations use **pandoc-style `[@key]`**.                                                                                            | Q16(b)    |
-| D46 | Default types are **`topic`, `concept`, `note`**; `stemma.toml` **extends** the set.                                                | Q34       |
-| D52 | The name is **`stemma`**, accepting an existing name collision.                                                                     | Q32, Q37  |
-| D63 | Pages may carry free-form **`tags`**, compared by normalised form. Tags label; they never name, and never resolve a link.           | review    |
+| ID  | Decision                                                                                                                                                                        | Rationale |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| D12 | **Git is optional.** Documents record the reasoning for meaning changes in their own text.                                                                                      | Q9        |
+| D13 | Tool-free raw readability is **not required**; preview/export is the human interface.                                                                                           | Q10       |
+| D14 | Frontmatter mandatory set is **small**. `type` is **closed but extensible by config**.                                                                                          | Q11       |
+| D15 | **Sources are cited, not compiled.** Pages are the origin. Original research is first-class.                                                                                    | Q12       |
+| D16 | A **robust bibliography subsystem** tracks documents as cited.                                                                                                                  | Q12       |
+| D17 | The KB is **contiguous — no topic boundaries, no sub-wikis**.                                                                                                                   | Q13       |
+| D18 | The format is **documented but not strictly versioned or gated**.                                                                                                               | Q14       |
+| D19 | Links are **`[[wikilinks]]`**, resolved by title/slug/alias, exported to portable markdown. Ambiguous titles are a hard lint error. The markdown export is deferred; see below. | Q15(b)    |
+| D20 | Citations use **pandoc-style `[@key]`**.                                                                                                                                        | Q16(b)    |
+| D46 | Default types are **`topic`, `concept`, `note`**; `stemma.toml` **extends** the set.                                                                                            | Q34       |
+| D52 | The name is **`stemma`**, accepting an existing name collision.                                                                                                                 | Q32, Q37  |
+| D63 | Pages may carry free-form **`tags`**, compared by normalised form. Tags label; they never name, and never resolve a link.                                                       | review    |
 
 ### Layout
 
@@ -136,7 +136,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | ID  | Decision                                                                                                                                                                                                                                                   | Rationale |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | D57 | Every command supports **`--json`**. Exit codes: `0` clean, `1` validation findings, `2` operational error.                                                                                                                                                | Q42       |
-| D58 | The MCP surface is a **curated subset** (~10 tools), not a full CLI mirror. Full surface stays on the CLI.                                                                                                                                                 | Q42       |
+| D58 | The MCP surface, when built, is a **curated subset** (~10 tools), not a full CLI mirror. Full surface stays on the CLI.                                                                                                                                    | Q42       |
 | D59 | `stemma.toml` is **optional-with-defaults** and is the discovery marker. Unknown keys preserved. Holds title, type extensions, citation style, ignore paths, default type. `citation_style` selects from built-in formatters only — **not CSL style IDs**. | Q43       |
 | D60 | **Tools own anything with an invariant; the agent owns anything requiring judgement.** The corollary written into the skills: **the agent never computes a path, citation key, or index by hand** — it asks the tool.                                      | Q44       |
 
@@ -589,6 +589,21 @@ the cost is not saved, only moved — and it is moved onto the operation that ha
 constantly, while giving up the property that reorganising `pages/` is free. A rewriting pass
 on every operation is worse still: it pays this cost on every command rather than once, for
 the same result.
+
+## Deferred during implementation
+
+### Portable-markdown export. The second clause of `D19` is deferred.
+
+`D19` says wikilinks are "exported to portable markdown", following Q15(b)'s
+"exporter emits standard relative links". No command does this. A scoped extract
+is a KB root in the same format, so it keeps `[[wikilinks]]` (`D30`, `D71`);
+`export json` is machine JSON (`D70`); and the renderer emits relative links in
+HTML, not markdown (`D69`). The relative-link intent is met only by the site.
+
+The promise is deferred, not dropped. Taken up, it is a markdown export whose
+wikilinks become standard relative paths. It is separate from the scoped extract,
+which must stay a KB root for the tool to read. Deferred by the author on
+2026-09-29.
 
 ## Naming collision log
 

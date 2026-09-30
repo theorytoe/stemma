@@ -16,8 +16,8 @@ description: >-
 Stemma is a tool for authoring and maintaining a knowledge base (KB): a
 directory of markdown pages, linked with `[[wikilinks]]`, that cite sources as
 `[@key]` from a BibTeX bibliography. The `stemma` command is the whole surface.
-An MCP server exposes a subset of the same operations; the CLI is canonical and
-is what this skill spells.
+An MCP server is planned to expose a subset of the same operations; the CLI is
+canonical and is what this skill spells.
 
 ## The two rules that matter most
 

@@ -247,3 +247,20 @@ quietly."
 - Tests — `internal/export`'s scoped tests write an extract and lint it under
   `kb.Strict`, which is the sentence being true.
 - Decision ref — D71
+
+### Makefile — the extract added to check
+
+- Date — 2026-09-29
+- Prior task — 1 (foundation)
+- What changed — an `extract` target added, and `check` now depends on it. It
+  extracts the example wiki's entry document at full depth with the binary the
+  same run just built, lints the extract under `--strict`, and builds it as a
+  site.
+- Why — the same reason `site` is there: the Makefile's own note says further
+  gates belong in `check` so that a local run and a CI run cannot drift apart,
+  and the definition of done names the extract as its last step. The exhaustive
+  assertions are `internal/export`'s, which `test` runs; this target is what
+  proves the shipped binary produces an extract that holds up.
+- Interface impact — none; additive, and `check` passes.
+- Tests — `internal/export`'s gate test is the exhaustive half.
+- Decision ref — D30, D71

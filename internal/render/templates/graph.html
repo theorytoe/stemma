@@ -1,0 +1,20 @@
+{{define "graph"}}<!doctype html>
+<html lang="en">
+<head>
+{{template "head" .}}
+</head>
+<body>
+{{template "header" .}}
+<main>
+  <h1>{{.Heading}}</h1>
+  {{if .Summary}}<p class="meta">{{.Summary}}</p>{{end}}
+  <section class="graph">
+    {{.Graph}}
+    <script type="application/json" class="graph-data">{{.GraphJSON}}</script>
+    <script src="{{.Site.GraphScriptURL}}" defer></script>
+  </section>
+</main>
+{{template "footer" .}}
+</body>
+</html>
+{{end}}

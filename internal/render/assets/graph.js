@@ -24,23 +24,51 @@
     return;
   }
 
-  var nodes = [{ title: data.center.title, url: data.center.url, self: true }];
-  (data.backlinks || []).forEach(function (n) { nodes.push({ title: n.title, url: n.url }); });
-  (data.links || []).forEach(function (n) { nodes.push({ title: n.title, url: n.url }); });
+  // Two shapes reach this script: a page's local graph, which is a centre and
+  // its neighbours, and the whole-KB graph, which is nodes and edges outright.
+  // Both become the same two lists. Only the whole-KB graph sizes its nodes;
+  // the local graph draws them uniform.
+  var sized = !!data.nodes;
+  var nodes, edges;
+  if (data.nodes) {
+    nodes = data.nodes.map(function (n) {
+      return { title: n.title, url: n.url, self: !!n.self, backlinks: n.backlinks || 0, degree: n.degree || 0, color: n.color || 0 };
+    });
+    edges = data.edges || [];
+  } else {
+    nodes = [{ title: data.center.title, url: data.center.url, self: true, backlinks: data.center.backlinks || 0 }];
+    edges = [];
+    (data.backlinks || []).forEach(function (n) {
+      edges.push([0, nodes.length]);
+      nodes.push({ title: n.title, url: n.url, backlinks: n.backlinks || 0 });
+    });
+    (data.links || []).forEach(function (n) {
+      edges.push([0, nodes.length]);
+      nodes.push({ title: n.title, url: n.url, backlinks: n.backlinks || 0 });
+    });
+  }
   if (nodes.length < 2) {
     return;
   }
 
-  var edges = [];
-  for (var i = 1; i < nodes.length; i++) {
-    edges.push([0, i]);
-  }
-
   var NS = "http://www.w3.org/2000/svg";
-  var W = 640;
-  var H = Math.max(260, 150 + nodes.length * 26);
-  var RADIUS = 9;
-  var SELF_RADIUS = 12;
+  var hasSelf = nodes.some(function (n) { return n.self; });
+  var W = hasSelf ? 640 : 760;
+  var H = hasSelf ? Math.max(260, 150 + nodes.length * 26) : 760;
+
+  // In the whole-KB graph a node's size is its degree -- backlinks plus
+  // outgoing links -- square-rooted into a fixed range so one hub cannot dwarf
+  // the rest. The local graph is left uniform: its shape already says what
+  // connects to what, so size there would say nothing new.
+  var MIN_R = 5;
+  var MAX_R = 18;
+  var top = Math.max(1, data.max_degree || 1);
+  function radius(n) {
+    if (!sized) {
+      return n.self ? 12 : 9;
+    }
+    return MIN_R + (MAX_R - MIN_R) * Math.sqrt(Math.max(0, n.degree || 0) / top);
+  }
 
   // Springs and charge. The numbers are a balance rather than a derivation:
   // enough repulsion that dots do not overlap, enough spring that connected
@@ -57,14 +85,25 @@
     return v < lo ? lo : v > hi ? hi : v;
   }
 
-  nodes[0].x = W / 2;
-  nodes[0].y = H / 2;
-  nodes[0].r = SELF_RADIUS;
-  for (i = 1; i < nodes.length; i++) {
-    var angle = ((i - 1) / (nodes.length - 1)) * Math.PI * 2;
-    nodes[i].x = W / 2 + Math.cos(angle) * W * 0.3;
-    nodes[i].y = H / 2 + Math.sin(angle) * H * 0.32;
-    nodes[i].r = RADIUS;
+  var selfIndex = -1;
+  for (i = 0; i < nodes.length; i++) {
+    nodes[i].r = radius(nodes[i]);
+    if (nodes[i].self && selfIndex < 0) {
+      selfIndex = i;
+    }
+  }
+  var around = 0;
+  var others = nodes.length - (selfIndex < 0 ? 0 : 1);
+  for (i = 0; i < nodes.length; i++) {
+    if (i === selfIndex) {
+      nodes[i].x = W / 2;
+      nodes[i].y = H / 2;
+      continue;
+    }
+    var angle = (around / Math.max(1, others)) * Math.PI * 2;
+    around++;
+    nodes[i].x = W / 2 + Math.cos(angle) * W * 0.32;
+    nodes[i].y = H / 2 + Math.sin(angle) * H * 0.34;
   }
   nodes.forEach(function (n) { n.vx = 0; n.vy = 0; });
 
@@ -150,7 +189,11 @@
     var wrap = n.self
       ? document.createElementNS(NS, "g")
       : document.createElementNS(NS, "a");
-    wrap.setAttribute("class", n.self ? "graph-node graph-self" : "graph-node");
+    var cls = n.self ? "graph-node graph-self" : "graph-node";
+    if (sized) {
+      cls += " graph-color-" + (n.color || 0);
+    }
+    wrap.setAttribute("class", cls);
     if (!n.self) {
       wrap.setAttribute("href", n.url);
     }
@@ -179,9 +222,15 @@
 
   var hovered = -1;
 
+  function tipLabel(n) {
+    var c = n.backlinks || 0;
+    var text = c === 0 ? "no backlinks" : c + " backlink" + (c === 1 ? "" : "s");
+    return n.title + " \u2014 " + text;
+  }
+
   function positionTip() {
     var n = nodes[hovered];
-    tipText.textContent = n.title;
+    tipText.textContent = tipLabel(n);
     tip.style.display = "";
     var box = tipText.getBBox();
     tipRect.setAttribute("x", box.x - 7);

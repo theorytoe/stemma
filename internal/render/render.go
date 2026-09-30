@@ -56,6 +56,14 @@ type Renderer struct {
 	title     string
 	home      string
 	search    bool
+
+	// backCounts and outCounts are each page's backlinks and its distinct
+	// resolved outgoing links; topDegree is the largest of their sum. They are
+	// the metric the whole-KB graph sizes nodes by, computed once so rendering
+	// stays linear in the KB.
+	backCounts map[string]int
+	outCounts  map[string]int
+	topDegree  int
 }
 
 // New returns a renderer for k, using the citation style its manifest names. An
@@ -70,7 +78,17 @@ func New(k *kb.KB) (*Renderer, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Renderer{kb: k, formatter: f, templates: t, title: k.Manifest.Title, home: homeURL(k)}, nil
+	back, out, top := nodeCounts(k)
+	return &Renderer{
+		kb:           k,
+		formatter:    f,
+		templates:    t,
+		title:        k.Manifest.Title,
+		home:         homeURL(k),
+		backCounts:   back,
+		outCounts:    out,
+		topDegree:    top,
+	}, nil
 }
 
 // Formatter is the citation formatter in use, so that a caller rendering a

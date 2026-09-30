@@ -36,6 +36,9 @@ const (
 	// each kept apart from the page list and from each other.
 	typesURL = "types.html"
 	tagsURL  = "tags.html"
+
+	// graphURL is the generated graph of the whole KB.
+	graphURL = "graph.html"
 )
 
 // SiteData is what every document knows about the site around it. Every address
@@ -46,6 +49,7 @@ type SiteData struct {
 	IndexURL       string
 	TypesURL       string
 	TagsURL        string
+	GraphURL       string
 	AssetURL       string
 	ScriptURL      string
 	GraphScriptURL string
@@ -115,6 +119,15 @@ type ListingData struct {
 	Types   []TypeLink
 	Tags    []TagLink
 	Empty   string
+}
+
+// GraphPageData is the whole-KB graph page.
+type GraphPageData struct {
+	common
+	Heading   string
+	Summary   string
+	Graph     template.HTML
+	GraphJSON template.JS
 }
 
 // SearchHit is one result on the search page.
@@ -189,6 +202,7 @@ func (r *Renderer) siteFor(docURL string) SiteData {
 		IndexURL:       rel(docURL, indexURL),
 		TypesURL:       rel(docURL, typesURL),
 		TagsURL:        rel(docURL, tagsURL),
+		GraphURL:       rel(docURL, graphURL),
 		AssetURL:       rel(docURL, assetDir+"/style.css"),
 		ScriptURL:      rel(docURL, assetDir+"/theme.js"),
 		GraphScriptURL: rel(docURL, assetDir+"/graph.js"),
@@ -295,6 +309,20 @@ func (r *Renderer) TagIndex(norm string) ([]byte, error) {
 	return r.execute("listing", data)
 }
 
+// AllGraph renders the whole-KB graph page.
+func (r *Renderer) AllGraph() ([]byte, error) {
+	docURL := graphURL
+	g := r.allGraph(docURL)
+	data := GraphPageData{
+		common:    common{Site: r.siteFor(docURL), DocTitle: tabTitle("Graph", r.title)},
+		Heading:   "Graph",
+		Summary:   fmt.Sprintf("%d pages, %d links", len(g.Nodes), len(g.Edges)),
+		Graph:     allGraphSVG(g),
+		GraphJSON: allGraphJSON(g),
+	}
+	return r.execute("graph", data)
+}
+
 // Search renders the search page. hits are the results already found; the
 // renderer shows them, it does not search.
 func (r *Renderer) Search(query string, hits []SearchHit) ([]byte, error) {
@@ -368,6 +396,11 @@ func (r *Renderer) Documents() ([]Document, error) {
 		return nil, err
 	}
 	addHTML(tagsURL, body)
+
+	if body, err = r.AllGraph(); err != nil {
+		return nil, err
+	}
+	addHTML(graphURL, body)
 
 	for _, typ := range r.typeNames() {
 		body, err := r.TypeIndex(typ)

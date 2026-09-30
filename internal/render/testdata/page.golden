@@ -19,6 +19,7 @@
         <a href="all.html">Index</a>
         <a href="types.html">Types</a>
         <a href="tags.html">Tags</a>
+        <a href="graph.html">Graph</a>
       </nav>
       <button class="theme-toggle" type="button" aria-label="Toggle light and dark theme" data-theme-toggle hidden><svg class="icon-sun" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg><svg class="icon-moon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></button>
     </div>
@@ -55,7 +56,7 @@
   <section class="graph">
     <h2>Local graph</h2>
     <svg class="graph-svg" viewBox="0 0 640 120" role="group" aria-label="Local graph"><title>Local graph</title><line class="graph-edge" x1="406" y1="60" x2="456" y2="60"/><a class="graph-node" href="attention.html"><rect x="456" y="46" width="172" height="28" rx="5"/><text x="465" y="64">Attention Is All Yo...</text></a><g class="graph-node graph-self"><rect x="234" y="46" width="172" height="28" rx="5"/><text x="243" y="64">Sample</text></g></svg>
-    <script type="application/json" class="graph-data">{"center":{"title":"Sample","url":"sample.html"},"backlinks":null,"links":[{"title":"Attention Is All You Need","url":"attention.html"}]}</script>
+    <script type="application/json" class="graph-data">{"center":{"title":"Sample","url":"sample.html","backlinks":0},"backlinks":null,"links":[{"title":"Attention Is All You Need","url":"attention.html","backlinks":1}]}</script>
     <script src="assets/graph.js" defer></script>
   </section>
   

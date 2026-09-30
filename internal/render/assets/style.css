@@ -20,6 +20,15 @@
   --link: #8da101; /* green */
   --code-bg: #f0eed9; /* bg_dim */
   --mark: #fbefd0; /* bg_yellow */
+
+  /* The accent colours, used to tint the whole-KB graph's nodes. */
+  --red: #f85552;
+  --orange: #f57d26;
+  --yellow: #dfa000;
+  --green: #8da101;
+  --aqua: #35a77c;
+  --blue: #3a94c5;
+  --purple: #df69ba;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -32,6 +41,13 @@
     --link: #a7c080; /* green */
     --code-bg: #21282c; /* bg_dim */
     --mark: #4a4940; /* bg_yellow */
+    --red: #e67e80;
+    --orange: #e69875;
+    --yellow: #dbbc7f;
+    --green: #a7c080;
+    --aqua: #83c092;
+    --blue: #7fbbb3;
+    --purple: #d699b6;
   }
 }
 
@@ -44,6 +60,13 @@
   --link: #a7c080; /* green */
   --code-bg: #21282c; /* bg_dim */
   --mark: #4a4940; /* bg_yellow */
+  --red: #e67e80;
+  --orange: #e69875;
+  --yellow: #dbbc7f;
+  --green: #a7c080;
+  --aqua: #83c092;
+  --blue: #7fbbb3;
+  --purple: #d699b6;
 }
 
 * {
@@ -279,6 +302,36 @@ a {
 .graph-node circle {
   fill: var(--muted);
   stroke: none;
+}
+
+/* The whole-KB graph tints each node from the Everglade accents, its colour
+   chosen in Go so the static SVG and the script agree. */
+.graph-color-0 circle {
+  fill: var(--red);
+}
+
+.graph-color-1 circle {
+  fill: var(--orange);
+}
+
+.graph-color-2 circle {
+  fill: var(--yellow);
+}
+
+.graph-color-3 circle {
+  fill: var(--green);
+}
+
+.graph-color-4 circle {
+  fill: var(--aqua);
+}
+
+.graph-color-5 circle {
+  fill: var(--blue);
+}
+
+.graph-color-6 circle {
+  fill: var(--purple);
 }
 
 .graph-node text {

@@ -66,6 +66,7 @@ func TestDocumentsAreUniqueAndComplete(t *testing.T) {
 		"all.html",               // the generated page list
 		"types.html",             // the generated type list
 		"tags.html",              // the generated tag list
+		"graph.html",             // the generated whole-KB graph
 		"sample.html",            // an authored page
 		"odd%20name.html",        // a file name with a space
 		"types/concept.html",     // a type index
@@ -250,6 +251,14 @@ func TestPageGraph(t *testing.T) {
 	if len(data.Backlinks) != 1 || data.Backlinks[0].Title != "Sample" {
 		t.Errorf("backlinks = %+v", data.Backlinks)
 	}
+	// The local graph carries backlinks for the hover tip and no degree: it is
+	// drawn uniform.
+	if data.Center.Backlinks != 1 {
+		t.Errorf("the centre has %d backlinks, want 1", data.Center.Backlinks)
+	}
+	if data.Center.Degree != 0 {
+		t.Errorf("the local graph set a degree (%d); it should not size nodes", data.Center.Degree)
+	}
 }
 
 // TestGraphWithoutNeighbours checks a page with no links still gets a graph:
@@ -266,6 +275,65 @@ func TestGraphWithoutNeighbours(t *testing.T) {
 	}
 	if strings.Contains(page, `<a class="graph-node"`) {
 		t.Errorf("a page with no neighbours has neighbour nodes:\n%s", page)
+	}
+}
+
+// TestWholeKBGraph checks the graph page draws every page and every link, and
+// that its embedded JSON is the same graph the SVG drew.
+func TestWholeKBGraph(t *testing.T) {
+	r := siteRenderer(t)
+	got, err := r.AllGraph()
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(got)
+	for _, want := range []string{
+		`<h1>Graph</h1>`,
+		`<svg class="graph-svg"`,
+		`<script type="application/json" class="graph-data">`,
+		`assets/graph.js`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the graph page is missing %q:\n%s", want, page)
+		}
+	}
+
+	const open = `<script type="application/json" class="graph-data">`
+	i := strings.Index(page, open)
+	j := strings.Index(page[i:], "</script>")
+	if i < 0 || j < 0 {
+		t.Fatalf("no embedded graph JSON:\n%s", page)
+	}
+	var g GraphJSON
+	if err := json.Unmarshal([]byte(page[i+len(open):i+j]), &g); err != nil {
+		t.Fatalf("the embedded graph is not JSON: %v", err)
+	}
+
+	if len(g.Nodes) != r.kb.Graph.Len() {
+		t.Errorf("nodes = %d, want one per page (%d)", len(g.Nodes), r.kb.Graph.Len())
+	}
+	// The only link in the fixture is Sample's several links to Attention,
+	// which are one edge once deduplicated.
+	if len(g.Edges) != 1 {
+		t.Errorf("edges = %d, want 1: %+v", len(g.Edges), g.Edges)
+	}
+
+	top := 0
+	for _, n := range g.Nodes {
+		if n.Degree > top {
+			top = n.Degree
+		}
+	}
+	if top != g.MaxDegree {
+		t.Errorf("the busiest node has degree %d, but max_degree is %d", top, g.MaxDegree)
+	}
+
+	// Every node is tinted from the palette, and the static SVG uses the same
+	// colour the script will.
+	for _, n := range g.Nodes {
+		if n.Color < 0 || n.Color >= graphColors {
+			t.Errorf("node %q has colour %d, out of range", n.Title, n.Color)
+		}
 	}
 }
 

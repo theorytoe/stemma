@@ -3,6 +3,7 @@ title: Why Stemma
 type: principle
 aliases:
   - the case for stemma
+tags: [design]
 ---
 Notes kept for years are read by someone who was not there when they were
 written, and usually that someone is their author. A note that says what is not

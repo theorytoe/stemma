@@ -1,6 +1,7 @@
 ---
 title: Drafts
 type: note
+tags: [format, workflow]
 ---
 Writing that is not finished goes in `inbox/`, which sits inside the KB root
 and outside `pages/`. A draft is not a page: it is not indexed, not searched,

@@ -7,9 +7,17 @@ This wiki is its documentation, and it is written in the format the tool
 defines.
 
 - [[Why Stemma]] — what the tool is for, and what it refuses to do.
+- [[Design principles]] — the commitments that decide everything else.
 - [[The format]] — what a page is, and what the tool will not touch.
 - [[Wikilinks]] — how one page names another, and what happens when two
   pages want the same name.
+- [[Citations]] — how a claim names the source it rests on.
 - [[Structure]] — the directories a KB is made of.
 - [[Drafts]] — where writing that is not finished yet lives.
+- [[Creating and maintaining a KB]] — how one starts, grows, and stays healthy.
+- [[Invoking the tool]] — how a command is spelled, and where it finds the KB.
+- [[The command surface]] — the verbs, by what they are for.
+- [[The rendered site]] — what the files become, and the pages no author
+  wrote.
+- [[Serving the site]] — reading a KB locally, with search and live reload.
 - [[The old sharing model]] — a page kept for its reasoning, no longer current.

@@ -3,6 +3,7 @@ title: The format
 type: concept
 aliases:
   - format specification
+tags: [format]
 ---
 A page is a markdown file with a small YAML frontmatter block: a title, a type,
 and whatever else you want. Two fields are required and everything else is

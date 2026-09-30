@@ -3,6 +3,7 @@ title: The old sharing model
 type: note
 status: archived
 archive_reason: superseded once distribution turned out to need no tooling
+tags: [design]
 review:
   state: closed
   notes:

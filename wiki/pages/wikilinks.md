@@ -1,6 +1,7 @@
 ---
 title: Wikilinks
 type: concept
+tags: [format]
 ---
 One page names another by writing its title in double brackets:
 

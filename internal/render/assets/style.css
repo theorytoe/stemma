@@ -262,9 +262,18 @@ a {
 
 .page-list,
 .type-list,
-.tag-list {
+.tag-list,
+.source-list,
+.attention-list {
   list-style: none;
   padding-left: 0;
+}
+
+.type-list li,
+.tag-list li,
+.source-list li,
+.attention-list li {
+  margin-bottom: 0.35rem;
 }
 
 .page-list li,
@@ -539,6 +548,13 @@ mark {
   color: var(--muted);
 }
 
+/* Every list on the landing page is the same list: no bullets, one line per item
+   with its secondary line beneath, so the page reads as one index rather than a
+   pile of blocks with different manners. */
+.home-block ul {
+  margin: 0;
+}
+
 .home-block {
   margin-top: 2.5rem;
   padding-top: 1rem;
@@ -567,14 +583,9 @@ mark {
   margin-top: 0;
 }
 
-.source-list,
-.attention-list {
-  padding-left: 1.1rem;
-}
-
 .source-list li,
 .attention-list li {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.35rem;
 }
 
 .retrieved,

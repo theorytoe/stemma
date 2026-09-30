@@ -197,7 +197,7 @@ func (g *Graph) Orphans() []string {
 	var out []string
 	for _, path := range g.Paths() {
 		p := g.pages[path]
-		if p.Type() == TypeIndex || p.Type() == TypeSource || p.Status() == StatusArchived {
+		if g.exemptFromOrphan(path, p) {
 			continue
 		}
 		if len(g.Backlinks(path)) == 0 {
@@ -205,6 +205,24 @@ func (g *Graph) Orphans() []string {
 		}
 	}
 	return out
+}
+
+// exemptFromOrphan reports whether a page is one nothing is expected to link
+// to: the entry document, an index page, a virtual source page, or an archived
+// one.
+//
+// The entry document is exempt because of what it is rather than what it says.
+// It is the page every other page is reachable from, so nothing links to it by
+// construction, and a finding that it has no inbound links says nothing an
+// author could act on. `init` gives it `type: index` as well, and that is why
+// the finding never appeared for a KB the tool made itself — but a KB whose
+// entry document is a page of some other type is just as much a KB, and an
+// extract's root is exactly that page.
+func (g *Graph) exemptFromOrphan(path string, p *Page) bool {
+	return path == EntryDocument ||
+		p.Type() == TypeIndex ||
+		p.Type() == TypeSource ||
+		p.Status() == StatusArchived
 }
 
 // Findings reports everything the graph can see: links that do not resolve to

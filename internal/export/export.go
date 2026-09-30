@@ -18,7 +18,6 @@ package export
 import (
 	"bytes"
 	"encoding/json"
-	"os"
 	"path/filepath"
 
 	"github.com/theorytoe/stemma/internal/kb"
@@ -239,12 +238,7 @@ func Write(k *kb.KB, path string) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	if dir := filepath.Dir(path); dir != "" {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return Result{}, err
-		}
-	}
-	if err := kb.WriteFileAtomic(path, b); err != nil {
+	if err := writeFile(filepath.Dir(path), filepath.Base(path), b); err != nil {
 		return Result{}, err
 	}
 	return Result{Out: path, Bytes: len(b), Counts: d.Counts}, nil

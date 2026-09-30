@@ -1,6 +1,7 @@
 package kb
 
 import (
+	"bytes"
 	"sort"
 	"strings"
 )
@@ -16,6 +17,48 @@ type Inline struct {
 	Start, End int
 	Link       *Link
 	Cites      []Citation
+}
+
+// RewriteBody replaces the inline constructs in a page body.
+//
+// rewrite is offered each construct together with the bytes it occupies, and
+// returns the text to put in its place, or false to leave it as it is. Unlike
+// RewriteLinks, which changes only the target inside a wikilink's brackets, this
+// replaces the whole construct, which is what pruning needs: a link that cannot
+// be kept becomes its anchor text and the brackets go with it.
+//
+// Constructs are offered in order, and one that overlaps a construct already
+// replaced is skipped, because a body may cover the same bytes twice and only
+// one of the two can win. Everything outside the replaced spans comes back byte
+// for byte; the report says whether anything changed, so a caller can leave a
+// file it has no reason to write alone.
+func (p *Page) RewriteBody(rewrite func(in Inline, text string) (string, bool)) bool {
+	body := p.Body()
+	var out bytes.Buffer
+	last, changed := 0, false
+	for _, in := range p.Inlines() {
+		if in.Start < last || in.End > len(body) {
+			continue
+		}
+		replacement, ok := rewrite(in, string(body[in.Start:in.End]))
+		if !ok {
+			continue
+		}
+		out.Write(body[last:in.Start])
+		out.WriteString(replacement)
+		last = in.End
+		changed = true
+	}
+	if !changed {
+		return false
+	}
+	out.Write(body[last:])
+
+	// Only the body is replaced, so the spans that separate it from the
+	// frontmatter still describe the lines they did: a prefix of the line slice
+	// is still that prefix, however many lines the new body has.
+	p.doc.lines = append(p.doc.lines[:p.doc.bodyStart:p.doc.bodyStart], splitLines(out.Bytes())...)
+	return true
 }
 
 // Inlines returns every inline construct in the page body, in the order it

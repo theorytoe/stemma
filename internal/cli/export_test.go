@@ -85,3 +85,92 @@ func TestExportJSONTakesNoArguments(t *testing.T) {
 		t.Errorf("stderr = %q", stderr)
 	}
 }
+
+// The extract lands in the generated directory by default, named after the page
+// it is of, and it is a KB root that loads.
+func TestExportPageDefaultsIntoTheGeneratedDirectory(t *testing.T) {
+	root := freshKB(t)
+	code, stdout, stderr := run("export", "page", "--kb", root, "Demo")
+	_ = stdout
+	if code != ExitOK {
+		t.Fatalf("exit = %d: %s", code, stderr)
+	}
+	// init names the KB "Demo" and its entry document after it, so the page is
+	// found by the title the entry document carries.
+	dir := filepath.Join(root, ".stemma", "extract", "index")
+	if _, err := os.Stat(filepath.Join(dir, "stemma.toml")); err != nil {
+		t.Fatalf("no extract at %s: %v", dir, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "pages", "index.md")); err != nil {
+		t.Errorf("the extract has no entry document: %v", err)
+	}
+}
+
+func TestExportPageOutIsRelativeToTheKB(t *testing.T) {
+	root := freshKB(t)
+	code, _, stderr := run("export", "page", "--kb", root, "Demo", "--out", "handoff")
+	if code != ExitOK {
+		t.Fatalf("exit = %d: %s", code, stderr)
+	}
+	if _, err := os.Stat(filepath.Join(root, "handoff", "stemma.toml")); err != nil {
+		t.Errorf("--out handoff did not write into the KB: %v", err)
+	}
+}
+
+// Depth is hops, "all" and 0 are the whole reachable set, and anything else that
+// is not a number of hops is refused rather than guessed at.
+func TestExportPageDepth(t *testing.T) {
+	root := freshKB(t)
+	for _, ok := range []string{"1", "2", "0", "all"} {
+		if code, _, stderr := run("export", "page", "--kb", root, "Demo", "--depth", ok); code != ExitOK {
+			t.Errorf("--depth %s: exit %d: %s", ok, code, stderr)
+		}
+	}
+	for _, bad := range []string{"-1", "lots", "1.5"} {
+		code, _, _ := run("export", "page", "--kb", root, "Demo", "--depth", bad)
+		if code != ExitError {
+			t.Errorf("--depth %s: exit %d, want %d", bad, code, ExitError)
+		}
+	}
+}
+
+// The JSON payload carries the pruned list, so a program does not have to ask
+// twice for it.
+func TestExportPageJSON(t *testing.T) {
+	root := freshKB(t)
+	code, stdout, stderr := run("export", "page", "--kb", root, "Demo", "--json")
+	if code != ExitOK {
+		t.Fatalf("exit = %d: %s", code, stderr)
+	}
+	var got struct {
+		Out     string   `json:"out"`
+		Root    string   `json:"root"`
+		Depth   int      `json:"depth"`
+		Entry   string   `json:"entry"`
+		Pages   []string `json:"pages"`
+		Sources []string `json:"sources"`
+		Pruned  []struct {
+			Kind string `json:"kind"`
+		} `json:"pruned"`
+	}
+	decodeData(t, stdout, &got)
+	if got.Out == "" || got.Root == "" || got.Entry != "pages/index.md" {
+		t.Errorf("data = %+v", got)
+	}
+	if len(got.Pages) == 0 {
+		t.Error("the payload names no pages")
+	}
+	if got.Pruned == nil {
+		t.Error("the payload carries no pruned list")
+	}
+}
+
+func TestExportPageNeedsOnePage(t *testing.T) {
+	root := freshKB(t)
+	if code, _, _ := run("export", "page", "--kb", root); code != ExitError {
+		t.Error("export page with no page was accepted")
+	}
+	if code, _, _ := run("export", "page", "--kb", root, "a", "b"); code != ExitError {
+		t.Error("export page with two pages was accepted")
+	}
+}

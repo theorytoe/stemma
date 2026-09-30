@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // EntryDocument is the page every other page is reachable from.
@@ -62,55 +61,13 @@ func Init(root, title string) error {
 // rather than leaving them to be looked up, because the file is the only place
 // a reader will think to look.
 func manifestFor(title string) []byte {
-	return []byte(fmt.Sprintf(`# The manifest. Optional: a KB with no stemma.toml gets these defaults.
-title = %s
-
-# A sentence or two about the KB. Free text; nothing reads it but a person.
-description = ""
-
-# Added to the built-in types: topic, concept and note.
-types = []
-
-# A built-in formatter. Not a CSL style.
-citation_style = %s
-
-# The export family's defaults. Depth is hops; 0 means no limit.
-[export]
-default_depth = %d
-`, tomlString(title), tomlString(DefaultCitationStyle), DefaultExportDepth))
+	return DefaultManifest(title).TOML()
 }
 
 const bibliographyHeader = `% The bibliography for this KB, as BibTeX.
 `
 
-// tomlString quotes a value the way TOML's basic strings are written. Go's own
-// quoting is close but not the same, and a title with a quote or a backslash in
-// it has to survive the round trip through a file the tool then reads back.
-func tomlString(s string) string {
-	var b strings.Builder
-	b.WriteByte('"')
-	for _, r := range s {
-		switch r {
-		case '"', '\\':
-			b.WriteByte('\\')
-			b.WriteRune(r)
-		case '\n':
-			b.WriteString(`\n`)
-		case '\r':
-			b.WriteString(`\r`)
-		case '\t':
-			b.WriteString(`\t`)
-		default:
-			if r < 0x20 || r == 0x7f {
-				fmt.Fprintf(&b, `\u%04X`, r)
-				continue
-			}
-			b.WriteRune(r)
-		}
-	}
-	b.WriteByte('"')
-	return b.String()
-}
+// tomlString and tomlList are in manifest.go with the manifest they write.
 
 // absOr returns name if it can be made absolute, and fallback if it cannot.
 // It exists so that a KB's default title can be the name of its directory

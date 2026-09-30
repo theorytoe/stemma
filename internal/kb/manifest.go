@@ -72,6 +72,74 @@ type Manifest struct {
 	raw []byte
 }
 
+// TOML renders a manifest as the file form of a KB that is being made: the one
+// `init` writes, and the one an extract gets.
+//
+// It is for a manifest that does not exist yet, and never for rewriting one that
+// does. A manifest that has been read is not re-emitted, which is what preserves
+// the keys this version does not know (`D26`, `P4`); rendering a new one from
+// the values in hand says what those values are, in the only place a reader will
+// think to look.
+func (m Manifest) TOML() []byte {
+	var b strings.Builder
+	fmt.Fprintf(&b, "# The manifest. Optional: a KB with no %s gets these defaults.\n", ManifestName)
+	fmt.Fprintf(&b, "title = %s\n\n", tomlString(m.Title))
+	b.WriteString("# A sentence or two about the KB. Free text; nothing reads it but a person.\n")
+	fmt.Fprintf(&b, "description = %s\n\n", tomlString(m.Description))
+	b.WriteString("# Added to the built-in types: topic, concept and note.\n")
+	fmt.Fprintf(&b, "types = %s\n\n", tomlList(m.Types))
+	b.WriteString("# What `new` applies when a page does not choose a type.\n")
+	fmt.Fprintf(&b, "default_type = %s\n\n", tomlString(m.DefaultType))
+	b.WriteString("# A built-in formatter. Not a CSL style.\n")
+	fmt.Fprintf(&b, "citation_style = %s\n\n", tomlString(m.CitationStyle))
+	if len(m.Ignore) > 0 {
+		b.WriteString("# Paths outside the KB, relative to the KB root. * is one segment, ** crosses them.\n")
+		fmt.Fprintf(&b, "ignore = %s\n\n", tomlList(m.Ignore))
+	}
+	b.WriteString("# The export family's defaults. Depth is hops; 0 means no limit.\n")
+	b.WriteString("[export]\n")
+	fmt.Fprintf(&b, "default_depth = %d\n", m.Export.DefaultDepth)
+	return []byte(b.String())
+}
+
+// tomlString quotes a value the way TOML's basic strings are written. Go's own
+// quoting is close but not the same, and a title with a quote or a backslash in
+// it has to survive the round trip through a file the tool then reads back.
+func tomlString(s string) string {
+	var b strings.Builder
+	b.WriteByte('"')
+	for _, r := range s {
+		switch r {
+		case '"', '\\':
+			b.WriteByte('\\')
+			b.WriteRune(r)
+		case '\n':
+			b.WriteString(`\n`)
+		case '\r':
+			b.WriteString(`\r`)
+		case '\t':
+			b.WriteString(`\t`)
+		default:
+			if r < 0x20 || r == 0x7f {
+				fmt.Fprintf(&b, `\u%04X`, r)
+				continue
+			}
+			b.WriteRune(r)
+		}
+	}
+	b.WriteByte('"')
+	return b.String()
+}
+
+// tomlList writes an array of TOML basic strings.
+func tomlList(items []string) string {
+	parts := make([]string, 0, len(items))
+	for _, s := range items {
+		parts = append(parts, tomlString(s))
+	}
+	return "[" + strings.Join(parts, ", ") + "]"
+}
+
 // DefaultManifest is what a KB with no manifest is assumed to have said.
 func DefaultManifest(rootName string) Manifest {
 	return Manifest{

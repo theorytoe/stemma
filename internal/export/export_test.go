@@ -21,15 +21,15 @@ var updateGolden = flag.Bool("update", false, "rewrite the golden files from the
 func testKB(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	writeFile(t, dir, "stemma.toml", "title = \"Export Test\"\ndescription = \"A KB for the dump tests.\"\n")
-	writeFile(t, dir, "pages/index.md", "---\ntitle: Home\ntype: index\ntags: [site]\n---\nHome links [[Alpha]], [[Beta]] and [[Nowhere]].\n")
-	writeFile(t, dir, "pages/alpha.md", "---\ntitle: Alpha\ntype: concept\naliases: [First]\n---\nAlpha cites [@bush1945] and [@missing2020]. See [[Beta]].\n")
-	writeFile(t, dir, "pages/beta.md", "---\ntitle: Beta\ntype: concept\naliases: [Alpha]\n---\nBeta also answers to [[First]].\n")
-	writeFile(t, dir, "bibliography.bib", "@article{bush1945,\n  author = {Bush, Vannevar},\n  title = {As We May Think},\n  year = {1945},\n}\n")
+	writeKBFile(t, dir, "stemma.toml", "title = \"Export Test\"\ndescription = \"A KB for the dump tests.\"\n")
+	writeKBFile(t, dir, "pages/index.md", "---\ntitle: Home\ntype: index\ntags: [site]\n---\nHome links [[Alpha]], [[Beta]] and [[Nowhere]].\n")
+	writeKBFile(t, dir, "pages/alpha.md", "---\ntitle: Alpha\ntype: concept\naliases: [First]\n---\nAlpha cites [@bush1945] and [@missing2020]. See [[Beta]].\n")
+	writeKBFile(t, dir, "pages/beta.md", "---\ntitle: Beta\ntype: concept\naliases: [Alpha]\n---\nBeta also answers to [[First]].\n")
+	writeKBFile(t, dir, "bibliography.bib", "@article{bush1945,\n  author = {Bush, Vannevar},\n  title = {As We May Think},\n  year = {1945},\n}\n")
 	return dir
 }
 
-func writeFile(t *testing.T, dir, name, body string) {
+func writeKBFile(t *testing.T, dir, name, body string) {
 	t.Helper()
 	p := filepath.Join(dir, filepath.FromSlash(name))
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
@@ -134,7 +134,7 @@ func TestCitationsSayWhetherTheyResolve(t *testing.T) {
 // empty list is an empty list and not a missing key.
 func TestEmptyListsArePresent(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, dir, "stemma.toml", "title = \"Empty\"\n")
+	writeKBFile(t, dir, "stemma.toml", "title = \"Empty\"\n")
 	got, err := Assemble(load(t, dir)).Bytes()
 	if err != nil {
 		t.Fatal(err)

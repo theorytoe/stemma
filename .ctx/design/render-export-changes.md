@@ -123,3 +123,21 @@ quietly."
   build tag.
 - Tests — `make check` builds and tests every package.
 - Decision ref — none
+
+### internal/cli — the build command registered
+
+- Date — 2026-09-29
+- Prior task — 2 (CLI surface)
+- What changed — `buildCommand` added in `internal/cli/build.go` and to the
+  `commands` table in `internal/cli/cli.go`, next to `serve`.
+- Why — the renderer has two entry points (`D40`), and the table is where a
+  surface is added: dispatch, help and the generated CLI reference are all read
+  from it, so none of them needed a second list. The command itself stays thin,
+  resolving the output directory and handing the writing to `internal/build`.
+- Interface impact — the table gains `build`; nothing else moves. `internal/build`
+  is new and belongs to this delegate.
+- Tests — `internal/build` covers the write, the URL decoding, the relative
+  addresses, and what a rebuild removes and what it leaves alone;
+  `internal/cli/build_test.go` covers the default directory, a relative `--out`,
+  and the JSON payload.
+- Decision ref — none

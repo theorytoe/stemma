@@ -41,7 +41,7 @@ functional requirement, not a preference. Readability, navigation, per-type and
 per-tag index pages, backlink lists, and search in server mode are all plain HTML.
 JavaScript is permitted only for polish — incremental client-side search, filtering
 — and is loaded as a plain static asset with no build step, no npm, and no
-framework (`D9`). Task 5 is the gate that keeps this honest.
+framework (`D9`). Task 6 is the gate that keeps this honest.
 
 ## One renderer, two entry points
 
@@ -317,12 +317,37 @@ an extract is refused instead.
 
 ## Task 9:
 
-Status: Not started
+Status: Done
 
 Extract validation gate. Assert that every extract lints clean under `--strict`,
 resolves every internal link it kept, and resolves every citation it materialised.
 Round-trip a KB, extract a page from it, and verify the extract stands alone. This
 is the test that makes `D30` true rather than aspirational.
+
+It closed as two tests and a Make target, over the project's own wiki, because
+that is the KB the definition of done is written about.
+`TestEveryExtractStandsAlone` takes every page at both depths — thirty-two
+extracts, not a sample, because the case a sample would miss is the interesting
+one — writes each, loads it back, and requires that `Lint(kb.Strict)` finds
+nothing. It then says the same thing in the tool's own vocabulary: every link the
+extract kept resolves to exactly one page, and every citation it kept names an
+entry the extract carries. The negative runs are what give it teeth — keeping a
+link that leaves the slice fails it, and so does letting the root keep its own
+path instead of taking the entry document's.
+
+`TestAnExtractOfAnExtractIsItself` is the round trip. An extract is a KB, so it
+can be extracted from again, and the second pass reproduces it file for file
+except for the manifest and the record in `.stemma/`, which say where the extract
+came from — and an extract of an extract came from somewhere else. That is the
+strongest form of "stands alone" available here: the artifact is a fixed point of
+the operation that made it, so nothing about it depends on the tree it came from
+still being there.
+
+`make extract` is the end-to-end half, in `check` beside the site: it extracts the
+example wiki's entry document at full depth, lints the result under `--strict`,
+and builds it as a site. That extract happens to be the whole KB — sixteen pages
+and three sources — so the gate covers the wide case while the tests cover the
+narrow ones.
 
 ## Task 10:
 

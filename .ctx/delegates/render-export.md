@@ -351,7 +351,7 @@ narrow ones.
 
 ## Task 10:
 
-Status: Not started
+Status: Done
 
 The site's home page. Today `index.html` is the authored entry document, so the
 KB's root page and the site's home page are the same page (`homeURL`). Consider
@@ -366,3 +366,37 @@ it is, and whether `pages/index.md` keeps any meaning once it is. Note that an
 extract's root is renamed to the entry document precisely because that path means
 "the page a reader arrives at", so if the site stops honouring `pages/index.md`
 the two should be settled together rather than drifting apart.
+
+It closed as a generated landing page at `index.html`, which is `D72`, and the
+question the task left open turned out to have a third answer: wrap it. The entry
+document's body is the page's opening and the blocks are counted from the KB
+around it. Nothing moves, because that page's address was already `index.html` —
+the page an author writes as a way in and the page a reader arrives at become one
+document instead of two wanting one URL. That also settles what the task flagged:
+separating them would have given `pages/index.md` an address of its own and moved
+every link to it away from the home.
+
+The blocks are the ones the author chose after looking at what Wikipedia's Main
+Page is actually made of, which was worth doing. It is eight blocks built from
+four kinds of dynamism, and only two of those — enumeration and recency — are
+things a tool can produce honestly; the editorial ones ("featured article", "did
+you know") were left out on purpose, because copying their shape without the
+judgement would produce a page that lies about having an editor. So the page
+carries the counts, the types and tags, the newest sources, and what lint would
+like fixed.
+
+Two of those are worth naming. The recency is the bibliography's and not the
+pages': the format records no dates for pages at all, and mtimes are worthless the
+moment a KB is cloned, so a "recently changed" list would be a lie exactly when
+someone else received the KB — while `stemma-retrieved` is a real date that
+travels with the entry. And the maintenance block renders as nothing when there is
+nothing to fix, which is what lets it sit on a published page; the example wiki has
+no such block at all.
+
+The entry document came out of it **optional**, which is the part that had been
+worth arguing about. `init` still writes one, because a new KB deserves a worked
+example of the format, but a KB without one now gets a fully generated home page
+and nothing breaks. What could not be dropped was its other role: the page nothing
+is expected to link to, which is what lets an extract's root lint clean under
+`--strict` (Task 9's gate). An extract renames its root into that place, so the two
+tasks compose without either having to know about the other.

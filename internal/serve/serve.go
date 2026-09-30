@@ -73,11 +73,19 @@ func (s *Server) refresh() error {
 	if err != nil {
 		return err
 	}
-	byURL := make(map[string]render.Document, len(docs))
+	// Keyed by the decoded URL, because that is what a request carries: net/http
+	// hands over URL.Path already unescaped, so a request for
+	// "two%20words.html" arrives as "two words.html". Keying by the URL as
+	// written would 404 exactly the pages whose names have to be escaped.
+	byPath := make(map[string]render.Document, len(docs))
 	for _, d := range docs {
-		byURL[d.URL] = d
+		p, err := render.FilePath(d.URL)
+		if err != nil {
+			return err
+		}
+		byPath[p] = d
 	}
-	s.kb, s.renderer, s.docs, s.version = k, r, byURL, version
+	s.kb, s.renderer, s.docs, s.version = k, r, byPath, version
 	return nil
 }
 

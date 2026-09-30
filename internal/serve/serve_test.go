@@ -85,6 +85,24 @@ func TestServesPagesAndAssets(t *testing.T) {
 	}
 }
 
+// A page whose name has to be escaped is served at its escaped URL. net/http
+// hands the handler a decoded path, so documents are looked up by their decoded
+// form; keyed by the URL as written, this page would 404.
+func TestServesPagesWithEscapedNames(t *testing.T) {
+	root := writeKB(t)
+	writeFile(t, root, "pages/two words.md", "---\ntitle: Two Words\ntype: note\n---\nBody.\n")
+	srv, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(srv)
+	defer ts.Close()
+
+	if status, _, _ := get(t, ts.URL+"/two%20words.html"); status != http.StatusOK {
+		t.Errorf("GET /two%%20words.html = %d, want 200", status)
+	}
+}
+
 // TestServerSideSearch is the P9 requirement for search: the form is answered
 // on the server, so results arrive without any JavaScript running.
 func TestServerSideSearch(t *testing.T) {

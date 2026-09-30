@@ -48,6 +48,25 @@ func SourceURL(key string) string {
 	return kb.SourcesDir + "/" + url.PathEscape(key) + ".html"
 }
 
+// FilePath is the unescaped form of a site URL: the name a build writes to
+// disk and the name a server matches a decoded request against. A URL carries
+// escapes and a file name does not — a page with a space in its name is served
+// at "two%20words.html" and stored as "two words.html" — so a consumer that
+// puts a URL on disk, or looks one up from an incoming request, decodes each
+// segment first. Both entry points decode here, so the site built and the site
+// served are the same site.
+func FilePath(pageURL string) (string, error) {
+	segs := strings.Split(pageURL, "/")
+	for i, s := range segs {
+		decoded, err := url.PathUnescape(s)
+		if err != nil {
+			return "", fmt.Errorf("unreadable URL %s: %w", pageURL, err)
+		}
+		segs[i] = decoded
+	}
+	return strings.Join(segs, "/"), nil
+}
+
 // Renderer renders one KB's pages in one citation style.
 type Renderer struct {
 	kb        *kb.KB
@@ -80,14 +99,14 @@ func New(k *kb.KB) (*Renderer, error) {
 	}
 	back, out, top := nodeCounts(k)
 	return &Renderer{
-		kb:           k,
-		formatter:    f,
-		templates:    t,
-		title:        k.Manifest.Title,
-		home:         homeURL(k),
-		backCounts:   back,
-		outCounts:    out,
-		topDegree:    top,
+		kb:         k,
+		formatter:  f,
+		templates:  t,
+		title:      k.Manifest.Title,
+		home:       homeURL(k),
+		backCounts: back,
+		outCounts:  out,
+		topDegree:  top,
 	}, nil
 }
 

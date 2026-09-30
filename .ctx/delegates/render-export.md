@@ -123,12 +123,25 @@ the site needs it.
 
 ## Task 2:
 
-Status: Not started
+Status: Done
 
 Templates and assets. `html/template` templates and embedded static assets, one set
 serving both entry points. Include the plain-HTML index pages per type and per tag,
 backlink lists, and the reference list per page. Visual design is not the point;
 navigability and correctness are.
+
+It closed with the document layer in `internal/render`: `templates/` and
+`assets/` embedded in the binary, and a `Renderer` that renders a page, the Index
+page, a type index, a tag index and a virtual source page, and enumerates the
+whole site as `[]Document`. `Documents()` is the one surface both entry points
+will read, and it reports a URL produced twice instead of letting one document
+overwrite another. A page shows a meta line (type, status, tags, aliases), then
+its reference list, then its backlinks; an empty section is omitted, so a page
+nothing links to has no backlinks heading. A type or tag with no page gets no
+index, and a tag's identity is its normalised form, so every spelling shares one
+page. No document emits a script, which is the `P9` gate held at the template
+level. Addresses and the light/dark stylesheet are those of `D69`; the visual
+design is expected to change once the site can be seen in a browser.
 
 ## Task 3:
 

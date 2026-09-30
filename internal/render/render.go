@@ -103,7 +103,7 @@ func New(k *kb.KB) (*Renderer, error) {
 		formatter:  f,
 		templates:  t,
 		title:      k.Manifest.Title,
-		home:       homeURL(k),
+		home:       homeURL(),
 		backCounts: back,
 		outCounts:  out,
 		topDegree:  top,

@@ -518,3 +518,77 @@ mark {
   color: inherit;
   padding: 0 0.1em;
 }
+
+/* The landing page: the entry document's opening, then the blocks counted from
+   the KB. The blocks reuse the rule-and-heading treatment the page-footer
+   sections use, so the home page reads as the same site rather than a special
+   one. */
+.description {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.counts {
+  margin: 0 0 2rem;
+  color: var(--muted);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.8rem;
+}
+
+.counts a {
+  color: var(--muted);
+}
+
+.home-block {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.95rem;
+}
+
+.home-block h2 {
+  margin-top: 0;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.home-block h3 {
+  margin: 1.25rem 0 0.5rem;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.home-block h3 + ul {
+  margin-top: 0;
+}
+
+.source-list,
+.attention-list {
+  padding-left: 1.1rem;
+}
+
+.source-list li,
+.attention-list li {
+  margin-bottom: 0.5rem;
+}
+
+.retrieved,
+.cited-by {
+  color: var(--muted);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.75rem;
+}
+
+.cited-by {
+  display: block;
+}
+
+.attention .count {
+  color: var(--red);
+  font-weight: 600;
+}

@@ -167,14 +167,16 @@ func parseTemplates() (*template.Template, error) {
 	return t, nil
 }
 
-// homeURL is the address of the site's entry document: the authored index page
-// when the KB has one, and the generated Index otherwise.
-func homeURL(k *kb.KB) string {
-	if p := kb.PagesDir + "/index.md"; hasPage(k, p) {
-		return PageURL(p)
-	}
-	return indexURL
-}
+// homeURL is the address of the site's home page, which is always the generated
+// landing page.
+//
+// It is the entry document's address, and that is the point of the whole design:
+// when a KB has an entry document, the landing page is rendered at that address
+// and the entry document's body is the page's opening, so the page the author
+// wrote and the page a reader arrives at are one document rather than two wanting
+// the same URL. When a KB has no entry document, the address is still this one
+// and the landing page is generated alone.
+func homeURL() string { return PageURL(kb.EntryDocument) }
 
 // rel is a link from one document to another, written relative to the first.
 // Every address the templates and the renderer emit goes through it, so a page
@@ -216,11 +218,6 @@ func (r *Renderer) siteFor(docURL string) SiteData {
 // EnableSearch adds the search form. Only a server can answer it, so a built
 // site leaves it off rather than shipping a form that submits to nothing.
 func (r *Renderer) EnableSearch() { r.search = true }
-
-func hasPage(k *kb.KB, p string) bool {
-	_, ok := k.Graph.Page(p)
-	return ok
-}
 
 // execute runs one named template over some data.
 func (r *Renderer) execute(name string, data any) ([]byte, error) {
@@ -374,6 +371,12 @@ func (r *Renderer) Documents() ([]Document, error) {
 	}
 
 	for _, p := range r.kb.Graph.Paths() {
+		// The entry document is not written as a page of its own. Its address is
+		// the home page's and it is rendered there, as the landing page's
+		// opening, so that a link to it arrives where a reader starts.
+		if p == kb.EntryDocument {
+			continue
+		}
 		body, err := r.Page(p)
 		if err != nil {
 			return nil, err
@@ -381,7 +384,13 @@ func (r *Renderer) Documents() ([]Document, error) {
 		addHTML(PageURL(p), body)
 	}
 
-	body, err := r.All()
+	body, err := r.Home()
+	if err != nil {
+		return nil, err
+	}
+	addHTML(homeURL(), body)
+
+	body, err = r.All()
 	if err != nil {
 		return nil, err
 	}

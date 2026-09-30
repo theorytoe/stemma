@@ -1,0 +1,56 @@
+{{define "home"}}<!doctype html>
+<html lang="en">
+<head>
+{{template "head" .}}
+</head>
+<body>
+{{template "header" .}}
+<main>
+  <h1>{{.Heading}}</h1>
+  {{if .Description}}<p class="description">{{.Description}}</p>{{end}}
+  {{if .Counts}}<p class="counts">{{range $i, $c := .Counts}}{{if $i}} · {{end}}{{if $c.URL}}<a href="{{$c.URL}}">{{$c.Text}}</a>{{else}}{{$c.Text}}{{end}}{{end}}</p>{{end}}
+  {{if .Opening}}
+  <article class="opening">
+{{.Opening}}
+  </article>
+  {{end}}
+  {{if or .Types .Tags}}
+  <section class="home-block">
+    <h2>Browse</h2>
+    {{if .Types}}
+    <h3><a href="{{.Site.TypesURL}}">By type</a></h3>
+    <ul class="type-list">
+      {{range .Types}}<li><a href="{{.URL}}">{{.Name}}</a> <span class="count">{{.Count}}</span></li>{{end}}
+    </ul>
+    {{end}}
+    {{if .Tags}}
+    <h3><a href="{{.Site.TagsURL}}">By tag</a></h3>
+    <ul class="tag-list">
+      {{range .Tags}}<li><a href="{{.URL}}">{{.Name}}</a> <span class="count">{{.Count}}</span></li>{{end}}
+    </ul>
+    {{end}}
+  </section>
+  {{end}}
+  {{if .Sources}}
+  <section class="home-block">
+    <h2>Newest sources</h2>
+    <ul class="source-list">
+      {{range .Sources}}<li><a href="{{.URL}}">{{.Title}}</a>{{if .Year}} <span class="year">{{.Year}}</span>{{end}}{{if .Retrieved}} <span class="retrieved">read {{.Retrieved}}</span>{{end}}
+        {{if .CitedBy}}<div class="cited-by">cited by {{range $i, $p := .CitedBy}}{{if $i}}, {{end}}<a href="{{$p.URL}}">{{$p.Title}}</a>{{end}}</div>{{end}}
+      </li>{{end}}
+    </ul>
+  </section>
+  {{end}}
+  {{if .Attention}}
+  <section class="home-block attention">
+    <h2>Needs attention</h2>
+    <ul class="attention-list">
+      {{range .Attention}}<li><span class="count">{{.Count}}</span> {{.Text}}{{if .Pages}} — {{range $i, $p := .Pages}}{{if $i}}, {{end}}<a href="{{$p.URL}}">{{$p.Title}}</a>{{end}}{{end}}</li>{{end}}
+    </ul>
+  </section>
+  {{end}}
+</main>
+{{template "footer" .}}
+</body>
+</html>
+{{end}}

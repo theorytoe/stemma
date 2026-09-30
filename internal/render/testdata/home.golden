@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>House</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="assets/theme.js"></script>
+
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="site-title" href="index.html">House</a>
+    <div class="site-tools">
+      <nav class="site-nav">
+        <a href="index.html">Home</a>
+        <a href="all.html">Index</a>
+        <a href="types.html">Types</a>
+        <a href="tags.html">Tags</a>
+        <a href="graph.html">Graph</a>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Toggle light and dark theme" data-theme-toggle hidden><svg class="icon-sun" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg><svg class="icon-moon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></button>
+    </div>
+    
+  </header>
+
+<main>
+  <h1>Start Here</h1>
+  <p class="description">A KB for the landing-page tests.</p>
+  <p class="counts"><a href="all.html">3 pages</a> · 3 sources · <a href="types.html">3 types</a> · <a href="tags.html">1 tag</a></p>
+  
+  <article class="opening">
+<p>Read <a href="alpha.html">Alpha</a> first, then <a href="beta.html">Beta</a>.</p>
+
+  </article>
+  
+  
+  <section class="home-block">
+    <h2>Browse</h2>
+    
+    <h3><a href="types.html">By type</a></h3>
+    <ul class="type-list">
+      <li><a href="types/concept.html">concept</a> <span class="count">1</span></li><li><a href="types/index.html">index</a> <span class="count">1</span></li><li><a href="types/note.html">note</a> <span class="count">1</span></li>
+    </ul>
+    
+    
+    <h3><a href="tags.html">By tag</a></h3>
+    <ul class="tag-list">
+      <li><a href="tags/site.html">site</a> <span class="count">2</span></li>
+    </ul>
+    
+  </section>
+  
+  
+  <section class="home-block">
+    <h2>Newest sources</h2>
+    <ul class="source-list">
+      <li><a href="sources/new2024.html">A Newer Work</a> <span class="year">2024</span> <span class="retrieved">read 2024-05-01</span>
+        <div class="cited-by">cited by <a href="alpha.html">Alpha</a>, <a href="beta.html">Beta</a></div>
+      </li><li><a href="sources/old2020.html">An Older Work</a> <span class="year">2020</span> <span class="retrieved">read 2020-01-02</span>
+        <div class="cited-by">cited by <a href="alpha.html">Alpha</a></div>
+      </li>
+    </ul>
+  </section>
+  
+  
+  <section class="home-block attention">
+    <h2>Needs attention</h2>
+    <ul class="attention-list">
+      <li><span class="count">1</span> sources nothing cites</li>
+    </ul>
+  </section>
+  
+</main>
+
+  <footer class="site-footer">
+    <p>Built with stemma.</p>
+  </footer>
+
+</body>
+</html>

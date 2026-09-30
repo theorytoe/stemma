@@ -159,12 +159,44 @@ recorded as `D67` and `D68`.
 
 ## Task 6:
 
-Status: Not started
+Status: Done
 
 Render and export. The blackfriday renderer with custom link and citation
 handling, `serve`, `build`, the graph view, the no-JS conformance gate, the
 JSON dump, and scoped extraction with depth control, citation closure, and link
 pruning. See `delegates/render-export.md`.
+
+It closed with the whole surface the delegate set out to build. `internal/render`
+resolves wikilinks and citations through the same scan lint reads, so rendering
+and validation cannot disagree by construction rather than by convention, and it
+emits a dozen documents per KB: every page, the generated home page, the Index,
+the type and tag lists, a graph of the whole KB, and a virtual source page for
+every key that is cited. `serve` answers those documents with server-side search
+and live reload. `build` writes them to a directory that needs no server at all.
+`stemma export json` dumps pages, links, citations and the bibliography for a
+program; `stemma export page` writes one page, what it links to and the sources
+they cite as a KB root in the same format, so every tool reads the result.
+
+Four decisions came out of it and every one was put to the author rather than
+taken quietly, because each is expensive to change once something depends on it:
+`D69`, what a link and a citation become when they render; `D70`, that a dump
+other systems read is one JSON document and carries page bodies so it stands
+alone; `D71`, that an extract renames its root to the entry document, prunes what
+it cannot keep into anchor text, and closes its references; and `D72`, that the
+home page is generated from what the KB holds, wrapping the entry document rather
+than replacing it. Two of those started as contradictions rather than choices — an
+extract's root has no inbound links, so the criterion that an extract lints clean
+could not have held — and the answers changed the format's rules rather than
+working around them.
+
+The delegate also changed code the earlier tasks wrote, and every change is in
+`design/render-export-changes.md`: one scan shared with lint, a per-page finding
+reader, a citation group returned in pieces, a body rewrite, a manifest writer,
+and three commands added to the CLI table. It leaves behind the project's
+definition of done minus its last clause, and `make check` runs all of it: the
+example wiki lints clean under `--strict`, builds a site that works with
+JavaScript off, produces an extract that is itself a KB and also lints clean, and
+none of that is asserted by hand.
 
 ## Task 7:
 

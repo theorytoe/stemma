@@ -152,9 +152,10 @@ content hash, one Go tokenizer and one Go BM25 scorer shared by both tiers, and
 a `Source` interface both tiers implement so search and graph are single
 functions over it. `stemma index`, `stemma search` and `stemma graph` are the
 surface; `status` and `env` report the real index state. `U1` was measured
-rather than guessed — Tier 0 is comfortable to roughly a thousand pages and the
-index begins to pay in the low thousands — and the finding is in `FORMAT.md` and
-the new `README.md`. The choices are recorded as `D67` and `D68`.
+rather than guessed — Tier 0 is comfortable to roughly a thousand pages, and the
+index saves about a third of a search and pays for itself after roughly twenty —
+and the finding is in `FORMAT.md` and the new `README.md`. The choices are
+recorded as `D67` and `D68`.
 
 ## Task 6:
 

@@ -68,7 +68,7 @@ delegate closed too early, and should be raised rather than patched here.
 
 ## Task 1:
 
-Status: Partly done
+Status: Done
 
 Structure the example wiki. Decide the page set and the type of each page —
 rationale, format specification, command reference, and worked examples — then
@@ -81,9 +81,14 @@ the index and lint-clean under `--strict`. The specification and the command
 reference are present. What is missing is a dedicated worked-examples page; the
 closest thing is the walkthrough in `lifecycle.md`.
 
+Done 2026-09-29: `wiki/pages/worked-example.md` ("A first KB, end to end") walks
+init, add, write, cite, check, inspect and build, with the real output of every
+command, and `index.md` links it. Writing it found the family-name bug in
+`--help` recorded in `design/docs-changes.md`.
+
 ## Task 2:
 
-Status: Partly done
+Status: Resolved — FORMAT.md stays canonical
 
 Restructure `FORMAT.md` into a wiki document. Preserve the substance from
 foundation Task 2 — page anatomy, the frontmatter field table, the type vocabulary
@@ -97,9 +102,17 @@ lines, still declares itself the canonical specification, and is still copied in
 the skill references by the Makefile. No wiki page references `FORMAT.md`. The
 restructure has not happened.
 
+Decided 2026-09-29: it is not restructured. `FORMAT.md` stays the canonical,
+self-contained specification and the wiki documents it rather than containing it.
+The premise — that the spec should live in the graph so lint exercises it — is
+given up deliberately, because the spec is one normative artifact that the skill
+suite ships as a single file, and its self-containment is worth keeping. The
+wiki's `format.md` is the documentation's entry point to the format, and the
+Makefile comment that promised the move is corrected.
+
 ## Task 3:
 
-Status: Partly done
+Status: Done
 
 The README. What the project is, how to install from source, and the two-minute
 path to a first KB. State two things plainly so neither is a surprise later: that
@@ -110,9 +123,15 @@ Now: the README states what the project is and how to build and install it. It i
 missing the two-minute first-KB path, the name-collision note, and the dependency
 allowlist note.
 
+Done 2026-09-29: the README gained an install section, a first-KB quickstart that
+points at the worked example, and a dependency section naming the four pinned
+modules and why the list is small. The name-collision note the task asked for was
+dropped on the author's instruction — the collision does not matter in practice —
+so `U6` closed as no confusion rather than as a caveat to publish.
+
 ## Task 4:
 
-Status: Partly done
+Status: Done
 
 CI gates. Add the four gates above plus the tier-parity tests to the workflow
 established in foundation Task 1, and confirm each one actually fails when it
@@ -123,16 +142,28 @@ contributor will see.
 All four gates are now wired. `make check` runs `lint-wiki` (gate 1), `site` (gate
 2), `test`, which includes `internal/build`'s no-JS conformance test (gate 3), and
 `extract`, which is backed by `internal/export`'s gate tests (gate 4). The
-tier-parity tests run under `test` as well. `ci.yml` runs `make check`. Gate 1 was
-confirmed to fail on an unresolved link and on an unknown type; what remains is to
-confirm that gates 2 to 4 fail when they should.
+tier-parity tests run under `test` as well. `ci.yml` runs `make check`.
+
+Each gate was confirmed to fail when it should. Gate 1 fails on an unresolved link
+and on an unknown type. Gate 2 fails on a page whose frontmatter cannot be parsed
+and passes once it is fixed (checked 2026-09-29). The no-JS gate was run against
+four deliberate breaks — a dropped navigation link, an inline script, an unhidden
+toggle, and a link to a missing page — and failed all four, as recorded in
+`delegates/render-export.md`. The extract gate has negative runs: keeping a link
+that leaves the slice fails it, and so does a root that keeps its own path.
 
 ## Task 5:
 
-Status: Not started
+Status: Done
 
 Close out the residual unknowns and record the outcomes in
 `.ctx/design/decisions.md`. `U3`: which citation styles the built-in formatter
 actually needs, decided by looking at the real sources in the example wiki. `U4`:
 whether `env` and `fetch` earn their place, decided by use. `U6`: whether the
 accepted `stemma` name collision has caused any real confusion.
+
+Closed 2026-09-29. `U3`: both styles are kept and **numeric becomes the default**,
+which changed code and is recorded in `design/docs-changes.md`. `U4`: both earn
+their place — `fetch` is used by the research skill, `env` diagnoses a failed
+fetch. `U6`: no confusion, so the README drops the external tool's name. All three
+rows in the register now carry their answer.

@@ -87,8 +87,9 @@ EXTRACT = .stemma/extract/gate
 # The agent skill suite: one directory per skill, following the open Agent Skills
 # standard. The umbrella skill's two references are generated, not committed
 # (P8): the CLI reference comes from the tool's own command table, and the format
-# specification is a copy of FORMAT.md until docs.md moves it into the wiki. Run
-# this before copying skills/ into a harness, because a fresh clone has neither.
+# specification is a copy of FORMAT.md, which stays the canonical, self-contained
+# specification. Run this before copying skills/ into a harness, because a fresh
+# clone has neither.
 SKILLS ?= skills
 
 # Where `make install-skills` puts the suite. The open Agent Skills standard does

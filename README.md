@@ -3,7 +3,34 @@
 A tool for authoring and maintaining a citation-bearing knowledge base on disk.
 Pages are markdown with a small frontmatter block, `[[wikilinks]]` and `[@key]`
 citations; sources live in BibTeX. The format is specified in
-[FORMAT.md](FORMAT.md).
+[FORMAT.md](FORMAT.md); the example wiki under `wiki/` is the project's own
+documentation and is built by the tool itself.
+
+## Install
+
+Go 1.27 or newer. PDF and HTML text extraction additionally needs a `python3`;
+everything else works without it.
+
+    git clone https://github.com/theorytoe/stemma
+    cd stemma
+    make install
+
+`make install` builds with the version stamp and puts `stemma` on `PATH` (it uses
+`go install`, so the binary lands in `GOBIN`, or in `GOPATH/bin` when that is
+unset). `make build` writes `bin/stemma` instead, if you would rather not install
+it. `make install-skills` copies the agent skills into `~/.agents/skills`.
+
+## A first KB
+
+    stemma init demo --title "Demo KB"
+    cd demo
+    stemma new "Vector search" --type concept
+    $EDITOR pages/vector-search.md    # write prose; link with [[...]], cite with [@...]
+    stemma lint --strict
+    stemma build                      # writes .stemma/site
+
+[A first KB, end to end](wiki/pages/worked-example.md) is that walkthrough in
+full, with the real output of every command.
 
 ## Build and check
 
@@ -12,6 +39,20 @@ citations; sources live in BibTeX. The format is specified in
     make install-skills # copy the agent skills into ~/.agents/skills
     make check          # build, vet, test, the shim's tests, and lint the example wiki
     make bench          # measure the two retrieval tiers (below)
+
+## Dependencies
+
+Four direct dependencies, pinned in `go.mod` and present in the module cache, so
+a build works offline:
+
+- `gopkg.in/yaml.v3` — frontmatter.
+- `github.com/BurntSushi/toml` — the manifest.
+- `github.com/russross/blackfriday/v2` — markdown rendering.
+- `modernc.org/sqlite` — the Tier-1 index.
+
+The list is kept small deliberately. Command dispatch, link resolution, the
+renderer's structure, and everything else are the standard library's, and these
+four are what is left once nothing else is let through.
 
 ## Tiers and scale
 

@@ -167,10 +167,10 @@ be discovered during implementation, recorded so they are not mistaken for settl
 | --- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | U1 | **Answered.** Tier 0 is comfortable to roughly 1,000 pages. The index saves about a third of a search at 1,000 and at 10,000 pages, so one build (19 ms / 0.19 s / 2.7 s) pays for itself after roughly twenty searches: it is worth it under repeated queries, not above a particular size. Measured by `make bench` over the whole `search` and `graph` commands, not candidate matching alone; the table is in `FORMAT.md`. | Benchmarking the on-demand resolver.                                             |
 | U2 | Whether global title uniqueness becomes a real nuisance given arbitrary `pages/` structure (D50). | Real use. Path-qualified links are the escape hatch, deliberately not taken now. |
-| U3 | Which citation styles the built-in formatter should cover.                                        | Examining the author's actual sources.                                           |
-| U4 | Whether `env` and `fetch` earn their place in the surface.                                     | Use.                                                                             |
+| U3 | **Answered.** Both `author-date` and `numeric` are kept, and **`numeric` is the default**: `kb.DefaultCitationStyle` and `citestyle.Parse("")` return it, `FORMAT.md` records it, and the example wiki no longer names a style so it exercises the default. CSL stays out of scope. | Examining the author's actual sources.                                           |
+| U4 | **Answered.** Both earn their place. `fetch` is used by the research skill, and `env` is the diagnostic for a failed fetch — it reports python3, the extraction shim, its libraries, and whether sqlite is linked. Neither is required for the core to work. | Use.                                                                             |
 | U5 | Whether `rename` rewriting inbound links is reliable enough to justify D19.                       | Building it. This is the load-bearing assumption of the whole link design.       |
-| U6 | `PATH` shadowing or confusion from the accepted `stemma` name collision.                          | Installing both tools.                                                           |
+| U6 | **Answered.** No confusion; the collision does not matter in practice. The tool keeps the name and the README does not mention it. | Installing both tools.                                                           |
 
 ---
 

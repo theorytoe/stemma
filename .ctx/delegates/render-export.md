@@ -248,12 +248,34 @@ rendering and writing are exercised end to end by CI, not only by the tests.
 
 ## Task 7:
 
-Status: Not started
+Status: Done
 
 `export json`. Pages, links, citations, and bibliography in a documented shape with
 a stable top-level structure. Decide and document whether output is one file or
 JSONL, and include enough metadata to reconstruct the graph without reading the
 source tree.
+
+It closed as one JSON document, which is `D70`. `internal/export` assembles it
+from a loaded KB: every page with its body, every wikilink with the page it
+resolved to or the reason it did not, every citation with whether the
+bibliography defines its key, and the bibliography with both the fields as
+written and the tool's own readings of them. It is deterministic — pages in path
+order, a page's links and citations in the order they appear, entries in key
+order — so it is diffable and a golden file fixes the shape. `stemma export json`
+is the surface, the first member of an `export` family that `export page` will
+join; it writes to `.stemma/export.json` by default, takes an `--out` relative to
+the KB root the way `build` does, and `--out -` writes the document itself to
+standard output. The rule that a relative output is relative to the KB moved to
+one helper both commands now read.
+
+The decisions the task asked for were put to the author rather than taken
+quietly, because a dump other systems read is expensive to change: one document
+rather than JSONL, bodies included so the dump stands alone, and a file by
+default so the `--json` envelope carries a summary rather than the whole document
+inside another one. The shape is in `FORMAT.md` under "Exports", including the
+note that `links` counts wikilinks written while the graph view counts distinct
+links between two pages — the two numbers differ on the example wiki, and a
+reader should not have to work out why.
 
 ## Task 8:
 

@@ -113,13 +113,24 @@ func TestPermuteStopsAtTheTerminator(t *testing.T) {
 	fs := flag.NewFlagSet("x", flag.ContinueOnError)
 	draft := fs.Bool("draft", false, "")
 	got := permute(fs, []string{"Alpha", "--", "--draft"})
-	if strings.Join(got, " ") != "Alpha --draft" {
+	if strings.Join(got, " ") != "-- Alpha --draft" {
 		t.Errorf("permute = %q", got)
 	}
 	if err := fs.Parse(got); err != nil {
 		t.Fatal(err)
 	}
 	if *draft || fs.NArg() != 2 {
+		t.Errorf("draft = %v, args = %q", *draft, fs.Args())
+	}
+
+	// The terminator survives even with nothing before it, which is what a
+	// title like "--draft" needs: flag.Parse must see the "--" and stop, or
+	// it reads the title as a flag.
+	got = permute(fs, []string{"--", "--draft"})
+	if err := fs.Parse(got); err != nil {
+		t.Fatal(err)
+	}
+	if *draft || fs.NArg() != 1 || fs.Args()[0] != "--draft" {
 		t.Errorf("draft = %v, args = %q", *draft, fs.Args())
 	}
 }

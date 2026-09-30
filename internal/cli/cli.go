@@ -281,7 +281,11 @@ func permute(fs *flag.FlagSet, args []string) []string {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if arg == "--" {
-			return append(append(flags, positional...), args[i+1:]...)
+			// Keep the terminator. Everything after it is positional, and
+			// flag.Parse has to see the "--" and stop, or a title that begins
+			// with a dash would be read as a flag.
+			positional = append(positional, args[i+1:]...)
+			return append(append(flags, "--"), positional...)
 		}
 		if len(arg) < 2 || arg[0] != '-' {
 			positional = append(positional, arg)

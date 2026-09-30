@@ -35,16 +35,20 @@ owns it. You own what the page says.
    stemma new "A Settled Title" --type concept       # a page
    ```
 
-   A title that begins with a dash is still a title: put `--` before it.
+   A title that begins with a dash is still a title: put the flags first, then
+   `--`, then the title -- `stemma new --type note -- "--draft"`.
 
 2. **Give it a type from the vocabulary.** `topic`, `concept`, and `note`, plus
    whatever the manifest adds. Never assign `source` or `index` -- the tool owns
    those. An unknown type warns by default and errors under `--strict`.
 
-3. **Write the body.** The body is the one part of the file you write by hand:
-   `new` created the frontmatter, and you edit the prose beneath it. Do not
-   hand-edit the frontmatter, a link's target, or a filename -- the tool owns
-   those. Link with `[[Title]]`; cite with `[@key]`.
+3. **Write the body.** `new` made the frontmatter; you write the prose beneath
+   it. Link with `[[Title]]`; cite with `[@key]`. Never edit a filename, a
+   link's target, or a citation key by hand: the tool owns those, and a hand
+   edit leaves the graph broken. Change a title with `rename` and a status with
+   `archive`, because those keep the links and the reason consistent. The
+   `type`, `aliases` and `tags` fields have no command for an existing page; set
+   them in the frontmatter yourself.
 
    - A link resolves by title, slug, or alias. If two pages resolve one link,
      that is an error; `stemma lint` reports it and `stemma show` shows what

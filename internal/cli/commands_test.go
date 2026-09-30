@@ -160,6 +160,26 @@ func TestNewRefusesWhatWouldBreakTheKB(t *testing.T) {
 	}
 }
 
+// A title that begins with a dash is still a title when it follows the
+// terminator, because everything after "--" is positional.
+func TestNewAcceptsATitleBeginningWithADash(t *testing.T) {
+	root := freshKB(t)
+	// Flags come before the terminator; everything after it is positional.
+	code, _, stderr := run("new", "--kb", root, "--type", "note", "--", "--draft")
+	if code != ExitOK {
+		t.Fatalf("exit = %d: %s", code, stderr)
+	}
+	// The title is "--draft", so it normalises to pages/draft.md. Had it been
+	// read as the --draft flag, new would have had no title at all and refused.
+	body, err := os.ReadFile(filepath.Join(root, "pages", "draft.md"))
+	if err != nil {
+		t.Fatalf("the page was not created: %v", err)
+	}
+	if !strings.Contains(string(body), "--draft") {
+		t.Errorf("the title was not preserved:\n%s", body)
+	}
+}
+
 // A type the vocabulary does not know is a warning by default and an error
 // under --strict (D55), never a usage error. By default the page is written
 // with the warning; under --strict it is refused.

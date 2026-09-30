@@ -66,8 +66,8 @@ with no loss, because it is a cache and never a source of truth.
 
 No command may require it. A KB with no `.stemma/` directory is fully usable.
 
-Two of the things inside it are worth naming, because commands put them there and
-a person may want to read them:
+Three of the things inside it are worth naming, because commands put them there
+and a person may want to read them:
 
 - `.stemma/shim/extract.py` — the extraction script. `init` writes it and the tool
   rewrites it whenever it does not match the binary, so an edit there is lost;
@@ -76,6 +76,8 @@ a person may want to read them:
   source it came from. Both halves are derived from the pointer, so fetching one
   source twice lands on the same file and two sources cannot land on one
   (`--clear` empties the directory and leaves the rest of `.stemma/` alone).
+- `.stemma/export.json` — the machine-readable dump `export json` writes. Its
+  shape is under "Exports", and `--out` puts it somewhere else.
 
 The fetched text is a cache and never a record. What a source *is* lives in the
 bibliography, with its pointer, its retrieval date and its content hash; what it
@@ -517,6 +519,64 @@ one. A directory holding neither is not a KB root.
 
 If none of these finds a KB root, the command fails with exit code `2`. There is
 no registry and no daemon.
+
+## Exports
+
+Two things leave a KB, and only two. Whole-KB sharing is `git clone` or `tar` and
+needs no tooling at all (`D25`), which is why there is no bundling subsystem.
+What the tool produces is a dump for a program, and a scoped KB for another
+person.
+
+### The JSON dump
+
+`stemma export json` writes one JSON document, by default to
+`.stemma/export.json`. It is one document rather than JSONL because a KB is a
+graph and a graph is not a stream: the whole answer is one object, and a consumer
+that wants records iterates an array. Every list is present even when it is
+empty, so a consumer never has to tell "none" from "not in this version".
+
+The top-level keys are fixed. `version` is the schema version of this document
+and not of the KB, and it is currently `1`.
+
+| Key            | What it holds                                            |
+| -------------- | -------------------------------------------------------- |
+| `version`      | the schema version of the document itself                |
+| `kb`           | `title`, `description`, `citation_style`                 |
+| `counts`       | the length of each list below                            |
+| `pages`        | one record per page                                      |
+| `links`        | one record per wikilink written, in the order it appears |
+| `citations`    | one record per key cited, in the order it appears        |
+| `bibliography` | one record per entry the bibliography defines            |
+
+A **page** carries `path`, the site `url` it is served at, `title`, `type`,
+`status`, `tags`, `aliases`, `archive_reason` when it has one, and `body`: the
+markdown exactly as it is on disk, frontmatter excluded, because the fields
+beside it are that frontmatter already read. The dump therefore stands alone — a
+consumer can read the prose without the KB tree.
+
+A **link** carries the page it is in, the `target` as the author wrote it, its
+`line`, and how it resolved: `resolved`, `unresolved`, or `ambiguous`. `to` names
+the page it reached when exactly one page answered to the name, and `matches`
+names every claimant when more than one did. This is every wikilink *written*, so
+a link written twice is two records; the graph the site draws counts distinct
+links between two pages, which is why its number is the smaller one.
+
+A **citation** carries the page, the `key`, its `line`, its `locator` when it has
+one, and `resolved`, which says whether the bibliography defines that key. The
+citation's form — its group, its prefix, whether it was written narratively — is
+how it should be *rendered*, and rendering is not what the dump is for.
+
+A **bibliography entry** carries `key`, `type`, `fields` as the entry was written,
+and the tool's own readings of the same entry: `title`, `year`, `authors`, `url`.
+Those readings are what the citation formatter uses, and they are not the same
+thing as the raw fields — a year is a date string in BibTeX and a normalised year
+here.
+
+Drafts are not in the dump. `inbox/` is not part of the knowledge (`D24`), and an
+export is a view of the knowledge.
+
+`--out -` writes the document to standard output instead of to a file, which is
+what makes `stemma export json --out - | jq` work.
 
 ## Leniency and preservation
 

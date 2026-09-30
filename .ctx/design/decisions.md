@@ -114,6 +114,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D44 | Out-of-scope links are **pruned** from the extract.                                                                                                                   | Q21       |
 | D51 | Pruned links **retain their anchor text** as plain text. A summary is reported by default; a flag emits the full list.                                                | Q36       |
 | D33 | A **JSON/JSONL machine-readable dump** of pages, links, and citations is included.                                                                                    | Q21       |
+| D70 | The dump is **one JSON document**, not JSONL, carrying the **page bodies** as well as the metadata so it stands alone, with a **schema version of its own** and a shape documented in `FORMAT.md`. It is written to **`<kb>/.stemma/export.json`** by default, and `--out -` writes it to standard output. | review    |
 | D67 | The Tier-1 index is **one file, `<kb>/.stemma/index.sqlite`**, versioned by SQLite's `user_version`; any other version, or a file that is not a database, is deleted and rebuilt. Tokens are defined by **one Go tokenizer** shared by both tiers; FTS5 is an external-content index over a `tokens` column those tokens fill, and **BM25 ranking and snippets are Go code**. | review    |
 | D68 | Retrieval is one **data-source interface** (`index.Source`) that both tiers implement, not an interface of queries. Search, graph traversal and the orphan and dead-end listings are single functions over it, so the tiers agree by construction. The interface includes **batch forms** (`Docs`, `LinksAll`, `BacklinksAll`), because a rule over the whole corpus must not become one query per page. `NewSource` prefers a fresh index and **silently falls back to the KB**, reporting the downgrade through one optional callback. | review    |
 
@@ -123,6 +124,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | --- | ---------------------------------------------------------------------------------------------------------------------- | --------- |
 | D40 | One renderer, invoked as **`serve`** and **`build`**.                                                                  | Q25       |
 | D41 | **One KB per invocation.** Discovery: explicit path → environment variable → walk-up from cwd. No registry, no daemon. | Q26       |
+| D69 | A resolved wikilink renders as an anchor showing the **page's own title**; an unresolved or ambiguous one renders as the written text inside a marked span; a citation links each key to that key's virtual source page. | review    |
 
 ---
 
@@ -358,6 +360,46 @@ unreachable from the body.
 The format deliberately leaves the HTML shape to the presentation layer, so these
 are the site's choices rather than the format's, and they are recorded the way the
 index choices were: because they are expensive to change once pages are published.
+
+### The JSON dump — one document, bodies included. `D70` added.
+
+**Decision.** `stemma export json` writes one JSON document, by default to
+`<kb>/.stemma/export.json`, holding the pages, every wikilink with how it
+resolved, every citation with whether the bibliography defines it, and the
+bibliography itself. Page bodies are in it. The document carries a `version` of
+its own — `1` — every list is present even when empty, and the shape is
+documented in `FORMAT.md`.
+
+**Why one document and not JSONL.** `D33` left the form open. A KB is a graph,
+and a graph is not a stream: the whole answer is one object, and a consumer that
+wants records iterates an array. JSONL would make the record order and a per-line
+discriminator part of the contract — surface to keep stable for no gain at KB
+scale, where thousands of pages is a few megabytes. The records are the same
+records, so a JSONL form can be added later without changing this one.
+
+**Why the bodies.** `D33` names pages alongside links and citations, and the
+purpose is consumption by other agent and RAG systems. A dump without the prose
+sends the consumer back to the source tree, which is the one thing the dump
+exists to avoid. The body is the markdown as it is on disk, so the dump is a view
+of the KB rather than a second rendering of it.
+
+**Why a version of its own.** `D26` refuses a behaviour-changing version field in
+the KB format, and this is not that. It is the schema version of one generated
+artifact, whose only reader is a program that has nothing else to tell it that
+the shape moved.
+
+**Why a file by default.** An artifact belongs in a file the way the built site
+does, and it keeps the universal `--json` envelope carrying a summary rather than
+the whole document re-encoded inside another JSON object. `--out -` writes the
+document to standard output when a pipe was what was wanted.
+
+**What is deliberately absent.** A page's fields are the ones the format defines;
+a citation's group, prefix and narrative form are how it should be rendered
+rather than what it is; and drafts are absent because `inbox/` is not part of the
+knowledge.
+
+**Provenance.** Put to the tool author with the alternatives before the package
+existed, and answered: one document, bodies included, a file by default.
 
 ### U5 — rewriting inbound links. `D19` stands.
 

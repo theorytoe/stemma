@@ -156,3 +156,39 @@ quietly."
 - Tests — `internal/build`'s conformance test is the assertion half and runs
   inside `test`.
 - Decision ref — none
+
+### internal/cli — the export family registered
+
+- Date — 2026-09-29
+- Prior task — 2 (CLI surface)
+- What changed — `exportCommand` and its `json` member added in
+  `internal/cli/export.go` and to the `commands` table in `internal/cli/cli.go`.
+  The rule for where a command writes was extracted to `outputPath`, which
+  `build` now reads as well.
+- Why — a surface is added in the table: dispatch, help and the generated CLI
+  reference all read it. `outputPath` exists because two commands now take a path
+  that is relative to the KB root rather than to the working directory, and that
+  rule should be stated once rather than twice.
+- Interface impact — the table gains `export`, a noun family with one member, so
+  `export` alone is a usage error the way `cite` alone is. `internal/export` is
+  new and belongs to this delegate.
+- Tests — `internal/export` covers the shape against a golden, each link
+  resolution, a citation that does not resolve, the empty lists, determinism and
+  the body; `internal/cli/export_test.go` covers the default location, a
+  relative `--out`, `--out -`, and the JSON payload.
+- Decision ref — D70
+
+### FORMAT.md — the JSON dump documented
+
+- Date — 2026-09-29
+- Prior task — 1 (foundation)
+- What changed — a `## Exports` section added with `### The JSON dump`, and
+  `.stemma/export.json` added to the named artifacts under `.stemma/`.
+- Why — `D70` settles a shape other systems read, so it belongs where the format
+  is written. `.stemma/` is where the file lands, and the new section is the
+  place `export page` will be documented too.
+- Interface impact — none; the KB format itself does not change. This documents a
+  generated artifact rather than the KB root.
+- Tests — the dump's golden test is the shape's regression; nothing in the format
+  reads this section.
+- Decision ref — D70

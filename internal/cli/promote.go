@@ -60,14 +60,11 @@ var promoteCommand = &command{
 
 			pageType := *typ
 			if pageType != "" {
-				// An explicit --type is a request from the caller, so an unknown
-				// one is a usage error rather than a finding about the draft.
-				if !k.Vocabulary.Assignable(pageType) {
-					if kb.IsReservedType(pageType) {
-						return w.fail(fmt.Errorf("%q is a type the tool owns and does not assign", pageType))
-					}
-					return w.fail(fmt.Errorf("%q is not a type this KB knows; add it to %s",
-						pageType, kb.ManifestName))
+				// A reserved type is the tool's own and is never assigned, so
+				// choosing one is a usage error. An unknown type is not: it is
+				// caught by validation below, as a finding about the draft (D55).
+				if kb.IsReservedType(pageType) {
+					return w.fail(fmt.Errorf("%q is a type the tool owns and does not assign", pageType))
 				}
 				if err := page.Set(kb.FieldType, pageType); err != nil {
 					return w.fail(err)

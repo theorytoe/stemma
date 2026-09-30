@@ -404,6 +404,24 @@ func TestPromoteRefusesAnInvalidDraft(t *testing.T) {
 	}
 }
 
+// An explicit unknown --type is a finding about the draft, not a usage error.
+func TestPromoteTreatsAnUnknownExplicitTypeAsAFinding(t *testing.T) {
+	root := writeTree(t, map[string]string{
+		"pages/index.md":   page("Index", "type: index", ""),
+		"inbox/thought.md": "---\ntitle: A Thought\n---\n",
+	})
+	code, stdout, _ := run("promote", "--kb", root, "thought", "--type", "wizard")
+	if code != ExitFindings {
+		t.Errorf("exit = %d, want %d", code, ExitFindings)
+	}
+	if !strings.Contains(stdout, "wizard") {
+		t.Errorf("the finding does not mention the type:\n%s", stdout)
+	}
+	if _, err := os.Lstat(filepath.Join(root, "inbox", "thought.md")); err != nil {
+		t.Errorf("the draft moved despite the finding: %v", err)
+	}
+}
+
 // --type is the explicit way to supply what a draft is missing.
 func TestPromoteSuppliesAType(t *testing.T) {
 	root := writeTree(t, map[string]string{

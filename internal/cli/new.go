@@ -49,12 +49,10 @@ var newCommand = &command{
 			if pageType == "" {
 				pageType = k.Manifest.DefaultType
 			}
-			if !k.Vocabulary.Assignable(pageType) {
-				if kb.IsReservedType(pageType) {
-					return w.fail(fmt.Errorf("%q is a type the tool owns and does not assign", pageType))
-				}
-				return w.fail(fmt.Errorf("%q is not a type this KB knows; add it to %s",
-					pageType, kb.ManifestName))
+			// The reserved types are the tool's own and are never assigned, so
+			// choosing one is a usage error rather than a fact about the page.
+			if kb.IsReservedType(pageType) {
+				return w.fail(fmt.Errorf("%q is a type the tool owns and does not assign", pageType))
 			}
 
 			dir := kb.PagesDir
@@ -67,18 +65,41 @@ var newCommand = &command{
 			if err != nil {
 				return w.fail(err)
 			}
+
+			// A type the vocabulary does not know is a finding, not a usage
+			// error: the format warns by default and errors under --strict
+			// (D55). Under --strict the page is not written; by default it is,
+			// with a warning, so the author can fix the type or add it to the
+			// manifest. A draft is left alone, because the inbox is lenient and
+			// promotion is where its type is held to the format.
+			var findings []kb.Finding
+			if !*draft {
+				findings = page.Validate(k.Vocabulary, o.mode())
+				// Validation leaves Path empty because a caller showing one page
+				// already knows which it asked about. Here the page does not
+				// exist yet, so name the file the finding is about.
+				for i := range findings {
+					findings[i].Path = name
+				}
+			}
+			data := map[string]string{"path": name, "title": title, "type": pageType}
+			if o.strict && len(findings) > 0 {
+				if w.json {
+					return w.report(data, findings)
+				}
+				return reportText(w.stdout, w.stderr, findings)
+			}
+
 			if err := k.CreatePage(name, page); err != nil {
 				return w.fail(err)
 			}
-
 			if w.json {
-				return w.emit(map[string]string{
-					"path":  name,
-					"title": title,
-					"type":  pageType,
-				})
+				return w.report(data, findings)
 			}
 			fmt.Fprintln(w.stdout, name)
+			if len(findings) > 0 {
+				return reportText(w.stdout, w.stderr, findings)
+			}
 			return ExitOK
 		}
 	},

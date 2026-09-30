@@ -144,7 +144,6 @@ func TestNewRefusesWhatWouldBreakTheKB(t *testing.T) {
 	}{
 		{"a name another page answers to", []string{"attention"}, "already the name of"},
 		{"a reserved type", []string{"Other", "--type", "source"}, "tool owns"},
-		{"an unknown type", []string{"Other", "--type", "wizard"}, "not a type this KB knows"},
 		{"a title nothing could link to", []string{"!!!"}, "nothing could link to it"},
 		{"no title at all", nil, "takes one title"},
 	} {
@@ -158,6 +157,35 @@ func TestNewRefusesWhatWouldBreakTheKB(t *testing.T) {
 				t.Errorf("stderr = %q, want it to mention %q", stderr, tc.want)
 			}
 		})
+	}
+}
+
+// A type the vocabulary does not know is a warning by default and an error
+// under --strict (D55), never a usage error. By default the page is written
+// with the warning; under --strict it is refused.
+func TestNewTreatsAnUnknownTypeAsAFinding(t *testing.T) {
+	root := freshKB(t)
+
+	code, stdout, stderr := run("new", "--kb", root, "Wizard", "--type", "wizard")
+	if code != ExitFindings {
+		t.Fatalf("lenient exit = %d, want %d: %s", code, ExitFindings, stderr)
+	}
+	if !strings.Contains(stdout, "unknown type") {
+		t.Errorf("the warning does not name the unknown type:\n%s", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(root, "pages", "wizard.md")); err != nil {
+		t.Errorf("the page was not written by default: %v", err)
+	}
+
+	code, stdout, _ = run("new", "--kb", root, "Sorcerer", "--type", "wizard", "--strict")
+	if code != ExitFindings {
+		t.Errorf("strict exit = %d, want %d", code, ExitFindings)
+	}
+	if !strings.Contains(stdout, "unknown type") {
+		t.Errorf("the error does not name the unknown type:\n%s", stdout)
+	}
+	if _, err := os.Lstat(filepath.Join(root, "pages", "sorcerer.md")); !os.IsNotExist(err) {
+		t.Error("strict wrote the page anyway")
 	}
 }
 

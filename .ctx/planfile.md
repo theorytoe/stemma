@@ -224,9 +224,10 @@ flags -- so the generator was extended and the change recorded in
 
 ## Task 8:
 
-Status: Not started
+Status: Deferred
 
-The MCP server. Moved to its own plan, `plans/mcp/planfile.md`, because it needs an
+The MCP server. Deferred by the author on 2026-09-29 in favour of finishing Task 9.
+The work is planned in its own plan, `plans/mcp/planfile.md`, because it needs an
 enabling refactor of how the surfaces build their output and settles protocol and
 packaging questions of its own. This task tracks that plan.
 

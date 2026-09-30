@@ -14,6 +14,9 @@ it is not a leaf task: it needs an enabling refactor of how the surfaces build
 their output, and it settles protocol and packaging questions of its own. The
 top-level Task 8 now points here and tracks this plan's completion.
 
+Deferred by the author on 2026-09-29, in favour of finishing the main plan's
+Task 9 first. No task here has started.
+
 ## Settled by the author, 2026-09-29
 
 - Own plan, same module. The server lives in `internal/mcp` and ships as a second
@@ -45,9 +48,10 @@ them. Most already have usable signatures; only the few that take the unexported
 ## Dependencies
 
 The main project's Tasks 1, 2, 3, 5 and 6 supply the commands and schemas this
-server exposes; all are complete. Task 9 documents the server and consumes the
-schema set this plan produces, so the schemas are emitted as an artifact rather
-than copied by hand.
+server exposes; all are complete. The server's own documentation is Task 7 here.
+The main plan's Task 9 documents the project as a whole and does not describe the
+MCP surface; where it needs the tool set it consumes the schema artifact this plan
+produces.
 
 ## Open risks
 
@@ -117,3 +121,16 @@ Parity and integration tests. Assert that each tool returns the same payload as
 the corresponding CLI command under `--json` on one corpus, and that both surfaces
 agree on validation failures. Exercise the server from at least two harnesses to
 confirm the absence of harness-specific assumptions; that check stays out of CI.
+
+## Task 7:
+
+Status: Not started
+
+Documentation. Describe the server where it can be generated rather than written:
+the tool reference is emitted from the schema set Task 2 produces, so a schema and
+its documentation cannot drift. Cover the curated subset and the commands
+deliberately left on the CLI, the stdio invocation and how a harness is configured
+to run it, and the payload and error contracts that match the CLI's. Keep the
+harness instructions to the standard configuration file each client reads, with no
+harness-specific extension. Add a gate that regenerates the reference and fails
+when it is stale, the way the skill suite's references are handled.

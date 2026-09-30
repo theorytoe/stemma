@@ -20,7 +20,7 @@ everything else works without it.
 unset). `make build` writes `bin/stemma` instead, if you would rather not install
 it. `make install-skills` copies the agent skills into `~/.agents/skills`.
 
-## A first KB
+## A first knowledge base
 
     stemma init demo --title "Demo KB"
     cd demo
@@ -29,8 +29,8 @@ it. `make install-skills` copies the agent skills into `~/.agents/skills`.
     stemma lint --strict
     stemma build                      # writes .stemma/site
 
-[A first KB, end to end](wiki/pages/worked-example.md) is that walkthrough in
-full, with the real output of every command.
+[A first knowledge base, end to end](wiki/pages/worked-example.md) is that
+walkthrough in full, with the real output of every command.
 
 ## Build and check
 

@@ -1,11 +1,12 @@
 # Stemma — Render and export: changes to prior code
 
 **Scope.** Task 6 (`.ctx/delegates/render-export.md`) may need to change code
-authored by Tasks 1–5. Every such change is recorded here, as it is made. This is
-an edit trail, not a design document: intent lives in `decisions.md`, the work
-lives in the delegate. An entry here does not authorise a change on its own. If a
-change alters an interface another delegate depends on, it is raised as a decision
-(`D<n>`) and recorded in the register as well.
+authored by Tasks 1–5, the knowledge base (KB) library and its surfaces. Every
+such change is recorded here, as it is made. This is an edit trail, not a design
+document: intent lives in `decisions.md`, the work lives in the delegate. An
+entry here does not authorise a change on its own. If a change alters an
+interface another delegate depends on, it is raised as a decision (`D<n>`) and
+recorded in the register as well.
 
 ## What goes here
 

@@ -329,12 +329,13 @@ The script is a tracked file in the repository, `internal/extract/extract.py`. I
 is embedded in the Go binary at compile time, so the bytes that print the JSON are
 the bytes compiled into the version that parses it.
 
-`init` writes it out eagerly, to `<kb>/.stemma/shim/extract.py`, in the same breath
-as the manifest and the entry document. A new KB has its whole shape from the
-moment it exists: nothing appears later the first time someone runs `fetch`, and
-the file is there to be read, run by hand, and pointed at. `kb.Init` does not know
-this file exists — `extract.Materialise` writes it, and the init command calls
-both — so the core keeps no dependency on the extraction package.
+`init` writes it out eagerly, to `<kb>/.stemma/shim/extract.py`, in the same
+breath as the manifest and the entry document. A new knowledge base (KB) has its
+whole shape from the moment it exists: nothing appears later the first time
+someone runs `fetch`, and the file is there to be read, run by hand, and pointed
+at. `kb.Init` does not know this file exists — `extract.Materialise` writes it,
+and the init command calls both — so the core keeps no dependency on the
+extraction package.
 
 **Every `.stemma/` artifact is per-checkout and re-derivable, and is re-established
 whenever it is absent or stale.** So the script is also checked before each

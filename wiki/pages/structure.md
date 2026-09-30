@@ -3,7 +3,7 @@ title: Structure
 type: concept
 tags: [format]
 ---
-A KB root holds everything, and almost all of it is yours:
+A knowledge base (KB) root holds everything, and almost all of it is yours:
 
 ```
 my-kb/

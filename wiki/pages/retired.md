@@ -10,8 +10,8 @@ review:
     - kept because the reasoning is worth more than the decision
     - bundling was going to be a subsystem; it became one command
 ---
-This page argued for topic bundles: named subsets of a KB, cut along subject
-lines, each with its own manifest and its own export.
+This page argued for topic bundles: named subsets of a knowledge base (KB), cut
+along subject lines, each with its own manifest and its own export.
 
 It was wrong, and the reason is worth keeping. A knowledge base is contiguous —
 there are no topic boundaries in it — so a bundle would have been a second

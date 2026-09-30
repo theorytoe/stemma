@@ -8,8 +8,8 @@ tags: [design]
 ---
 A program is replaced. The files it wrote are not, if the format lets them be
 read without it. That is the argument Ango makes for putting files before apps
-[@ango2023], and it is the bet a KB has to make if it is meant to outlast the
-tool that keeps it.
+[@ango2023], and it is the bet a knowledge base (KB) has to make if it is meant
+to outlast the tool that keeps it.
 
 So a KB is a directory of markdown, a BibTeX bibliography, and nothing else that
 matters. No database owns the text, no application holds the index, and nothing

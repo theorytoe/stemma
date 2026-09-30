@@ -11,9 +11,9 @@ ship as migrations.
 
 ## Vocabulary
 
-**KB** is the corpus, the whole body of documents. **KB root** is the directory
-that holds them. A KB is contiguous: there are no topic boundaries and no
-sub-wikis. One invocation of the tool operates on one KB.
+**Knowledge base (KB)** is the corpus, the whole body of documents. **KB root**
+is the directory that holds them. A KB is contiguous: there are no topic
+boundaries and no sub-wikis. One invocation of the tool operates on one KB.
 
 ## The KB root
 

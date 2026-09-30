@@ -8,11 +8,11 @@ tags: [design]
 A decision in this tool is made once and then inherited. When a choice is
 unclear, a small set of commitments decides it, and these are those commitments.
 
-**Machinery is additive, never prerequisite.** A KB is a directory of text. The
-tool works on one with no setup at all: no index, no server, no database, no
-repository. The Tier-1 index, the rendered site, the extraction shim and git
-history are each optional and each degrade to something simpler. Nothing has to
-be started for a page to be read.
+**Machinery is additive, never prerequisite.** A knowledge base (KB) is a
+directory of text. The tool works on one with no setup at all: no index, no
+server, no database, no repository. The Tier-1 index, the rendered site, the
+extraction shim and git history are each optional and each degrade to something
+simpler. Nothing has to be started for a page to be read.
 
 **One core, thin surfaces.** Parsing, link and citation resolution, indexing and
 the invariants live in one place, and a surface is a thin layer over it rather

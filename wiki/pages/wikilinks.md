@@ -17,11 +17,11 @@ Keeping `+` and `#` is what stops `C` and `C++` from becoming one page. A page
 can also be named by an alias, so [[format specification]] reaches the same page
 as [[The format]].
 
-Names have to be unique across the whole KB, and a link matching two pages is a
-hard error rather than a guess. That is why the examples above are written in
-code: a link inside a code span or a fenced block is text and not a link, which
-is how this page can show the syntax without linking to a page called
-`Structure`.
+Names have to be unique across the whole knowledge base (KB), and a link
+matching two pages is a hard error rather than a guess. That is why the examples
+above are written in code: a link inside a code span or a fenced block is text
+and not a link, which is how this page can show the syntax without linking to a
+page called `Structure`.
 
 Retitling a page rewrites every link that named it by its title. Links that
 named it by an alias are left alone, because they still work.

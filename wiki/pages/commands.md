@@ -12,9 +12,9 @@ same core. A command is spelled `stemma <command> [flags]`, and a family such as
 
 **Setup**
 
-| Verb   | What it does                      |
-| ------ | --------------------------------- |
-| `init` | create a KB root                  |
+| Verb   | What it does                           |
+| ------ | -------------------------------------- |
+| `init` | create a knowledge base (KB) root      |
 | `new`  | create a page, or a draft in the inbox |
 
 **Pages**

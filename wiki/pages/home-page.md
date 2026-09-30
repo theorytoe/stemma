@@ -5,9 +5,10 @@ aliases:
   - landing page
 tags: [site]
 ---
-Every KB gets a home page the tool writes, at `index.html`, and it is not really a
-page anyone authored. It says what the KB holds, and everything it says is a
-consequence of the content rather than of anyone's choice.
+Every knowledge base (KB) gets a home page the tool writes, at `index.html`, and
+it is not really a page anyone authored. It says what the KB holds, and
+everything it says is a consequence of the content rather than of anyone's
+choice.
 
 - The numbers: how many pages, sources, types and tags there are, each linking to
   the list it counts.

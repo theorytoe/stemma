@@ -1,5 +1,5 @@
 ---
-title: Creating and maintaining a KB
+title: Creating and maintaining a knowledge base
 type: concept
 aliases:
   - the kb lifecycle

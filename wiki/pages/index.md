@@ -15,8 +15,9 @@ defines.
 - [[Citations]] — how a claim names the source it rests on.
 - [[Structure]] — the directories a KB is made of.
 - [[Drafts]] — where writing that is not finished yet lives.
-- [[Creating and maintaining a KB]] — how one starts, grows, and stays healthy.
-- [[A first KB, end to end]] — every command in order, from an empty
+- [[Creating and maintaining a knowledge base]] — how one starts, grows, and
+  stays healthy.
+- [[A first knowledge base, end to end]] — every command in order, from an empty
   directory to a built site.
 - [[Invoking the tool]] — how a command is spelled, and where it finds the KB.
 - [[The command surface]] — the verbs, by what they are for.

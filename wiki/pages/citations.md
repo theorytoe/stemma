@@ -6,9 +6,9 @@ aliases:
 tags: [format]
 ---
 A claim that rests on a source names it in brackets: `[@bush1945]`. What is
-inside is a citation key, not a title, and it points into the KB's bibliography,
-which is BibTeX at the KB root. A key is an identifier, so it is matched
-exactly — unlike a page name, case matters.
+inside is a citation key, not a title, and it points into the bibliography of
+the knowledge base (KB), which is BibTeX at the KB root. A key is an identifier,
+so it is matched exactly — unlike a page name, case matters.
 
 ```markdown
 That is the argument Bush made for the memex [@bush1945].

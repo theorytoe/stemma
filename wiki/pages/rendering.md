@@ -5,10 +5,10 @@ aliases:
   - rendering
 tags: [site]
 ---
-A KB is plain text, but plain was never the same as readable. The rendered site
-is the human interface, and the format did not have to bend to make it one: a
-page becomes an HTML document, and the two constructs the format gives meaning
-to become links rather than staying punctuation.
+A knowledge base (KB) is plain text, but plain was never the same as readable.
+The rendered site is the human interface, and the format did not have to bend to
+make it one: a page becomes an HTML document, and the two constructs the format
+gives meaning to become links rather than staying punctuation.
 
 - A wikilink becomes a link to the page it names, and it shows that page's
   title rather than the spelling that was written. An alias therefore reads as

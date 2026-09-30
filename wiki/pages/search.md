@@ -6,10 +6,11 @@ aliases:
   - search
 tags: [cli]
 ---
-Retrieval runs in two tiers. Tier 0 reads the KB itself: load, resolve, rank,
-with no setup and nothing generated. Tier 1 is an index under `.stemma/`, built
-by `stemma index`, and a command reads it when it is fresh and the KB when it is
-not. Nothing requires the index, and nothing breaks without it.
+Retrieval runs in two tiers. Tier 0 reads the knowledge base (KB) itself: load,
+resolve, rank, with no setup and nothing generated. Tier 1 is an index under
+`.stemma/`, built by `stemma index`, and a command reads it when it is fresh and
+the KB when it is not. Nothing requires the index, and nothing breaks without
+it.
 
 Freshness is by content, not by timestamp. The index is stamped with a hash of
 the pages, so editing a file invalidates it and touching a file without changing
@@ -27,4 +28,4 @@ one thing in different words do not find each other. Semantic retrieval, built o
 the transformer line of work [@vaswani2017], brings a model, a runtime and a
 download that this project's self-contained, offline build will not carry. The
 tool trades that recall for being one binary that needs nothing else. See
-[[Creating and maintaining a KB]].
+[[Creating and maintaining a knowledge base]].

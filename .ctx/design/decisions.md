@@ -6,6 +6,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 
 - Name: **`stemma`**, accepted despite the existing `stemma-sh/stemma` collision (see naming log).
 - Manifest: `stemma.toml`. Binary: `stemma`.
+- **Knowledge base (KB)** is the corpus; a **KB root** is the directory that holds it.
 
 ---
 

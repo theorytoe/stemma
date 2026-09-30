@@ -54,11 +54,12 @@ this task's own deliverables (the README), which the delegate covers directly.
   and `citestyle.Parse("")` returns the numeric formatter. Both styles are kept.
 - Why — closing `U3`, the question of which styles the built-in formatter should
   cover. The author's answer is that both are covered and numeric is the default.
-- Interface impact — a KB whose manifest does not name a `citation_style` now
-  renders numeric citations. `stemma init` writes `citation_style = "numeric"`.
-  `FORMAT.md`'s field table records the new default. The example wiki no longer
-  names a style, so it exercises the default; the renderer's own golden is pinned
-  to author-date instead, so a manifest default cannot silently rewrite it.
+- Interface impact — a knowledge base (KB) whose manifest does not name a
+  `citation_style` now renders numeric citations. `stemma init` writes
+  `citation_style = "numeric"`. `FORMAT.md`'s field table records the new
+  default. The example wiki no longer names a style, so it exercises the
+  default; the renderer's own golden is pinned to author-date instead, so a
+  manifest default cannot silently rewrite it.
 - Tests — `internal/citestyle`'s parse test asserts the empty name is numeric;
   `internal/export`'s golden now records `numeric`; the site gate builds the
   example wiki, so the default is exercised end to end.

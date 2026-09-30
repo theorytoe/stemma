@@ -11,12 +11,12 @@ positional arguments — `stemma new --draft "A Title"` and `stemma new "A Title
 a dash is still a title. `stemma help` lists the surface and `stemma help
 <command>` describes one verb; see [[The command surface]].
 
-**Finding the KB.** A command that works on a KB finds it in one fixed order: a
-path given with `--kb`, else the `STEMMA_KB` environment variable, else a walk up
-from the working directory. The walk prefers a directory holding `stemma.toml`
-and falls back to the nearest one holding `pages/`, so a KB configured on purpose
-beats one that merely looks like a KB. There is no registry and no daemon, and
-one invocation works on one KB.
+**Finding the knowledge base (KB).** A command that works on a KB finds it in
+one fixed order: a path given with `--kb`, else the `STEMMA_KB` environment
+variable, else a walk up from the working directory. The walk prefers a
+directory holding `stemma.toml` and falls back to the nearest one holding
+`pages/`, so a KB configured on purpose beats one that merely looks like a KB.
+There is no registry and no daemon, and one invocation works on one KB.
 
 **Flags.** Every command accepts `--json`. A command that works on an existing KB
 also accepts `--kb` and `--strict`. `--strict` turns warnings into errors, so the

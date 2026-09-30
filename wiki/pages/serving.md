@@ -3,9 +3,9 @@ title: Serving the site
 type: note
 tags: [site, cli]
 ---
-`stemma serve` renders the KB and answers it over HTTP, on `127.0.0.1:8080` by
-default. It is the local way to read [[The rendered site]] — it runs until it is
-stopped and writes nothing to disk.
+`stemma serve` renders the knowledge base (KB) and answers it over HTTP, on
+`127.0.0.1:8080` by default. It is the local way to read [[The rendered site]] —
+it runs until it is stopped and writes nothing to disk.
 
 The server reloads the KB when its content changes rather than on every request.
 It compares a hash of every page's content, so touching a file without changing

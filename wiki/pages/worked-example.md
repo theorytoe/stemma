@@ -1,5 +1,5 @@
 ---
-title: A first KB, end to end
+title: A first knowledge base, end to end
 type: concept
 aliases:
   - worked example

@@ -37,7 +37,9 @@ A page at `pages/notes/one.md` is served at `notes/one.html`, and every address
 is written relative to the document that carries it. That is what lets the
 output be moved or opened from disk without a link breaking.
 
-One stylesheet, no framework and no build step. Light and dark follow the system
+One stylesheet, no framework and no build step. Text reads in Work Sans, falling
+back to Roboto and then the reader's own system face; the fonts are named rather
+than shipped, so the site stays self-contained. Light and dark follow the system
 preference, and a toggle adds an explicit choice that is remembered. The toggle
 is JavaScript, and it is polish: with none, the preference decides and a reader
 never sees a control that would do nothing. Read the site with

@@ -10,6 +10,15 @@
    toggle, remembered and written to data-theme -- overrides it; with no
    JavaScript at all, the OS preference is all there is. */
 
+/* The type. Work Sans first, Roboto next, then the system's own UI face. Both
+   are named rather than shipped: no font files live in the repo, so a built
+   site stays self-contained and costs no bytes, and a reader with neither font
+   gets the system stack this file used before. Everything but code reads in
+   this face, headings and long-form prose alike. */
+:root {
+  --font-sans: "Work Sans", Roboto, ui-sans-serif, system-ui, sans-serif;
+}
+
 :root,
 :root[data-theme="light"] {
   color-scheme: light;
@@ -88,7 +97,7 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   line-height: 1.6;
 }
 
@@ -120,7 +129,7 @@ main {
 .site-nav {
   display: flex;
   gap: 1rem;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.85rem;
 }
 
@@ -215,7 +224,7 @@ a {
 .meta {
   margin: 0 0 1.75rem;
   color: var(--muted);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.8rem;
 }
 
@@ -226,7 +235,7 @@ a {
 .page-type,
 .count {
   color: var(--muted);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.75rem;
 }
 
@@ -251,7 +260,7 @@ a {
 .backlinks h2,
 .graph h2 {
   margin-top: 0;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -352,7 +361,7 @@ a {
 
 .graph-node text {
   fill: var(--ink);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 12px;
   pointer-events: none;
 }
@@ -385,7 +394,7 @@ a {
 
 .graph-more {
   fill: var(--muted);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 11px;
 }
 
@@ -402,7 +411,7 @@ a {
 
 .graph-tip text {
   fill: var(--ink);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 12px;
 }
 
@@ -453,7 +462,7 @@ td {
 .site-footer {
   padding-bottom: 2rem;
   color: var(--muted);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.8rem;
   border-top: 1px solid var(--rule);
   padding-top: 1rem;
@@ -547,7 +556,7 @@ mark {
 .counts {
   margin: 0 0 2rem;
   color: var(--muted);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.8rem;
 }
 
@@ -571,7 +580,7 @@ mark {
 
 .home-block h2 {
   margin-top: 0;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -580,7 +589,7 @@ mark {
 
 .home-block h3 {
   margin: 1.25rem 0 0.5rem;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--muted);
@@ -598,7 +607,7 @@ mark {
 .retrieved,
 .cited-by {
   color: var(--muted);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.75rem;
 }
 

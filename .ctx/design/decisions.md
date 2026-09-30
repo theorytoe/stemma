@@ -127,6 +127,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D41 | **One KB per invocation.** Discovery: explicit path → environment variable → walk-up from cwd. No registry, no daemon. | Q26       |
 | D69 | A resolved wikilink renders as an anchor showing the **page's own title**; an unresolved or ambiguous one renders as the written text inside a marked span; a citation links each key to that key's virtual source page. | review    |
 | D72 | The site's home page is **generated** from what the KB holds — counts, browse by type and tag, the newest sources, and what needs attention — with the **entry document's body as its opening** when the KB has one. `pages/index.md` is **optional** and is not rendered as a page of its own. | review    |
+| D73 | The site's type is **Work Sans**, falling back to **Roboto** and then the reader's system UI face. The fonts are **named, not shipped**: the stylesheet declares the stack, the repo carries no font files, and a built site stays self-contained (`D3`). The body's serif stack is gone — everything but code reads in this face. | review    |
 
 ---
 
@@ -510,6 +511,32 @@ never reads `inbox/`. No images, because the format has no such concept.
 **Provenance.** Put to the tool author as a proposal with the alternatives, after
 reading what Wikipedia's Main Page is actually made of, and answered: a landing
 page in that shape, wrapping the entry document rather than replacing it.
+
+### The site's type. `D73` added.
+
+**Decision.** Text reads in Work Sans, falling back to Roboto and then the
+reader's own system UI face. The fonts are named in the stylesheet, not shipped:
+no font files live in the repo, so a built site stays self-contained (`D3`) and
+costs no bytes. Everything but code reads in that face — headings and long-form
+prose alike — so the body's serif stack is gone.
+
+**Why named and not shipped.** The site's promise is that it is self-contained:
+one stylesheet, no network, no build step. Bundling the files would keep that
+promise and make the font render everywhere, but it puts binary assets in a
+repository that is otherwise all text and grows every built site by them. Loading
+the font from a CDN would break the promise outright. Naming it is the middle: a
+reader who has Work Sans sees it, and everyone else gets the system stack the
+site used before, so the change is never worse than what it replaces.
+
+**Why the whole page.** The body was serif and only the chrome was sans, so a
+font named for the chrome would have touched a fraction of what a reader reads.
+Asking for a primary face means the prose reads in it too, and the stylesheet
+loses the serif stack rather than keeping two.
+
+**Provenance.** Asked of the tool author as a direct request — Work Sans as the
+primary face, Roboto as the fallback — with delivery, scope and fallback put as
+separate questions. The answers: name-only, the whole page, Roboto named but not
+shipped.
 
 ### U5 — rewriting inbound links. `D19` stands.
 

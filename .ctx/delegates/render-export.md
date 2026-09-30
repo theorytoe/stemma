@@ -74,8 +74,8 @@ broken regardless of how it looks.
 ## Dependencies
 
 Task 1 for parsing and resolution. Task 3 of the project for citation rendering and
-virtual source pages. Task 5 is optional here — the site must build without an
-index.
+virtual source pages. Task 5 of the project is optional here — the site must
+build without an index.
 
 ## Working agreement
 
@@ -174,13 +174,30 @@ on a running server.
 
 Status: Not started
 
+The local graph. A small graph on every page, showing that page and the pages it
+is connected to: its backlinks and its outgoing links, one hop. The baseline is a
+server-rendered SVG, so the graph is present and navigable with JavaScript off —
+its nodes are real links, not a picture. A script may replace it with its own
+interactive layout, reading the graph data embedded in the page as inert JSON.
+
+The static graph is the feature and the script is the upgrade, as with the theme
+toggle: nothing about the page depends on the script running, and the no-JS gate
+in the next task checks that the graph is present and usable without it. Go
+computes the layout from `Graph.Backlinks` and `Graph.Links` and emits `<svg>`
+with `<a>` nodes. The embedded JSON carries the same nodes and edges the SVG
+draws, so a script that redraws the graph cannot show what the baseline did not.
+
+## Task 6:
+
+Status: Not started
+
 No-JS conformance gate. Build the site, then assert in a test that the entry
 document, per-type indexes, backlink lists, page navigation, and reference lists
 are all reachable and readable with JavaScript disabled. Fail the build if any of
 them only work with JS. This task is the enforcement mechanism for `P9`; without
 it the requirement erodes on the first convenient exception.
 
-## Task 6:
+## Task 7:
 
 Status: Not started
 
@@ -189,7 +206,7 @@ a stable top-level structure. Decide and document whether output is one file or
 JSONL, and include enough metadata to reconstruct the graph without reading the
 source tree.
 
-## Task 7:
+## Task 8:
 
 Status: Not started
 
@@ -197,7 +214,7 @@ Status: Not started
 retained anchor text, the default summary versus `--report-pruned` detail, and the
 KB-root output form. Include the pruned-link report in `--json` for machine use.
 
-## Task 8:
+## Task 9:
 
 Status: Not started
 

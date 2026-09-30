@@ -59,7 +59,9 @@ func topUsage() string {
 		fmt.Fprintf(&b, "  %-9s %s\n", c.name, c.summary)
 	}
 	b.WriteString("\nEvery command accepts --json. Commands that work on an existing KB\n")
-	b.WriteString("also accept --kb and --strict. Run \"stemma help <command>\" for one command.\n")
+	b.WriteString("also accept --kb and --strict. When --kb is not given, the KB root comes\n")
+	b.WriteString("from the STEMMA_KB environment variable, else from a walk up from the\n")
+	b.WriteString("working directory. Run \"stemma help <command>\" for one command.\n")
 	return b.String()
 }
 

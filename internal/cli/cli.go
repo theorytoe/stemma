@@ -194,7 +194,7 @@ func (o *options) registerJSON(fs *flag.FlagSet) {
 
 // registerKB adds the flags a command needs to find and read a KB.
 func (o *options) registerKB(fs *flag.FlagSet) {
-	fs.StringVar(&o.kb, "kb", "", "the KB root; discovered when not given")
+	fs.StringVar(&o.kb, "kb", "", "the KB root; when not given, STEMMA_KB, else discovered by walking up")
 	fs.BoolVar(&o.strict, "strict", false, "treat warnings as errors")
 }
 

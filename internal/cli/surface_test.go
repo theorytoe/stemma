@@ -37,6 +37,20 @@ func TestCommandHelpShowsItsFlags(t *testing.T) {
 	}
 }
 
+// The environment variable that points at a KB is part of the usage, so a
+// person reading `stemma help` learns it exists without the skills.
+func TestUsageNamesTheKBEnvironmentVariable(t *testing.T) {
+	for _, args := range [][]string{{"help"}, {"help", "lint"}} {
+		code, stdout, stderr := run(args...)
+		if code != ExitOK {
+			t.Fatalf("%v: exit = %d: %s", args, code, stderr)
+		}
+		if !strings.Contains(stdout, "STEMMA_KB") {
+			t.Errorf("%v does not document STEMMA_KB:\n%s", args, stdout)
+		}
+	}
+}
+
 // --help on a command is the same as asking help for it, and neither is an
 // error.
 func TestHelpFlagOnACommand(t *testing.T) {

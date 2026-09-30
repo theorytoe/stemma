@@ -3,8 +3,10 @@ title: Stemma — MCP server
 date: 2026-09-26
 ---
 
-This is a delegate plan. It covers Task 8 of the top-level planfile
-(`.ctx/planfile.md`). All decisions referenced as `D<n>` or `P<n>` are recorded in
+This delegate plan covered Task 8 of the top-level planfile (`.ctx/planfile.md`).
+It is superseded: the MCP server moved to its own plan,
+`.ctx/plans/mcp/planfile.md`, and this document is kept for its curation
+reasoning. All decisions referenced as `D<n>` or `P<n>` are recorded in
 `.ctx/design/decisions.md`.
 
 # Plan details

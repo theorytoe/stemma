@@ -8,6 +8,9 @@ below is a delegate plan in `.ctx/delegates/`, and completing a delegate complet
 the corresponding task here. Delegate documents follow this same template and are
 marked as delegates.
 
+Task 8 is the exception. The MCP server outgrew a single delegate and now has its
+own plan in `plans/mcp/planfile.md`; this task tracks that plan's completion.
+
 # Plan details
 
 ## What Stemma is
@@ -223,10 +226,9 @@ flags -- so the generator was extended and the change recorded in
 
 Status: Not started
 
-The MCP server. A curated subset of about ten tools over the core library — not a
-CLI wrapper — with schemas shared with the CLI and identical validation and error
-semantics.
-See `delegates/mcp.md`.
+The MCP server. Moved to its own plan, `plans/mcp/planfile.md`, because it needs an
+enabling refactor of how the surfaces build their output and settles protocol and
+packaging questions of its own. This task tracks that plan.
 
 ## Task 9:
 

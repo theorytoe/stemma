@@ -20,6 +20,8 @@ the delegates, and the design record are all part of the repository.
 - `design/shim-contract.md` — the Go-to-Python interface: how the extraction script
   is invoked, the JSON object it prints, its failure classes, its limits, and where
   the script lives.
+- `plans/mcp/planfile.md` — the MCP server's own plan, moved out of the top-level
+  Task 8. It is a single-tier plan, so it has no delegates of its own.
 
 ## Reading order
 
@@ -40,5 +42,6 @@ the delegates, and the design record are all part of the repository.
 - `delegates/index-retrieval.md` — SQLite FTS5 Tier-1 index, search, graph.
 - `delegates/render-export.md` — renderer, serve, build, JSON dump, scoped extract.
 - `delegates/skills.md` — umbrella skill, five workflow skills, disjointness review.
-- `delegates/mcp.md` — curated MCP tool subset over the core library.
+- `delegates/mcp.md` — superseded by `plans/mcp/planfile.md`; kept for its original
+  curation reasoning.
 - `delegates/docs.md` — example wiki as documentation, FORMAT.md, README, CI gates.

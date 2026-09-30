@@ -77,6 +77,21 @@ Task 1 for parsing and resolution. Task 3 of the project for citation rendering 
 virtual source pages. Task 5 is optional here — the site must build without an
 index.
 
+## Working agreement
+
+Two things about how this delegate is built, agreed with the author before Task 1
+began.
+
+Subtasks 2, 3 and 4 — templates and assets, `serve`, and `build` — are designed
+interactively. The author reviews the look and feel as it develops, so work
+bounces between the renderer, the templates, and the two entry points until it is
+right. Changes are shown small and often rather than batched.
+
+This delegate may need to change code authored by Tasks 1–5. Every such change is
+recorded, as it happens, in `.ctx/design/render-export-changes.md`, and a change to
+an interface another delegate depends on is raised as a decision rather than taken
+quietly. New files owned only by this delegate are not logged there.
+
 # Tasks
 
 ## Task 1:

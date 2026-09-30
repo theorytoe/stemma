@@ -279,11 +279,41 @@ reader should not have to work out why.
 
 ## Task 8:
 
-Status: Not started
+Status: Done
 
 `export page`, scoped extraction. Depth control, citation closure, link pruning with
 retained anchor text, the default summary versus `--report-pruned` detail, and the
 KB-root output form. Include the pruned-link report in `--json` for machine use.
+
+It closed with `export.Scoped`: a KB root holding one page, the pages it links
+to, and the sources they cite, in the same format as any other KB, so every tool
+reads it and every command works on it unchanged. Depth is hops and defaults to
+one, with `--depth all` for the whole reachable set. Three things change on the
+way out. The root page is written as the entry document, because the extract is
+*of* it and the format already makes that page the place a reader arrives. A link
+that cannot come along becomes its anchor text — the title of the page it named
+when it resolved outside the slice, and the author's own words when it named
+nothing or named more than one page. And a citation group whose keys are not all
+defined becomes its own text, because a group is one parenthetical and rebuilding
+it from the keys that survived would be writing markdown the author did not
+write. References are closed over (`D31`), so `bibliography.bib` holds exactly
+the keys the extract still cites.
+
+The task asked for a decision and got one, but not the decision the plan
+anticipated: an extract's root has no inbound links, so it is an orphan, so
+`--strict` fails on it, so the criterion Task 9 exists to enforce could not hold.
+That was raised rather than worked around, and the answer is `D71` — rename the
+root, and exempt the entry document from the orphan check, which is a rule the
+format should have had anyway: the page every other page is reachable from has no
+inbound links by construction. Pruning broken constructs rather than carrying
+them or refusing to extract came from the same conversation.
+
+One thing found while building it: an extract that had to be rewritten could be
+written nowhere it would not later clog, so an extract records what it wrote in
+its own `.stemma/` and a second run into the same directory refreshes it. Without
+that a stale page becomes an orphan or a name collision and the extract gets
+*less* clean each time it is refreshed. A destination that is neither empty nor
+an extract is refused instead.
 
 ## Task 9:
 
@@ -293,3 +323,21 @@ Extract validation gate. Assert that every extract lints clean under `--strict`,
 resolves every internal link it kept, and resolves every citation it materialised.
 Round-trip a KB, extract a page from it, and verify the extract stands alone. This
 is the test that makes `D30` true rather than aspirational.
+
+## Task 10:
+
+Status: Not started
+
+The site's home page. Today `index.html` is the authored entry document, so the
+KB's root page and the site's home page are the same page (`homeURL`). Consider
+generating the home page instead — a landing page the tool writes, the way it
+already writes the Index, the type and tag lists and the graph — leaving the
+authored entry document to be served at its own address like any other page.
+
+Raised by the author while Task 8 was being decided, and recorded here rather
+than acted on then because it is a site decision and not an extract decision.
+Settle it on its own: whether the home page is generated at all, what it shows if
+it is, and whether `pages/index.md` keeps any meaning once it is. Note that an
+extract's root is renamed to the entry document precisely because that path means
+"the page a reader arrives at", so if the site stops honouring `pages/index.md`
+the two should be settled together rather than drifting apart.

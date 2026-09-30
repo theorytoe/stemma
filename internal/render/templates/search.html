@@ -1,0 +1,30 @@
+{{define "search"}}<!doctype html>
+<html lang="en">
+<head>
+{{template "head" .}}
+</head>
+<body>
+{{template "header" .}}
+<main>
+  <h1>Search</h1>
+  <form class="search" action="{{.Site.SearchURL}}" method="get" role="search">
+    <input type="search" name="q" value="{{.Query}}" aria-label="Search the pages" autofocus>
+    <button type="submit">Search</button>
+  </form>
+  {{if .Searched}}
+    {{if .Hits}}
+    <ol class="results">
+      {{range .Hits}}<li>
+        <a href="{{.URL}}">{{.Title}}</a>
+        {{if .Snippet}}<p class="snippet">{{.Snippet}}</p>{{end}}
+      </li>{{end}}
+    </ol>
+    {{else}}
+    <p class="empty">No pages match "{{.Query}}".</p>
+    {{end}}
+  {{end}}
+</main>
+{{template "footer" .}}
+</body>
+</html>
+{{end}}

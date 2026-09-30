@@ -89,6 +89,7 @@ func init() {
 		indexCommand,
 		searchCommand,
 		graphCommand,
+		serveCommand,
 		citeCommand,
 		fetchCommand,
 		lintCommand,

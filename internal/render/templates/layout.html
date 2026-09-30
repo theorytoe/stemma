@@ -12,6 +12,11 @@
       <a href="{{.Site.HomeURL}}">Home</a>
       <a href="{{.Site.IndexURL}}">Index</a>
     </nav>
+    {{if .Site.SearchURL}}
+    <form class="search" action="{{.Site.SearchURL}}" method="get" role="search">
+      <input type="search" name="q" placeholder="Search" aria-label="Search the pages">
+    </form>
+    {{end}}
   </header>
 {{end}}
 

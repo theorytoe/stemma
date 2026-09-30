@@ -186,7 +186,7 @@ func TestSourcePage(t *testing.T) {
 		"Attention Is All You Need",
 		`key: vaswani2017`,
 		"Cited by",
-		`<a href="sample.html">Sample</a>`,
+		`<a href="../sample.html">Sample</a>`,
 	} {
 		if !strings.Contains(string(got), want) {
 			t.Errorf("the source page is missing %q:\n%s", want, got)
@@ -210,6 +210,35 @@ func TestCollisionIsReported(t *testing.T) {
 	}
 	if _, err := r.Documents(); err == nil {
 		t.Error("a page colliding with the Index page was accepted")
+	}
+}
+
+// TestLinksAreRelativeToTheDocument checks the property the build needs: a page
+// addresses everything relative to itself, so a document one level down climbs
+// out with "../" and the output directory can be moved without rewriting links.
+func TestLinksAreRelativeToTheDocument(t *testing.T) {
+	r := siteRenderer(t)
+
+	root, err := r.Page("pages/sample.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(root), `href="attention.html"`) {
+		t.Errorf("a root page should link to a sibling by name:\n%s", root)
+	}
+
+	typ, err := r.TypeIndex("concept")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`href="../attention.html"`,   // a page, one level up
+		`href="../assets/style.css"`, // the stylesheet, one level up
+		`href="../index.html"`,       // the home page, one level up
+	} {
+		if !strings.Contains(string(typ), want) {
+			t.Errorf("the type index is missing %q:\n%s", want, typ)
+		}
 	}
 }
 

@@ -53,7 +53,9 @@ type Renderer struct {
 	kb        *kb.KB
 	formatter citestyle.Formatter
 	templates *template.Template
-	site      SiteData
+	title     string
+	home      string
+	search    bool
 }
 
 // New returns a renderer for k, using the citation style its manifest names. An
@@ -68,7 +70,7 @@ func New(k *kb.KB) (*Renderer, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Renderer{kb: k, formatter: f, templates: t, site: siteData(k)}, nil
+	return &Renderer{kb: k, formatter: f, templates: t, title: k.Manifest.Title, home: homeURL(k)}, nil
 }
 
 // Formatter is the citation formatter in use, so that a caller rendering a
@@ -86,12 +88,13 @@ func (r *Renderer) Body(mode kb.Mode, path string) ([]byte, []kb.Finding, error)
 		return nil, nil, fmt.Errorf("no page at %s", path)
 	}
 	refs, _ := r.kb.References(path)
-	return r.bodyHTML(page, refs), r.kb.FindingsFor(path, mode), nil
+	return r.bodyHTML(page, refs, PageURL(path)), r.kb.FindingsFor(path, mode), nil
 }
 
-// bodyHTML renders one page's body as an HTML fragment.
-func (r *Renderer) bodyHTML(page *kb.Page, refs []kb.Reference) []byte {
-	src := r.expand(page, refs)
+// bodyHTML renders one page's body as an HTML fragment. docURL is the page's
+// own address, which every link in the fragment is written relative to.
+func (r *Renderer) bodyHTML(page *kb.Page, refs []kb.Reference, docURL string) []byte {
+	src := r.expand(page, refs, docURL)
 	return blackfriday.Run(src, blackfriday.WithExtensions(blackfriday.CommonExtensions))
 }
 
@@ -103,7 +106,7 @@ func (r *Renderer) bodyHTML(page *kb.Page, refs []kb.Reference) []byte {
 // keep the "[[" or the "[@", so a tree walk would see a link the scanner had
 // split or re-spelled -- "[[a *b* c]]" is three nodes, not one link. The body
 // the scanner read is the body that is expanded.
-func (r *Renderer) expand(page *kb.Page, refs []kb.Reference) []byte {
+func (r *Renderer) expand(page *kb.Page, refs []kb.Reference, docURL string) []byte {
 	body := page.Body()
 	var buf bytes.Buffer
 	last := 0
@@ -115,9 +118,9 @@ func (r *Renderer) expand(page *kb.Page, refs []kb.Reference) []byte {
 		}
 		buf.Write(body[last:in.Start])
 		if in.Link != nil {
-			buf.WriteString(r.link(in.Link))
+			buf.WriteString(r.link(in.Link, docURL))
 		} else {
-			buf.WriteString(r.citations(in.Cites, refs))
+			buf.WriteString(r.citations(in.Cites, refs, docURL))
 		}
 		last = in.End
 	}
@@ -129,14 +132,14 @@ func (r *Renderer) expand(page *kb.Page, refs []kb.Reference) []byte {
 // page's title; a link that resolves to nothing, or to several pages, keeps its
 // written text inside a span so the prose still reads and a stylesheet can mark
 // it.
-func (r *Renderer) link(l *kb.Link) string {
+func (r *Renderer) link(l *kb.Link, docURL string) string {
 	switch res := r.kb.Graph.Resolve(l.Name); res.Kind {
 	case kb.Resolved:
 		text := l.Target
 		if target, ok := r.kb.Graph.Page(res.Path); ok && target.Title() != "" {
 			text = target.Title()
 		}
-		return anchor(PageURL(res.Path), text)
+		return anchor(rel(docURL, PageURL(res.Path)), text)
 	case kb.Ambiguous:
 		return marked("stemma-ambiguous", l.Target)
 	default:
@@ -147,7 +150,7 @@ func (r *Renderer) link(l *kb.Link) string {
 // citations renders one citation group. Each key the bibliography defines
 // becomes a link to that key's source page; a key it does not define stays
 // text, and the page's findings already name it.
-func (r *Renderer) citations(cites []kb.Citation, refs []kb.Reference) string {
+func (r *Renderer) citations(cites []kb.Citation, refs []kb.Reference, docURL string) string {
 	l := r.formatter.Layout(cites, refs)
 	var b strings.Builder
 	b.WriteString(html.EscapeString(l.Before))
@@ -156,7 +159,7 @@ func (r *Renderer) citations(cites []kb.Citation, refs []kb.Reference) string {
 			b.WriteString(html.EscapeString(l.Sep))
 		}
 		if r.defined(p.Key) {
-			b.WriteString(anchor(SourceURL(p.Key), p.Text))
+			b.WriteString(anchor(rel(docURL, SourceURL(p.Key)), p.Text))
 		} else {
 			b.WriteString(html.EscapeString(singleLine(p.Text)))
 		}

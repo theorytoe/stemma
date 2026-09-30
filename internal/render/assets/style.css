@@ -221,3 +221,64 @@ td {
   border-top: 1px solid var(--rule);
   padding-top: 1rem;
 }
+
+/* Search is a server-mode surface: the form and the results page exist only
+   while `stemma serve` is running. */
+.search {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.75rem 0 1.5rem;
+}
+
+.site-header .search {
+  margin: 0;
+  flex-basis: 100%;
+}
+
+.search input[type="search"] {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  flex: 1;
+}
+
+.search button {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--code-bg);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.results {
+  padding-left: 1.1rem;
+}
+
+.results li {
+  margin-bottom: 1rem;
+}
+
+.snippet {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+mark {
+  background: #ffe9a8;
+  color: inherit;
+  padding: 0 0.1em;
+}
+
+@media (prefers-color-scheme: dark) {
+  mark {
+    background: #6b5a1e;
+  }
+}

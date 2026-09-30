@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io/fs"
 	"net/url"
+	"path"
 	"sort"
 	"strings"
 
@@ -32,12 +33,14 @@ const (
 	indexURL = "all.html"
 )
 
-// SiteData is what every document knows about the site around it.
+// SiteData is what every document knows about the site around it. Every address
+// is written relative to the document it is used in.
 type SiteData struct {
-	Title    string
-	HomeURL  string
-	IndexURL string
-	AssetURL string
+	Title     string
+	HomeURL   string
+	IndexURL  string
+	AssetURL  string
+	SearchURL string
 }
 
 // common is embedded in each document's data so the shared partials can reach
@@ -101,6 +104,21 @@ type ListingData struct {
 	Tags    []TagLink
 }
 
+// SearchHit is one result on the search page.
+type SearchHit struct {
+	Title   string
+	URL     string
+	Snippet template.HTML
+}
+
+// SearchData is the search page: the query and the results it found.
+type SearchData struct {
+	common
+	Query    string
+	Searched bool
+	Hits     []SearchHit
+}
+
 // Document is one file the site serves or writes.
 type Document struct {
 	URL  string
@@ -123,18 +141,50 @@ func parseTemplates() (*template.Template, error) {
 	return t, nil
 }
 
-func siteData(k *kb.KB) SiteData {
-	home := indexURL
+// homeURL is the address of the site's entry document: the authored index page
+// when the KB has one, and the generated Index otherwise.
+func homeURL(k *kb.KB) string {
 	if p := kb.PagesDir + "/index.md"; hasPage(k, p) {
-		home = PageURL(p)
+		return PageURL(p)
 	}
-	return SiteData{
-		Title:    k.Manifest.Title,
-		HomeURL:  home,
-		IndexURL: indexURL,
-		AssetURL: assetDir + "/style.css",
-	}
+	return indexURL
 }
+
+// rel is a link from one document to another, written relative to the first.
+// Every address the templates and the renderer emit goes through it, so a page
+// under types/ points at ../attention.html and a page at the root points at
+// attention.html. That is what lets the output directory be moved or opened
+// from disk without rewriting a link.
+func rel(from, to string) string {
+	dir := path.Dir(from)
+	if dir == "." || dir == "/" {
+		return to
+	}
+	// One "../" per segment of the document's own directory. A link that
+	// climbs and comes back down resolves the same as a shorter one, so this
+	// does not try to be minimal.
+	depth := strings.Count(dir, "/") + 1
+	return strings.Repeat("../", depth) + to
+}
+
+// siteFor is the site data one document sees: the same site, addressed relative
+// to where the document sits.
+func (r *Renderer) siteFor(docURL string) SiteData {
+	s := SiteData{
+		Title:    r.title,
+		HomeURL:  rel(docURL, r.home),
+		IndexURL: rel(docURL, indexURL),
+		AssetURL: rel(docURL, assetDir+"/style.css"),
+	}
+	if r.search {
+		s.SearchURL = rel(docURL, "search")
+	}
+	return s
+}
+
+// EnableSearch adds the search form. Only a server can answer it, so a built
+// site leaves it off rather than shipping a form that submits to nothing.
+func (r *Renderer) EnableSearch() { r.search = true }
 
 func hasPage(k *kb.KB, p string) bool {
 	_, ok := k.Graph.Page(p)
@@ -162,34 +212,53 @@ func (r *Renderer) Page(pagePath string) ([]byte, error) {
 
 // All renders the Index page: every page, then the types and the tags.
 func (r *Renderer) All() ([]byte, error) {
+	docURL := indexURL
 	data := ListingData{
-		common:  common{Site: r.site, DocTitle: tabTitle("Index", r.site.Title)},
+		common:  common{Site: r.siteFor(docURL), DocTitle: tabTitle("Index", r.title)},
 		Heading: "Index",
-		Pages:   r.pageLinks(r.kb.Graph.Paths()),
-		Types:   r.typeLinks(),
-		Tags:    r.tagLinks(),
+		Pages:   r.pageLinks(r.kb.Graph.Paths(), docURL),
+		Types:   r.typeLinks(docURL),
+		Tags:    r.tagLinks(docURL),
 	}
 	return r.execute("listing", data)
 }
 
 // TypeIndex renders the index of one type.
 func (r *Renderer) TypeIndex(typ string) ([]byte, error) {
+	docURL := TypeURL(typ)
 	data := ListingData{
-		common:  common{Site: r.site, DocTitle: tabTitle(typ, r.site.Title)},
+		common:  common{Site: r.siteFor(docURL), DocTitle: tabTitle(typ, r.title)},
 		Heading: typ,
-		Pages:   r.pageLinks(r.pathsOfType(typ)),
+		Pages:   r.pageLinks(r.pathsOfType(typ), docURL),
 	}
 	return r.execute("listing", data)
 }
 
 // TagIndex renders the index of one tag, named by its normalised form.
 func (r *Renderer) TagIndex(norm string) ([]byte, error) {
+	docURL := TagURL(norm)
 	data := ListingData{
-		common:  common{Site: r.site, DocTitle: tabTitle(norm, r.site.Title)},
+		common:  common{Site: r.siteFor(docURL), DocTitle: tabTitle(norm, r.title)},
 		Heading: "Tagged: " + norm,
-		Pages:   r.pageLinks(r.pathsWithTag(norm)),
+		Pages:   r.pageLinks(r.pathsWithTag(norm), docURL),
 	}
 	return r.execute("listing", data)
+}
+
+// Search renders the search page. hits are the results already found; the
+// renderer shows them, it does not search.
+func (r *Renderer) Search(query string, hits []SearchHit) ([]byte, error) {
+	docURL := "search"
+	for i := range hits {
+		hits[i].URL = rel(docURL, hits[i].URL)
+	}
+	data := SearchData{
+		common:   common{Site: r.siteFor(docURL), DocTitle: tabTitle("Search", r.title)},
+		Query:    query,
+		Searched: query != "",
+		Hits:     hits,
+	}
+	return r.execute("search", data)
 }
 
 // Source renders the virtual source page for a citation key.
@@ -198,12 +267,12 @@ func (r *Renderer) Source(key string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	meta := []MetaItem{{Text: kb.TypeSource}, {Label: "key", Text: page.Key()}}
+	docURL := SourceURL(key)
 	data := PageData{
-		common: common{Site: r.site, DocTitle: tabTitle(page.Title(), r.site.Title)},
+		common: common{Site: r.siteFor(docURL), DocTitle: tabTitle(page.Title(), r.title)},
 		Title:  page.Title(),
-		Meta:   meta,
-		Body:   template.HTML(r.bodyHTML(page, nil)),
+		Meta:   []MetaItem{{Text: kb.TypeSource}, {Label: "key", Text: page.Key()}},
+		Body:   template.HTML(r.bodyHTML(page, nil, docURL)),
 	}
 	return r.execute("page", data)
 }
@@ -312,23 +381,24 @@ func checkUnique(docs []Document) error {
 
 // pageData builds the view of one authored page.
 func (r *Renderer) pageData(pagePath string, page *kb.Page, refs []kb.Reference) PageData {
+	docURL := PageURL(pagePath)
 	return PageData{
-		common:     common{Site: r.site, DocTitle: tabTitle(page.Title(), r.site.Title)},
+		common:     common{Site: r.siteFor(docURL), DocTitle: tabTitle(page.Title(), r.title)},
 		Title:      page.Title(),
-		Meta:       r.meta(page),
-		Body:       template.HTML(r.bodyHTML(page, refs)),
+		Meta:       r.meta(page, docURL),
+		Body:       template.HTML(r.bodyHTML(page, refs, docURL)),
 		References: r.referenceData(refs),
-		Backlinks:  r.backlinks(pagePath),
+		Backlinks:  r.backlinks(pagePath, docURL),
 	}
 }
 
 // meta is the line under a page's title: what the frontmatter says, in the
 // order a reader would ask for it. A page with only a title and a type shows
 // only those.
-func (r *Renderer) meta(page *kb.Page) []MetaItem {
+func (r *Renderer) meta(page *kb.Page, docURL string) []MetaItem {
 	var out []MetaItem
 	if typ := page.Type(); typ != "" {
-		out = append(out, MetaItem{Text: typ, URL: TypeURL(typ)})
+		out = append(out, MetaItem{Text: typ, URL: rel(docURL, TypeURL(typ))})
 	}
 	if page.Status() == kb.StatusArchived {
 		text := "archived"
@@ -342,7 +412,7 @@ func (r *Renderer) meta(page *kb.Page) []MetaItem {
 		if i == 0 {
 			label = "tags"
 		}
-		out = append(out, MetaItem{Label: label, Text: tag, URL: TagURL(tag)})
+		out = append(out, MetaItem{Label: label, Text: tag, URL: rel(docURL, TagURL(tag))})
 	}
 	for i, alias := range page.Aliases() {
 		label := ""
@@ -362,22 +432,22 @@ func (r *Renderer) referenceData(refs []kb.Reference) []ReferenceData {
 	return out
 }
 
-func (r *Renderer) backlinks(pagePath string) []PageLink {
+func (r *Renderer) backlinks(pagePath, docURL string) []PageLink {
 	paths := r.kb.Graph.Backlinks(pagePath)
 	out := make([]PageLink, 0, len(paths))
 	for _, p := range paths {
 		if page, ok := r.kb.Graph.Page(p); ok {
-			out = append(out, PageLink{Title: page.Title(), URL: PageURL(p), Type: page.Type()})
+			out = append(out, PageLink{Title: page.Title(), URL: rel(docURL, PageURL(p)), Type: page.Type()})
 		}
 	}
 	return out
 }
 
-func (r *Renderer) pageLinks(paths []string) []PageLink {
+func (r *Renderer) pageLinks(paths []string, docURL string) []PageLink {
 	out := make([]PageLink, 0, len(paths))
 	for _, p := range paths {
 		if page, ok := r.kb.Graph.Page(p); ok {
-			out = append(out, PageLink{Title: page.Title(), URL: PageURL(p), Type: page.Type()})
+			out = append(out, PageLink{Title: page.Title(), URL: rel(docURL, PageURL(p)), Type: page.Type()})
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Title < out[j].Title })
@@ -429,11 +499,11 @@ func (r *Renderer) typeCounts() map[string]int {
 	return counts
 }
 
-func (r *Renderer) typeLinks() []TypeLink {
+func (r *Renderer) typeLinks(docURL string) []TypeLink {
 	counts := r.typeCounts()
 	out := make([]TypeLink, 0, len(counts))
 	for _, name := range sortedKeys(counts) {
-		out = append(out, TypeLink{Name: name, URL: TypeURL(name), Count: counts[name]})
+		out = append(out, TypeLink{Name: name, URL: rel(docURL, TypeURL(name)), Count: counts[name]})
 	}
 	return out
 }
@@ -466,11 +536,11 @@ func (r *Renderer) tagCounts() map[string]int {
 	return counts
 }
 
-func (r *Renderer) tagLinks() []TagLink {
+func (r *Renderer) tagLinks(docURL string) []TagLink {
 	counts := r.tagCounts()
 	out := make([]TagLink, 0, len(counts))
 	for _, norm := range sortedKeys(counts) {
-		out = append(out, TagLink{Name: r.tagSpelling(norm), URL: TagURL(norm), Count: counts[norm]})
+		out = append(out, TagLink{Name: r.tagSpelling(norm), URL: rel(docURL, TagURL(norm)), Count: counts[norm]})
 	}
 	return out
 }

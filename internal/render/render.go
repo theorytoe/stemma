@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"fmt"
 	"html"
+	"html/template"
 	"net/url"
 	"strings"
 
@@ -51,6 +52,8 @@ func SourceURL(key string) string {
 type Renderer struct {
 	kb        *kb.KB
 	formatter citestyle.Formatter
+	templates *template.Template
+	site      SiteData
 }
 
 // New returns a renderer for k, using the citation style its manifest names. An
@@ -61,7 +64,11 @@ func New(k *kb.KB) (*Renderer, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Renderer{kb: k, formatter: f}, nil
+	t, err := parseTemplates()
+	if err != nil {
+		return nil, err
+	}
+	return &Renderer{kb: k, formatter: f, templates: t, site: siteData(k)}, nil
 }
 
 // Formatter is the citation formatter in use, so that a caller rendering a
@@ -79,9 +86,13 @@ func (r *Renderer) Body(mode kb.Mode, path string) ([]byte, []kb.Finding, error)
 		return nil, nil, fmt.Errorf("no page at %s", path)
 	}
 	refs, _ := r.kb.References(path)
+	return r.bodyHTML(page, refs), r.kb.FindingsFor(path, mode), nil
+}
+
+// bodyHTML renders one page's body as an HTML fragment.
+func (r *Renderer) bodyHTML(page *kb.Page, refs []kb.Reference) []byte {
 	src := r.expand(page, refs)
-	out := blackfriday.Run(src, blackfriday.WithExtensions(blackfriday.CommonExtensions))
-	return out, r.kb.FindingsFor(path, mode), nil
+	return blackfriday.Run(src, blackfriday.WithExtensions(blackfriday.CommonExtensions))
 }
 
 // expand replaces every wikilink and citation in the page body with the HTML it

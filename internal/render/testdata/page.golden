@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sample · test</title>
+  <link rel="stylesheet" href="assets/style.css">
+
+</head>
+<body>
+
+  <header class="site-header">
+    <a class="site-title" href="index.html">test</a>
+    <nav class="site-nav">
+      <a href="index.html">Home</a>
+      <a href="all.html">Index</a>
+    </nav>
+  </header>
+
+<main>
+  <article class="page">
+    <h1>Sample</h1>
+    <p class="meta"><a href="types/note.html">note</a></p>
+<p>The method <a href="attention.html">Attention Is All You Need</a> and <span class="stemma-unresolved">Nowhere</span> and the alias <a href="attention.html">Attention Is All You Need</a>.</p>
+
+<p>See (<a href="sources/vaswani2017.html">Vaswani and Shazeer 2017</a>) and (missing2020) and a group (<a href="sources/vaswani2017.html">Vaswani and Shazeer 2017</a>; missing2020).</p>
+
+<p>Inline <code>[[attention]]</code> and <code>[@vaswani2017]</code> stay code.</p>
+
+<p><em><a href="attention.html">Attention Is All You Need</a></em> in emphasis.</p>
+
+<pre><code>[[attention]]
+[@vaswani2017]
+</code></pre>
+
+  </article>
+  
+  <section class="references">
+    <h2>References</h2>
+    <ul>
+      <li>Vaswani, Ashish and Shazeer, Noam. 2017. Attention Is All You Need. NeurIPS.</li>
+    </ul>
+  </section>
+  
+  
+</main>
+
+  <footer class="site-footer">
+    <p>Built with stemma.</p>
+  </footer>
+
+</body>
+</html>

@@ -49,7 +49,8 @@ func testKB(t *testing.T) *kb.KB {
 	}
 	add("pages/index.md", "---\ntitle: Home\ntype: index\n---\nStart here.\n")
 	add("pages/attention.md", "---\ntitle: Attention Is All You Need\ntype: concept\naliases:\n  - transformer paper\n---\nThe paper.\n")
-	add("pages/transformer.md", "---\ntitle: Transformer\ntype: concept\n---\nThe architecture.\n")
+	add("pages/transformer.md", "---\ntitle: Transformer\ntype: concept\ntags: [architecture, attention]\n---\nThe architecture.\n")
+	add("pages/odd name.md", "---\ntitle: Odd Name\ntype: note\n---\nA file name with a space.\n")
 	add("pages/sample.md", "---\ntitle: Sample\ntype: note\n---\n"+sampleBody)
 
 	bib, err := kb.ParseBibliography("bibliography.bib", []byte(`@article{vaswani2017,

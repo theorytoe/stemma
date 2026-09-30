@@ -1,0 +1,36 @@
+{{define "page"}}<!doctype html>
+<html lang="en">
+<head>
+{{template "head" .}}
+</head>
+<body>
+{{template "header" .}}
+<main>
+  <article class="page">
+    <h1>{{.Title}}</h1>
+    {{if .Meta}}<p class="meta">{{range $i, $m := .Meta}}{{if $i}} · {{end}}{{template "meta-item" $m}}{{end}}</p>{{end}}
+{{.Body}}
+  </article>
+  {{if .References}}
+  <section class="references">
+    <h2>References</h2>
+    <ul>
+      {{range .References}}<li>{{.Text}}</li>{{end}}
+    </ul>
+  </section>
+  {{end}}
+  {{if .Backlinks}}
+  <nav class="backlinks">
+    <h2>Linked from</h2>
+    <ul>
+      {{range .Backlinks}}<li><a href="{{.URL}}">{{.Title}}</a></li>{{end}}
+    </ul>
+  </nav>
+  {{end}}
+</main>
+{{template "footer" .}}
+</body>
+</html>
+{{end}}
+
+{{define "meta-item"}}{{if .Label}}{{.Label}}: {{end}}{{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}{{end}}

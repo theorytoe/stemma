@@ -1,0 +1,37 @@
+{{define "listing"}}<!doctype html>
+<html lang="en">
+<head>
+{{template "head" .}}
+</head>
+<body>
+{{template "header" .}}
+<main>
+  <h1>{{.Heading}}</h1>
+  {{if .Pages}}
+  <ul class="page-list">
+    {{range .Pages}}<li><a href="{{.URL}}">{{.Title}}</a>{{if .Type}} <span class="page-type">{{.Type}}</span>{{end}}</li>{{end}}
+  </ul>
+  {{else}}
+  <p class="empty">Nothing here yet.</p>
+  {{end}}
+  {{if .Types}}
+  <section class="type-list">
+    <h2>Types</h2>
+    <ul>
+      {{range .Types}}<li><a href="{{.URL}}">{{.Name}}</a> <span class="count">{{.Count}}</span></li>{{end}}
+    </ul>
+  </section>
+  {{end}}
+  {{if .Tags}}
+  <section class="tag-list">
+    <h2>Tags</h2>
+    <ul>
+      {{range .Tags}}<li><a href="{{.URL}}">{{.Name}}</a> <span class="count">{{.Count}}</span></li>{{end}}
+    </ul>
+  </section>
+  {{end}}
+</main>
+{{template "footer" .}}
+</body>
+</html>
+{{end}}

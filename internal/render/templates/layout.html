@@ -1,0 +1,22 @@
+{{define "head"}}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.DocTitle}}</title>
+  <link rel="stylesheet" href="{{.Site.AssetURL}}">
+{{end}}
+
+{{define "header"}}
+  <header class="site-header">
+    <a class="site-title" href="{{.Site.HomeURL}}">{{.Site.Title}}</a>
+    <nav class="site-nav">
+      <a href="{{.Site.HomeURL}}">Home</a>
+      <a href="{{.Site.IndexURL}}">Index</a>
+    </nav>
+  </header>
+{{end}}
+
+{{define "footer"}}
+  <footer class="site-footer">
+    <p>Built with stemma.</p>
+  </footer>
+{{end}}

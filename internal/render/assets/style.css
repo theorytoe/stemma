@@ -1,0 +1,223 @@
+/* A small semantic stylesheet for a stemma site.
+   No framework and no build step. Classes are named for what a thing is, not
+   for how it looks, so the look can change without touching the markup. */
+
+:root {
+  color-scheme: light dark;
+  --ink: #1a1a1a;
+  --muted: #6b6b6b;
+  --paper: #fdfdfc;
+  --rule: #e2e2df;
+  --link: #1a4f8a;
+  --code-bg: #f2f2ef;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e6e6e6;
+    --muted: #9a9a9a;
+    --paper: #16161a;
+    --rule: #2c2c32;
+    --link: #8ab4f8;
+    --code-bg: #23232a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 18px;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  line-height: 1.6;
+}
+
+.site-header,
+.site-footer,
+main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding-top: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.site-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  text-decoration: none;
+}
+
+.site-nav {
+  display: flex;
+  gap: 1rem;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.85rem;
+}
+
+main {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+}
+
+h1 {
+  font-size: 1.7rem;
+  margin: 0 0 0.25rem;
+}
+
+h2 {
+  font-size: 1.15rem;
+  margin-top: 2.25rem;
+}
+
+a {
+  color: var(--link);
+}
+
+.meta {
+  margin: 0 0 1.75rem;
+  color: var(--muted);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.8rem;
+}
+
+.meta a {
+  color: var(--muted);
+}
+
+.page-type,
+.count {
+  color: var(--muted);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.75rem;
+}
+
+.count::before {
+  content: "(";
+}
+
+.count::after {
+  content: ")";
+}
+
+.references,
+.backlinks,
+.type-list,
+.tag-list {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.95rem;
+}
+
+.references h2,
+.backlinks h2,
+.type-list h2,
+.tag-list h2 {
+  margin-top: 0;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.references ul,
+.backlinks ul,
+.type-list ul,
+.tag-list ul,
+.page-list {
+  padding-left: 1.1rem;
+}
+
+.references li {
+  margin-bottom: 0.6rem;
+}
+
+.page-list,
+.type-list ul,
+.tag-list ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.page-list li,
+.type-list li,
+.tag-list li {
+  margin-bottom: 0.35rem;
+}
+
+code,
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+}
+
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
+pre {
+  background: var(--code-bg);
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+  border-radius: 4px;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+}
+
+blockquote {
+  margin-left: 0;
+  padding-left: 1rem;
+  border-left: 3px solid var(--rule);
+  color: var(--muted);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  border: 1px solid var(--rule);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+.site-footer {
+  padding-bottom: 2rem;
+  color: var(--muted);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.8rem;
+  border-top: 1px solid var(--rule);
+  padding-top: 1rem;
+}

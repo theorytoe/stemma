@@ -141,3 +141,18 @@ quietly."
   `internal/cli/build_test.go` covers the default directory, a relative `--out`,
   and the JSON payload.
 - Decision ref — none
+
+### Makefile — the static site added to check
+
+- Date — 2026-09-29
+- Prior task — 1 (foundation)
+- What changed — a `site` target added, and `check` now depends on it. It runs
+  `stemma build --kb wiki` with the binary the same run just built.
+- Why — the Makefile already says further gates belong in `check` so that a local
+  run and a CI run cannot drift apart. Building the example wiki is the end-to-end
+  path — parse, render, write — and the assertions about what the output must
+  contain are the conformance test, so the gate is those two halves together.
+- Interface impact — none; the target is additive and `check` passes.
+- Tests — `internal/build`'s conformance test is the assertion half and runs
+  inside `test`.
+- Decision ref — none

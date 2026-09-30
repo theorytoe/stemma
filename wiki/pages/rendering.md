@@ -30,7 +30,8 @@ and a Types page and a Tags page list the types and the tags with their counts;
 each type and each tag then has an index of its own, and each cited key gets a
 source page built from its BibTeX entry. A type or a tag with no pages under it
 gets no index of its own, because an empty index is noise rather than
-navigation.
+navigation. The site's front page is generated the same way — [[The home page]]
+says what it shows.
 
 A page at `pages/notes/one.md` is served at `notes/one.html`, and every address
 is written relative to the document that carries it. That is what lets the

@@ -21,5 +21,7 @@ defines.
 - [[Search and ranking]] — how retrieval works, and what it does not do.
 - [[The rendered site]] — what the files become, and the pages no author
   wrote.
+- [[The home page]] — what a KB's front page shows, and how much of it a person
+  wrote.
 - [[Serving the site]] — reading a KB locally, with search and live reload.
 - [[The old sharing model]] — a page kept for its reasoning, no longer current.

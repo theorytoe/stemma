@@ -218,3 +218,40 @@ func TestSourceURL(t *testing.T) {
 		t.Errorf("SourceURL = %q, want %q", got, want)
 	}
 }
+
+// TestBodyDoesNotFractionizeIdentifiers pins the SmartypantsFractions fix. A
+// DOI is a run of digits around a slash, which Smartypants otherwise renders as
+// a superscript numerator and a subscript denominator.
+func TestBodyDoesNotFractionizeIdentifiers(t *testing.T) {
+	g := kb.NewGraph()
+	p, err := kb.ParsePage([]byte("---\ntitle: Identifiers\ntype: note\n---\n" +
+		"The DOI is 10.1145/2568225.2568322 and the date is 2024/09/30.\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	g.Add("pages/ids.md", p)
+	k := &kb.KB{
+		Graph:        g,
+		Bibliography: kb.NewBibliography(),
+		Vocabulary:   kb.DefaultVocabulary(),
+		Manifest:     kb.DefaultManifest("test"),
+	}
+	r, err := New(k)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _, err := r.Body(kb.Lenient, "pages/ids.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{"<sup>", "<sub>", "&frasl;"} {
+		if strings.Contains(string(got), bad) {
+			t.Errorf("an identifier was rendered as a fraction (%s):\n%s", bad, got)
+		}
+	}
+	for _, want := range []string{"10.1145/2568225.2568322", "2024/09/30"} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("output does not contain %q:\n%s", want, got)
+		}
+	}
+}

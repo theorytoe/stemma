@@ -140,9 +140,20 @@ func (r *Renderer) Body(mode kb.Mode, path string) ([]byte, []kb.Finding, error)
 
 // bodyHTML renders one page's body as an HTML fragment. docURL is the page's
 // own address, which every link in the fragment is written relative to.
+//
+// SmartypantsFractions is the one part of Smartypants turned off, because it
+// reads a run of digits around a slash as a fraction: the DOI
+// "10.1145/2568225" comes back with "1145" superscripted and "2568225"
+// subscripted, which is wrong for the identifiers a bibliography is full of.
+// Quotes and dashes still curl, because prose wants them.
 func (r *Renderer) bodyHTML(page *kb.Page, refs []kb.Reference, docURL string) []byte {
 	src := r.expand(page, refs, docURL)
-	return blackfriday.Run(src, blackfriday.WithExtensions(blackfriday.CommonExtensions))
+	renderer := blackfriday.NewHTMLRenderer(blackfriday.HTMLRendererParameters{
+		Flags: blackfriday.CommonHTMLFlags &^ blackfriday.SmartypantsFractions,
+	})
+	return blackfriday.Run(src,
+		blackfriday.WithExtensions(blackfriday.CommonExtensions),
+		blackfriday.WithRenderer(renderer))
 }
 
 // expand replaces every wikilink and citation in the page body with the HTML it

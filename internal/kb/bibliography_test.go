@@ -52,12 +52,39 @@ func TestSameWorkByIdentifier(t *testing.T) {
 			"@misc{a, url = {https://example.com/x}}\n",
 			"@misc{b, url = {https://example.com/x/}}\n",
 		},
+		{
+			"one local file written two ways",
+			"@misc{a, path = {./notes/paper.pdf}}\n",
+			"@misc{b, path = {notes/paper.pdf}}\n",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if !SameWork(parseOne(t, tc.a), parseOne(t, tc.b)) {
 				t.Error("the same work was not recognised")
 			}
 		})
+	}
+}
+
+func TestPointerPrefersURLAndFallsBackToPath(t *testing.T) {
+	urlOnly := parseOne(t, "@misc{a, url = {https://example.com/x}}\n")
+	if got := urlOnly.Pointer(); got != "https://example.com/x" {
+		t.Errorf("Pointer = %q, want the url", got)
+	}
+
+	pathOnly := parseOne(t, "@misc{a, path = {notes/paper.pdf}}\n")
+	if got := pathOnly.Pointer(); got != "notes/paper.pdf" {
+		t.Errorf("Pointer = %q, want the path", got)
+	}
+	if got := pathOnly.Path(); got != "notes/paper.pdf" {
+		t.Errorf("Path = %q", got)
+	}
+
+	// A record with both reads from its address: a path and a url are two
+	// locations, and the one a browser can reach is the one to prefer.
+	both := parseOne(t, "@misc{a, url = {https://example.com/x}, path = {notes/paper.pdf}}\n")
+	if got := both.Pointer(); got != "https://example.com/x" {
+		t.Errorf("Pointer = %q, want the url", got)
 	}
 }
 

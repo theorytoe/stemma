@@ -131,6 +131,14 @@ with or without its version, even though the version is what gets fetched. Two
 entries that point at one work are one work, and the check says so rather than
 leaving a person to notice.
 
+A pointer is one of the fields `doi`, `eprint`, `url`, `isbn`, and `path`. `url`
+is an address; `path` is a file on the machine the tool runs on. They are
+separate fields because a path is not an address and cannot be typed into a
+browser. A `path` is kept exactly as it was written and is read relative to the
+working directory when the capture is made, so a source that is only on this
+machine needs no address before it can be vendored. A path is compared after
+cleaning, so `./notes/paper.pdf` and `notes/paper.pdf` are one pointer.
+
 | Field                  | Meaning                                                       |
 | ---------------------- | ------------------------------------------------------------- |
 | `stemma-retrieved`     | the date the source was fetched, as `YYYY-MM-DD`              |
@@ -184,6 +192,14 @@ is what the digest is for: two keys that reduce to one filename, such as
 `smith:2020` and `smith-2020`, would otherwise have to share a capture. The name
 is derived rather than stated because the entry records the capture's hash and
 not its path, so the key is what tells you where to look.
+
+A capture is part of the rendered site. `build` writes it and `serve` answers it
+at `sources/<key>-text.html`, and the key's source page links to it. That address
+is derived from the key and not from the capture's file name, so re-vendoring the
+text does not move it. The text is shown exactly as it was captured and is never
+re-parsed, because a capture is evidence rather than prose. A key with no capture
+gets no such page, and a KB that has vendored nothing is unchanged by any of
+this.
 
 Capturing is the one thing a bibliography cannot do for itself: an address goes
 stale and a capture does not. It is therefore explicit, and it checks itself. When
@@ -574,7 +590,8 @@ citation's form — its group, its prefix, whether it was written narratively �
 how it should be *rendered*, and rendering is not what the dump is for.
 
 A **bibliography entry** carries `key`, `type`, `fields` as the entry was written,
-and the tool's own readings of the same entry: `title`, `year`, `authors`, `url`.
+and the tool's own readings of the same entry: `title`, `year`, `authors`, `url`,
+`path`.
 Those readings are what the citation formatter uses, and they are not the same
 thing as the raw fields — a year is a date string in BibTeX and a normalised year
 here.

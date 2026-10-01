@@ -89,6 +89,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D45 | Source pages are **virtual**: materialised only at export/build time, never committed. Resolvable by citation key. Excluded from orphan and title-collision checks.         | Q28       |
 | D64 | Export is **`cite export --format bibtex|csl-json`**, whole bibliography by default, `--cited` to narrow it. BibTeX is **self-contained** (macros resolved); CSL-JSON maps known fields and passes the rest through. Output is checked by an independent reader. | Q22       |
 | D65 | A source pointer is compared by **what it names, not how it is typed**, and there is **one normalisation rule per identifier in `kb`**, shared by duplicate detection and by resolution so the two cannot disagree. DOI folds case and drops the URL wrapper, query and fragment; ISBN keeps digits only; arXiv **keeps the version to fetch and drops it to identify**. Names are read by **one shared reader** for the same reason. | review    |
+| D74 | A local file is pointed at with **`path`**, kept exactly as written and read relative to the working directory, not with `url`; **`url` stays an address**. The two are separate fields because a path is not an address and cannot be typed into a browser. | review    |
 
 ### Ingest
 
@@ -129,6 +130,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D69 | A resolved wikilink renders as an anchor showing the **page's own title**; an unresolved or ambiguous one renders as the written text inside a marked span; a citation links each key to that key's virtual source page. | review    |
 | D72 | The site's home page is **generated** from what the KB holds — counts, browse by type and tag, the newest sources, and what needs attention — with the **entry document's body as its opening** when the KB has one. `pages/index.md` is **optional** and is not rendered as a page of its own. | review    |
 | D73 | The site's type is **Work Sans**, falling back to **Roboto** and then the reader's system UI face. The fonts are **named, not shipped**: the stylesheet declares the stack, the repo carries no font files, and a built site stays self-contained (`D3`). The body's serif stack is gone — everything but code reads in this face. | review    |
+| D75 | A **vendored capture is materialised into the site** at `sources/<key>-text.html` and linked from its source page; the text is shown exactly as captured and never re-parsed. A key with no capture gets no page, and the site is unchanged when nothing is vendored. | review    |
 
 ---
 
@@ -538,6 +540,61 @@ loses the serif stack rather than keeping two.
 primary face, Roboto as the fallback — with delivery, scope and fallback put as
 separate questions. The answers: name-only, the whole page, Roboto named but not
 shipped.
+
+### Local sources are pointed at with `path`. `D74` added.
+
+**Decision.** A source that is a file on this machine is recorded with a `path`
+field, not with `url`. `path` is kept exactly as the author wrote it and is read
+relative to the working directory when the capture is made. `url` stays what its
+name says: an address. `cite add --path FILE` enters a local file, and a
+positional argument that names an existing file is read as a path. A record with
+both fields is read from its `url`.
+
+**Why separate fields.** `FORMAT.md` always said a pointer could be "a path to a
+local file", but the only field that carried one was `url`, so a path was
+recorded as an address. The two are different kinds of thing: an address resolves
+for anyone, and a path resolves only on the machine that wrote it. Keeping them
+apart lets the tool read a local source without pretending the path is a URL, and
+lets `url` mean one thing in an export.
+
+**Why as written.** `P4` says never re-encode what you do not understand, and the
+tool has no basis to rewrite a path the author chose. The vendored capture is the
+portable, committed artifact; the path only has to work when the capture is made,
+and it is read the way a CLI path always is, relative to the working directory.
+
+**Provenance.** Asked of the tool author, with absolute and KB-relative storage
+as the alternatives; the author chose exactly as written.
+
+### A vendored capture is readable in the site. `D75` added.
+
+**Decision.** A key whose text has been vendored gets a second document in the
+rendered site at `sources/<key>-text.html`, holding the capture in a preformatted
+block under the site's chrome, and its source page carries a **full text** link to
+it. The address is a function of the key and not of the capture's file name, so
+re-vendoring does not move it. A scoped extract carries a cited key's capture
+too, so the same reading survives `export page`.
+
+**Why the site.** `D38` makes vendoring opt-in because text is expensive to
+store; the point of paying that cost is that the text can be read, and the
+rendered site is the human interface (`D13`). Serving the capture is the
+difference between holding evidence and being able to consult it.
+
+**Why a separate document and not the record page.** A capture can be as long as
+a book, and a source page is a record a reader skims; mixing them makes the
+record unreadable. A separate page keeps both, and the key-derived address means
+a re-vendored capture keeps its URL.
+
+**Why plain text in a preformatted block.** The extractor returns text, not
+markdown, so re-parsing it would be inventing structure that is not there. It is
+escaped and shown as it was captured, which is what makes it evidence.
+
+**Why the extract carries it.** An extract is a KB in the same format designed to
+stand alone (`D30`), so a cited source's capture belongs in it for the same
+reason its entry does. Without it the extract's site would offer a full-text link
+to nothing.
+
+**Provenance.** Asked of the tool author, with a raw text document and an inline
+block on the record page as the alternatives; the author chose a styled page.
 
 ### U5 — rewriting inbound links. `D19` stands.
 

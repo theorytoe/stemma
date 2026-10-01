@@ -45,13 +45,18 @@ a citation key. Your judgement is in deciding what is worth recording.
    stemma cite add --arxiv 2401.12345
    stemma cite add --isbn 9780262033848
    stemma cite add --url https://example.org/paper
+   stemma cite add --path ./downloads/paper.pdf --title "A Local Paper"
    stemma cite add --title "A Work Entered By Hand" --year 2024 --container "A Journal"
    ```
 
    Useful flags: `--key` to name the entry, `--type` for the BibTeX entry type,
    `--dry-run` to see what would be written, `--offline` to refuse the network.
-   `cite add` updates an entry it already has rather than appending a second
-   copy of the same work; `--force` is the deliberate way to keep a duplicate.
+   A source that is a file on this machine takes `--path`, not `--url`: a path
+   is not an address. A positional argument that names an existing file is read
+   as a path too. Either way a local file still needs its title and year, because
+   there is no resolver for a file. `cite add` updates an entry it already has
+   rather than appending a second copy of the same work; `--force` is the
+   deliberate way to keep a duplicate.
 
 3. **Read the source.** `fetch` writes a document's text into the KB's scratch
    area so you can work from it. It does not add it to the KB.
@@ -69,6 +74,10 @@ a citation key. Your judgement is in deciding what is worth recording.
    ```sh
    stemma cite vendor KEY
    ```
+
+   A vendored capture is committed, and `build` and `serve` publish it as a page
+   linked from the source page, so a reader can consult the text without leaving
+   the site.
 
 4. **Cite the key in a page.** Write `[@key]` in the prose, using the key the
    tool minted. Do not paraphrase the key or derive one from the title. The

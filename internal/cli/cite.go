@@ -74,6 +74,7 @@ var citeAddCommand = &command{
 		arxiv := fs.String("arxiv", "", "an arXiv identifier")
 		isbn := fs.String("isbn", "", "an ISBN")
 		url := fs.String("url", "", "a URL")
+		path := fs.String("path", "", "a path to a local file")
 		o.registerKB(fs)
 
 		return func(c *command, w *output, args []string) int {
@@ -81,15 +82,26 @@ var citeAddCommand = &command{
 				return w.fail(fmt.Errorf("cite add takes at most one identifier"))
 			}
 
+			// A positional argument that names a file on this machine is a local
+			// source, not an identifier: there is no resolver for a path, so it
+			// fills the same field --path does and the record is built by hand.
+			if len(args) == 1 && *path == "" {
+				if info, err := os.Stat(args[0]); err == nil && !info.IsDir() {
+					*path = args[0]
+					args = nil
+				}
+			}
+
 			fields := source.Fields{
 				Type: *typ, Key: *key, Title: *title, Authors: *authors,
 				Year: *year, Container: *container, Publisher: *publisher,
 				Volume: *volume, Issue: *issue, Pages: *pages, Edition: *edition,
-				DOI: *doi, ArXiv: *arxiv, ISBN: *isbn, URL: *url,
+				DOI: *doi, ArXiv: *arxiv, ISBN: *isbn, URL: *url, Path: *path,
 			}
 			handEntered := *title != "" || len(*authors) > 0 || *year != "" ||
 				*container != "" || *publisher != "" || *volume != "" || *issue != "" ||
-				*pages != "" || *edition != "" || *doi != "" || *arxiv != "" || *isbn != "" || *url != ""
+				*pages != "" || *edition != "" || *doi != "" || *arxiv != "" || *isbn != "" ||
+				*url != "" || *path != ""
 
 			k, code := o.load(w)
 			if k == nil {

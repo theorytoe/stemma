@@ -83,6 +83,50 @@ func TestCiteAddByHandCreatesTheBibliography(t *testing.T) {
 	}
 }
 
+func TestCiteAddRecordsALocalFileWithPath(t *testing.T) {
+	root := kbWithPages(t)
+	document := filepath.Join(t.TempDir(), "paper.pdf")
+	if err := os.WriteFile(document, []byte("%PDF-1.4\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	code, _, stderr := run("cite", "add", "--kb", root, "--path", document, "--title", "A Local Paper")
+	if code != ExitOK {
+		t.Fatalf("exit = %d: %s", code, stderr)
+	}
+
+	f := readBib(t, root, "bibliography.bib")
+	if f.Len() != 1 {
+		t.Fatalf("entries = %d, want 1", f.Len())
+	}
+	e := f.Entries()[0]
+	if got, _ := e.Value("path"); got != document {
+		t.Errorf("path = %q, want %q", got, document)
+	}
+	// A file on this machine is not an address, and must not be filed as one.
+	if _, ok := e.Raw("url"); ok {
+		t.Error("a local file was recorded with a url")
+	}
+}
+
+func TestCiteAddTakesAnExistingFilePositionally(t *testing.T) {
+	root := kbWithPages(t)
+	document := filepath.Join(t.TempDir(), "paper.pdf")
+	if err := os.WriteFile(document, []byte("%PDF-1.4\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	code, _, stderr := run("cite", "add", "--kb", root, document, "--title", "A Local Paper")
+	if code != ExitOK {
+		t.Fatalf("exit = %d: %s", code, stderr)
+	}
+
+	e := readBib(t, root, "bibliography.bib").Entries()[0]
+	if got, _ := e.Value("path"); got != document {
+		t.Errorf("path = %q, want %q", got, document)
+	}
+}
+
 func TestCiteAddAppendsToAnExistingBibliography(t *testing.T) {
 	root := writeTree(t, map[string]string{
 		"pages/index.md":   page("Index", "type: index", ""),

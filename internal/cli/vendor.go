@@ -53,9 +53,9 @@ var citeVendorCommand = &command{
 			if !ok {
 				return w.fail(fmt.Errorf("no entry for %q, so there is no source to capture", key))
 			}
-			pointer := entry.URL()
+			pointer := entry.Pointer()
 			if pointer == "" {
-				return w.fail(fmt.Errorf("%q has no url, so there is nothing to read; "+
+				return w.fail(fmt.Errorf("%q has no url or path, so there is nothing to read; "+
 					"give the entry an address or a path to a file, then vendor it", key))
 			}
 

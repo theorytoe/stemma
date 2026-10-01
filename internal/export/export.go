@@ -132,6 +132,7 @@ type Entry struct {
 	Year    string            `json:"year,omitempty"`
 	Authors []string          `json:"authors,omitempty"`
 	URL     string            `json:"url,omitempty"`
+	Path    string            `json:"path,omitempty"`
 	Fields  map[string]string `json:"fields"`
 }
 
@@ -279,6 +280,7 @@ func entryOf(e *kb.BibEntry) Entry {
 		Year:    e.Year(),
 		Authors: e.Authors(),
 		URL:     e.URL(),
+		Path:    e.Path(),
 		Fields:  map[string]string{},
 	}
 	for _, f := range e.Fields() {

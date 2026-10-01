@@ -45,6 +45,36 @@ func TestVendoredPathIsUnderTheKBRoot(t *testing.T) {
 	}
 }
 
+func TestVendoredHashesCoversEveryCapture(t *testing.T) {
+	root := t.TempDir()
+	// A KB that has vendored nothing is the ordinary case, and it is not an error.
+	got, err := VendoredHashes(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Errorf("hashes = %v, want none", got)
+	}
+
+	name := VendoredName("bush1945")
+	full := filepath.Join(root, filepath.FromSlash(name))
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	text := "the captured text\n"
+	if err := os.WriteFile(full, []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err = VendoredHashes(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := HashOf([]byte(text)); got[name] != want {
+		t.Errorf("VendoredHashes[%q] = %q, want %q", name, got[name], want)
+	}
+}
+
 // keyWithCapture builds a KB whose one entry is otherwise well formed, so the
 // only findings a test has to think about are the vendored ones. recorded is the
 // value written as the vendored hash; text is what is put on disk, and "" leaves

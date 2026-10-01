@@ -48,6 +48,16 @@ func SourceURL(key string) string {
 	return kb.SourcesDir + "/" + url.PathEscape(key) + ".html"
 }
 
+// SourceTextURL is the URL a vendored capture is served at.
+//
+// It is derived from the key and not from the capture's file name, so
+// re-vendoring the text does not move its address, and it is a separate document
+// from the source's record page so the record stays small however long the
+// capture is.
+func SourceTextURL(key string) string {
+	return kb.SourcesDir + "/" + url.PathEscape(key) + "-text.html"
+}
+
 // FilePath is the unescaped form of a site URL: the name a build writes to
 // disk and the name a server matches a decoded request against. A URL carries
 // escapes and a file name does not — a page with a space in its name is served

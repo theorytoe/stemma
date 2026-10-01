@@ -1,6 +1,9 @@
 package kb
 
-import "strings"
+import (
+	"path/filepath"
+	"strings"
+)
 
 // The identifier rules live here, once.
 //
@@ -67,6 +70,18 @@ func NormalizeISBN(s string) string {
 // person does not mean to write.
 func NormalizeURL(s string) string {
 	return strings.TrimRight(strings.TrimSpace(s), "/")
+}
+
+// NormalizePath reduces the ways one file on this machine is written to the path
+// it names, so "./notes/paper.pdf" and "notes/paper.pdf" are one pointer. It is
+// the filesystem's own spelling, because a path names a file and means something
+// only on the machine that wrote it.
+func NormalizePath(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	return filepath.Clean(s)
 }
 
 // trimAnyPrefixFold removes the first prefix that matches, ignoring case.

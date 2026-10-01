@@ -23,6 +23,18 @@ func vendorKB(t *testing.T, url string) string {
 	})
 }
 
+// vendorPathKB is vendorKB for a source that is a file on this machine.
+func vendorPathKB(t *testing.T, path string) string {
+	t.Helper()
+	return writeTree(t, map[string]string{
+		"pages/index.md": page("Index", "type: index", ""),
+		"bibliography.bib": "@article{bush1945,\n" +
+			"  title = {As We May Think},\n" +
+			"  path = {" + path + "},\n" +
+			"}\n",
+	})
+}
+
 // capture returns what is on disk for a key, and whether anything is.
 func capture(t *testing.T, root, key string) (string, bool) {
 	t.Helper()
@@ -257,9 +269,9 @@ func TestCiteVendorThroughTheRealShim(t *testing.T) {
 	if err := os.WriteFile(document, []byte("hello from a file\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	// A path in the url field, which is how a source that is only on this machine
-	// is recorded.
-	root := vendorKB(t, document)
+	// A path in the path field, which is how a source that is only on this
+	// machine is recorded.
+	root := vendorPathKB(t, document)
 
 	code, _, stderr := run("cite", "vendor", "--kb", root, "bush1945")
 	if code != ExitOK {

@@ -50,6 +50,32 @@ func TestScopedTakesTheRootAndWhatItLinksTo(t *testing.T) {
 	}
 }
 
+// A vendored capture is part of the source it belongs to, so an extract carries
+// it: the extract's site then offers the same full text the source KB does.
+func TestScopedCarriesVendoredCaptures(t *testing.T) {
+	dir := scopedKB(t)
+	text := "the captured text\n"
+	full := kb.VendoredPath(dir, "bush1945")
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(full, []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	x, err := Scoped(load(t, dir), "pages/root.md", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := kb.VendoredName("bush1945")
+	if !wrote(x, name) {
+		t.Fatalf("the extract does not carry %s; it has %v", name, filePaths(x))
+	}
+	if got := string(fileOf(t, x, name)); got != text {
+		t.Errorf("capture = %q, want %q", got, text)
+	}
+}
+
 // Depth 0 is the whole reachable set, so the page that was out of reach comes
 // along and nothing is pruned for being outside.
 func TestScopedDepthZeroReachesEverything(t *testing.T) {

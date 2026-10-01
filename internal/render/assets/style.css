@@ -439,6 +439,13 @@ pre code {
   padding: 0;
 }
 
+/* A capture is prose read top to bottom, so it wraps rather than scrolling
+   sideways; an extraction has no fixed line length to preserve. */
+.source-text .capture {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 blockquote {
   margin-left: 0;
   padding-left: 1rem;

@@ -34,6 +34,9 @@ type Fields struct {
 	ArXiv string
 	ISBN  string
 	URL   string
+	// Path is a file on this machine, kept exactly as given. It is the local
+	// alternative to URL and the pointer a local capture is read from.
+	Path string
 }
 
 // Manual builds an entry from supplied metadata, which is the fallback when the
@@ -46,7 +49,7 @@ type Fields struct {
 // hand-entered record visibly different from a fetched one.
 func Manual(f Fields) (*kb.BibEntry, error) {
 	title := strings.TrimSpace(f.Title)
-	if title == "" && firstNonEmpty(f.DOI, f.ArXiv, f.ISBN, f.URL, f.ID) == "" {
+	if title == "" && firstNonEmpty(f.DOI, f.ArXiv, f.ISBN, f.URL, f.Path, f.ID) == "" {
 		return nil, invalid(f.ID, "a record needs a title or an identifier")
 	}
 
@@ -64,7 +67,7 @@ func Manual(f Fields) (*kb.BibEntry, error) {
 
 	key := strings.TrimSpace(f.Key)
 	if key == "" {
-		key = CiteKey(f.Authors, f.Year, title, firstNonEmpty(f.DOI, f.ArXiv, f.ISBN, f.URL, f.ID))
+		key = CiteKey(f.Authors, f.Year, title, firstNonEmpty(f.DOI, f.ArXiv, f.ISBN, f.URL, f.Path, f.ID))
 	}
 
 	e := kb.NewBibEntry(typ, key)
@@ -91,5 +94,6 @@ func Manual(f Fields) (*kb.BibEntry, error) {
 		e.Set("archivePrefix", "{arXiv}")
 	}
 	setIf(e, "url", f.URL)
+	setIf(e, "path", f.Path)
 	return e, nil
 }

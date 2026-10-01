@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/theorytoe/stemma/internal/kb"
 )
 
 // writeKB lays down a tiny KB on disk, because the server reads files and
@@ -162,6 +164,42 @@ func TestRefreshPicksUpEdits(t *testing.T) {
 	}
 	if status, _, body := get(t, ts.URL+"/gamma.html"); status != http.StatusOK || !strings.Contains(body, "<h1>Gamma</h1>") {
 		t.Errorf("the new page is not served: %d\n%s", status, body)
+	}
+}
+
+// TestServesVendoredCapture checks that a capture in sources/ is served, and
+// that adding one while the server runs is noticed: a capture is not a page, so
+// the page freshness check alone would miss it.
+func TestServesVendoredCapture(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "stemma.toml", "title = \"Test KB\"\n")
+	writeFile(t, dir, "pages/index.md", "---\ntitle: Home\ntype: index\n---\nSee [@bush1945].\n")
+	writeFile(t, dir, "bibliography.bib", "@article{bush1945,\n  title = {As We May Think},\n}\n")
+
+	srv, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(srv)
+	defer ts.Close()
+
+	if status, _, _ := get(t, ts.URL+"/sources/bush1945-text.html"); status != http.StatusNotFound {
+		t.Fatalf("the text page exists before the capture does")
+	}
+	_, _, before := get(t, ts.URL+"/__reload")
+
+	writeFile(t, dir, kb.VendoredName("bush1945"), "the captured text\n")
+
+	_, _, after := get(t, ts.URL+"/__reload")
+	if before == after {
+		t.Errorf("the version did not change after a capture was added: %s", before)
+	}
+	status, ctype, body := get(t, ts.URL+"/sources/bush1945-text.html")
+	if status != http.StatusOK || !strings.HasPrefix(ctype, "text/html") {
+		t.Fatalf("GET the text page = %d %s", status, ctype)
+	}
+	if !strings.Contains(body, "the captured text") {
+		t.Errorf("the capture is not served:\n%s", body)
 	}
 }
 

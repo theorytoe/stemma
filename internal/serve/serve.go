@@ -55,6 +55,16 @@ func (s *Server) refresh() error {
 	if err != nil {
 		return err
 	}
+	// A capture is not a page, so Hashes does not cover it, but it is part of the
+	// site: vendoring a source, or editing a capture, has to make the server
+	// reload rather than keep serving the text it read at startup.
+	vendored, err := kb.VendoredHashes(s.root)
+	if err != nil {
+		return err
+	}
+	for name, digest := range vendored {
+		hashes[name] = digest
+	}
 	version := versionOf(hashes)
 	if s.docs != nil && version == s.version {
 		return nil

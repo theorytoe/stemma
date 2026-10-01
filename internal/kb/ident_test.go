@@ -76,6 +76,21 @@ func TestNormalizeURL(t *testing.T) {
 	}
 }
 
+func TestNormalizePath(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"notes/paper.pdf", "notes/paper.pdf"},
+		{"./notes/paper.pdf", "notes/paper.pdf"},
+		{"notes/./paper.pdf", "notes/paper.pdf"},
+		{"notes/dir/../paper.pdf", "notes/paper.pdf"},
+		{"  notes/paper.pdf  ", "notes/paper.pdf"},
+		{"", ""},
+	} {
+		if got := NormalizePath(tc.in); got != tc.want {
+			t.Errorf("NormalizePath(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
 func TestYearOf(t *testing.T) {
 	for _, tc := range []struct{ in, want string }{
 		{"2009", "2009"},

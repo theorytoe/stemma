@@ -154,6 +154,9 @@ func SameWork(a, b *BibEntry) bool {
 	if sameIdentifier(a, b, "url", NormalizeURL) {
 		return true
 	}
+	if sameIdentifier(a, b, "path", NormalizePath) {
+		return true
+	}
 	return sameFields(a, b)
 }
 
@@ -208,10 +211,26 @@ func (e *BibEntry) Year() string { return YearOf(fieldValue(e, "year")) }
 // Authors is the record's authors, in order.
 func (e *BibEntry) Authors() []string { return splitNameList(fieldValue(e, "author")) }
 
-// URL is the entry's `url` field, which is where a source's readable location
-// lives: an address, or a path to a file on this machine. It is the field a
-// capture is read from, so it is the one an entry needs before it can be vendored.
+// URL is the entry's `url` field: the address a source is readable at.
 func (e *BibEntry) URL() string { return fieldValue(e, "url") }
+
+// Path is the entry's `path` field: the file on this machine a source is.
+//
+// It is kept exactly as the author wrote it and is read relative to the working
+// directory when the capture is made, so a local source needs no address. It is
+// a separate field from `url` because a path is not an address and cannot be
+// typed into a browser.
+func (e *BibEntry) Path() string { return fieldValue(e, "path") }
+
+// Pointer is where a source's text is read from: its `url` when it has one and
+// its `path` otherwise. It is the field a capture needs before an entry can be
+// vendored, and the one the pointer is compared by.
+func (e *BibEntry) Pointer() string {
+	if url := e.URL(); url != "" {
+		return url
+	}
+	return e.Path()
+}
 
 // firstSurname is the family name of an entry's first author, normalised, which
 // is the part of an author list two records for one work agree on.

@@ -443,3 +443,100 @@ func TestURLsAreNotDoubleEscaped(t *testing.T) {
 		t.Errorf("the page URL was escaped twice:\n%s", got)
 	}
 }
+
+// vendoredRenderer builds a renderer over a KB on disk with one cited source
+// whose text is vendored. The capture is a file in the KB, so an in-memory KB
+// cannot carry one.
+func vendoredRenderer(t *testing.T) *Renderer {
+	t.Helper()
+	root := t.TempDir()
+	write := func(name, body string) {
+		t.Helper()
+		p := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	text := "the captured text\n"
+	write("pages/index.md", "---\ntitle: Home\ntype: index\n---\nSee [@bush1945].\n")
+	write("bibliography.bib", "@article{bush1945,\n"+
+		"  title = {As We May Think},\n"+
+		"  path = {/nowhere/not-read.txt},\n"+
+		"  stemma-vendored-hash = {"+kb.HashOf([]byte(text))+"},\n"+
+		"}\n")
+	write(kb.VendoredName("bush1945"), text)
+
+	k, err := kb.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := New(k)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return r
+}
+
+// TestVendoredSourceIsServedAndLinked is the point of the whole path: a capture
+// in sources/ becomes a document of the site, and the record page points at it.
+func TestVendoredSourceIsServedAndLinked(t *testing.T) {
+	r := vendoredRenderer(t)
+	docs, err := r.Documents()
+	if err != nil {
+		t.Fatal(err)
+	}
+	byURL := map[string]Document{}
+	for _, d := range docs {
+		byURL[d.URL] = d
+	}
+
+	url := SourceTextURL("bush1945")
+	doc, ok := byURL[url]
+	if !ok {
+		t.Fatalf("Documents did not produce %s", url)
+	}
+	if !strings.Contains(string(doc.Body), "the captured text") {
+		t.Errorf("the capture is not on the text page:\n%s", doc.Body)
+	}
+	if !strings.Contains(string(doc.Body), "captured text of") {
+		t.Errorf("the text page does not name its record:\n%s", doc.Body)
+	}
+
+	record, ok := byURL[SourceURL("bush1945")]
+	if !ok {
+		t.Fatal("Documents did not produce the record page")
+	}
+	if !strings.Contains(string(record.Body), url) {
+		t.Errorf("the record page does not link to %s:\n%s", url, record.Body)
+	}
+}
+
+// TestVendoredTextIsEscaped checks that a capture is shown as text. An
+// extraction can contain anything, including something that looks like markup.
+func TestVendoredTextIsEscaped(t *testing.T) {
+	r := vendoredRenderer(t)
+	got, err := r.SourceText("bush1945", []byte("<b>not markup</b>\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(got), "&lt;b&gt;not markup&lt;/b&gt;") {
+		t.Errorf("the capture was not escaped:\n%s", got)
+	}
+	if strings.Contains(string(got), "<b>not markup</b>") {
+		t.Errorf("the capture was rendered as markup:\n%s", got)
+	}
+}
+
+// TestSourceTextURLIsStableAcrossReVendoring pins the address to the key rather
+// than to the capture's file name.
+func TestSourceTextURLIsStableAcrossReVendoring(t *testing.T) {
+	if got, want := SourceTextURL("vaswani2017"), "sources/vaswani2017-text.html"; got != want {
+		t.Errorf("SourceTextURL = %q, want %q", got, want)
+	}
+	if got, want := SourceTextURL("a/b:c"), "sources/a%2Fb:c-text.html"; got != want {
+		t.Errorf("SourceTextURL = %q, want %q", got, want)
+	}
+}

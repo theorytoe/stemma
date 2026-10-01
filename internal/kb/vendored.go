@@ -1,6 +1,10 @@
 package kb
 
 import (
+	"errors"
+	"fmt"
+	"io/fs"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -21,4 +25,34 @@ func VendoredName(key string) string {
 // VendoredPath is where that file is on disk.
 func VendoredPath(root, key string) string {
 	return filepath.Join(root, filepath.FromSlash(VendoredName(key)))
+}
+
+// VendoredHashes returns the digest of every capture in sources/, keyed by its
+// path inside the KB.
+//
+// It is deliberately not folded into Hashes. The index stamps pages, and a
+// capture is not a page; a running server, on the other hand, has to notice a
+// capture changing so the text it serves stays current, and this is how it does.
+func VendoredHashes(root string) (map[string]string, error) {
+	fsys := os.DirFS(root)
+	entries, err := fs.ReadDir(fsys, SourcesDir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", SourcesDir, err)
+	}
+	out := map[string]string{}
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := path.Join(SourcesDir, e.Name())
+		raw, err := fs.ReadFile(fsys, name)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", name, err)
+		}
+		out[name] = HashOf(raw)
+	}
+	return out, nil
 }

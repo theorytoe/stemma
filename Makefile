@@ -37,7 +37,7 @@ install-skills: skills
 	@mkdir -p "$(SKILLS_DIR)"
 	@for d in $(SKILLS)/*/; do \
 		name=$$(basename "$$d"); \
-		rm -rf "$(SKILLS_DIR)/$$name"; \
+		rm -r "$(SKILLS_DIR)/$$name"; \
 		cp -R "$$d" "$(SKILLS_DIR)/$$name"; \
 		echo "installed $$name to $(SKILLS_DIR)"; \
 	done

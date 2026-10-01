@@ -12,9 +12,11 @@ const DefaultSnippetWidth = 120
 // every matched token wrapped in square brackets.
 //
 // The result is plain text, never HTML, because the commands that print it
-// print to a terminal or a pipe. An empty result means none of the terms is in
-// the body, which is a different answer from "the body is empty" and is left
-// for the caller to say.
+// print to a terminal or a pipe, and it is one line: the window is taken from
+// markdown, which is full of newlines, and every run of whitespace in it is
+// collapsed to a single space so a result reads on one line wherever it is
+// shown. An empty result means none of the terms is in the body, which is a
+// different answer from "the body is empty" and is left for the caller to say.
 //
 // The search is over tokens, not raw bytes, so a snippet marks the same words a
 // query would match — including a word reached through the accent fold, whose
@@ -93,7 +95,18 @@ func Snippet(body string, terms []string, width int) string {
 	if end < len(rs) {
 		out.WriteString("...")
 	}
-	return strings.TrimSpace(out.String())
+	return oneLine(out.String())
+}
+
+// oneLine collapses every run of whitespace in a snippet to a single space.
+//
+// A snippet is cut from a page body, so the window around a match can hold the
+// newlines, list markers and table pipes the author wrote. The words and the
+// marks around them are what matter, so the whitespace between them is
+// normalised and nothing else is: a snippet is a single line in a terminal, in
+// a pipe and in JSON alike.
+func oneLine(s string) string {
+	return strings.Join(strings.Fields(s), " ")
 }
 
 // tokenSpan is one token's place in a rune slice. It is defined with the

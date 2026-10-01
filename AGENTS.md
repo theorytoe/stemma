@@ -39,7 +39,7 @@ make install        # go install to GOBIN (or GOPATH/bin)
 make install-skills # copy skills/ into ~/.agents/skills (override SKILLS_DIR)
 make tidy           # go mod tidy
 make fmt            # go fmt ./...
-make clean          # rm -rf bin
+make clean          # rm -r bin
 ```
 
 `make build` writes `bin/stemma`. The version is injected with
@@ -132,6 +132,8 @@ make bench       # Tier-0 vs Tier-1 timing; measures, never passes/fails
   If a change legitimately alters output, regenerate the golden and inspect the
   diff rather than loosening the assertion.
 - The exhaustive extract/round-trip gate is `internal/export/gate_test.go`; the
+- Tests should be ran with `env -u STEMMA_KB` to prevent any existing knowledge
+  bases from interacting with the test suite.
   `make extract` target exercises the same path through the shipped binary.
 - `make test-shim` skips (not fails) without `python3`. The Go suite must pass on
   a machine with no interpreter at all. Do not make Python a build prerequisite.

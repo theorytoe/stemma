@@ -3,6 +3,10 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"io"
+	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/theorytoe/stemma/internal/index"
 	"github.com/theorytoe/stemma/internal/kb"
@@ -75,19 +79,138 @@ var searchCommand = &command{
 					"results": hits,
 				})
 			}
-			for _, h := range hits {
-				fmt.Fprintf(w.stdout, "%s\t%.3f", h.Path, h.Score)
-				switch {
-				case h.Snippet != "":
-					fmt.Fprintf(w.stdout, "\t%s", h.Snippet)
-				case h.Title != "":
-					fmt.Fprintf(w.stdout, "\t%s", h.Title)
-				}
-				fmt.Fprintln(w.stdout)
-			}
+			writeSearchResults(w.stdout, hits, index.Tokenize(query),
+				colorEnabled(w.stdout), terminalWidth(w.stdout))
 			return ExitOK
 		}
 	},
+}
+
+// The escapes a search row uses. They are the eight-colour set, which every
+// terminal that claims to be one can render, and each is paired with a reset so
+// the color cannot leak into the rest of the line.
+const (
+	ansiReset = "\x1b[0m"
+	ansiPath  = "\x1b[36m"   // cyan
+	ansiMatch = "\x1b[1;32m" // bold green
+)
+
+// minSnippetWidth is the least room a clipped snippet keeps when the terminal
+// is too narrow for the columns before it. A few words of context beat none,
+// even when the line then runs past the edge.
+const minSnippetWidth = 20
+
+// writeSearchResults prints one hit per line: the page path, its score, and the
+// context around the match.
+//
+// The snippet arrives already collapsed to one line, because a result that
+// wraps is a result a reader has to reassemble; only the path and score columns
+// are padded, so the fields line up without a tab that a path of the wrong
+// length would knock out of place.
+//
+// color and width describe the terminal the lines are going to. width is 0 off
+// a terminal, and then nothing is clipped and no color is written, so a pipe
+// receives the plain text it can split on whitespace, with the snippet's
+// "[term]" marks left in place. On a terminal, lines are clipped so they cannot
+// wrap, and color may be on or off: NO_COLOR turns off the color without giving
+// up the clipping.
+func writeSearchResults(out io.Writer, hits []index.Hit, terms []string, color bool, width int) {
+	pathWidth, scoreWidth := 0, 0
+	scores := make([]string, len(hits))
+	for i, h := range hits {
+		if n := utf8.RuneCountInString(h.Path); n > pathWidth {
+			pathWidth = n
+		}
+		scores[i] = strconv.FormatFloat(h.Score, 'f', 3, 64)
+		if n := len(scores[i]); n > scoreWidth {
+			scoreWidth = n
+		}
+	}
+
+	for i, h := range hits {
+		text := h.Snippet
+		if text == "" {
+			text = h.Title
+		}
+		pad := strings.Repeat(" ", pathWidth-utf8.RuneCountInString(h.Path))
+
+		// The two spaces between fields, plus the path and score as rendered,
+		// come out of the terminal before the snippet gets the rest.
+		budget := 0
+		if width > 0 {
+			budget = width - pathWidth - scoreWidth - 4
+			if budget < minSnippetWidth {
+				budget = minSnippetWidth
+			}
+		}
+		snippet := renderSnippet(index.SplitSnippet(text, terms), color, budget)
+
+		if color {
+			fmt.Fprintf(out, "%s%s%s%s  %*s  %s\n",
+				ansiPath, h.Path, ansiReset, pad, scoreWidth, scores[i], snippet)
+			continue
+		}
+		fmt.Fprintf(out, "%s%s  %*s  %s\n", h.Path, pad, scoreWidth, scores[i], snippet)
+	}
+}
+
+// renderSnippet renders a snippet's parts as one line.
+//
+// With color, a marked term is written in color and its marking brackets are
+// dropped; without it, the brackets stay, because they are the plain-text
+// convention a pipe and the site both read. A positive width clips the line to
+// that many visible runes with a trailing ellipsis; the count is of what a
+// reader sees, so the escapes do not eat into the budget and a bracket pair
+// counts as the two columns it occupies.
+func renderSnippet(parts []index.SnippetPart, color bool, width int) string {
+	const ellipsis = "..."
+	limit := -1
+	if width > 0 {
+		if limit = width - len(ellipsis); limit < 0 {
+			limit = 0
+		}
+	}
+
+	var b strings.Builder
+	used, clipped := 0, false
+	for _, part := range parts {
+		visible := utf8.RuneCountInString(part.Text)
+		display := part.Text
+		switch {
+		case part.Match && color:
+			display = ansiMatch + part.Text + ansiReset
+		case part.Match:
+			display = "[" + part.Text + "]"
+			visible += 2
+		}
+
+		if limit >= 0 && used+visible > limit {
+			// A text run is cut to the room left; a marked term is kept or
+			// dropped whole, because half a highlight is worse than none.
+			if !part.Match {
+				if room := limit - used; room > 0 {
+					b.WriteString(runePrefix(part.Text, room))
+				}
+			}
+			clipped = true
+			break
+		}
+		b.WriteString(display)
+		used += visible
+	}
+	if clipped {
+		b.WriteString(ellipsis)
+	}
+	return b.String()
+}
+
+// runePrefix returns the first room runes of s, or s when it is no longer.
+func runePrefix(s string, room int) string {
+	rs := []rune(s)
+	if len(rs) <= room {
+		return s
+	}
+	return string(rs[:room])
 }
 
 // searchSource returns a source for the KB, plus the drafts to search alongside

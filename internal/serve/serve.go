@@ -152,10 +152,7 @@ func (s *Server) search(w http.ResponseWriter, r *http.Request) {
 		k := s.kb
 		s.mu.RUnlock()
 
-		terms := map[string]bool{}
-		for _, t := range index.Tokenize(query) {
-			terms[t] = true
-		}
+		terms := index.Tokenize(query)
 
 		src := index.NewSource(k, nil)
 		defer src.Close()
@@ -193,35 +190,18 @@ func (s *Server) search(w http.ResponseWriter, r *http.Request) {
 // markSnippet turns the "[term]" the index puts around a matched word into
 // <mark>, escaping everything else so a result is safe to put in a page.
 //
-// The brackets are ambiguous: a body may contain its own, as every wikilink
-// does. A pair is taken as a mark only when it holds exactly one word, with no
-// bracket of its own, and that word is one of the query's terms. A literal
-// "[[Page]]" in the body therefore survives as text.
-func markSnippet(s string, terms map[string]bool) template.HTML {
+// Which brackets are marks is decided by the index, which knows the query's
+// terms; this only renders the decision.
+func markSnippet(s string, terms []string) template.HTML {
 	var b strings.Builder
-	for len(s) > 0 {
-		i := strings.IndexByte(s, '[')
-		if i < 0 {
-			b.WriteString(html.EscapeString(s))
-			break
-		}
-		j := strings.IndexByte(s[i+1:], ']')
-		if j < 0 {
-			b.WriteString(html.EscapeString(s))
-			break
-		}
-		inner := s[i+1 : i+1+j]
-		toks := index.Tokenize(inner)
-		if strings.ContainsAny(inner, "[]") || len(toks) != 1 || !terms[toks[0]] {
-			b.WriteString(html.EscapeString(s[:i+1]))
-			s = s[i+1:]
+	for _, part := range index.SplitSnippet(s, terms) {
+		if part.Match {
+			b.WriteString("<mark>")
+			b.WriteString(html.EscapeString(part.Text))
+			b.WriteString("</mark>")
 			continue
 		}
-		b.WriteString(html.EscapeString(s[:i]))
-		b.WriteString("<mark>")
-		b.WriteString(html.EscapeString(inner))
-		b.WriteString("</mark>")
-		s = s[i+1+j+1:]
+		b.WriteString(html.EscapeString(part.Text))
 	}
 	return template.HTML(b.String())
 }

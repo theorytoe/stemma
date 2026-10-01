@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/theorytoe/stemma/internal/index"
 )
 
 func searchTestKB(t *testing.T) string {
@@ -44,8 +47,108 @@ func TestSearchCommandRanksTitleFirst(t *testing.T) {
 	if code != ExitOK {
 		t.Fatalf("exit %d: %s", code, stderr)
 	}
-	if !strings.HasPrefix(stdout, "pages/retrieval.md\t") {
+	if !strings.HasPrefix(stdout, "pages/retrieval.md") {
 		t.Errorf("the title match did not rank first:\n%s", stdout)
+	}
+}
+
+// Every result is one line, however much the body it was cut from wrapped.
+func TestSearchCommandPutsEachResultOnOneLine(t *testing.T) {
+	root := writeTree(t, map[string]string{
+		"pages/index.md": page("Index", "type: index", ""),
+		"pages/prose.md": page("Prose", "type: concept",
+			"alpha beta\n\nretrieval happens here\n\n- and then more\n"),
+	})
+	code, stdout, stderr := run("search", "--kb", root, "retrieval")
+	if code != ExitOK {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+	lines := strings.Split(strings.TrimRight(stdout, "\n"), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("search printed %d lines for one hit:\n%s", len(lines), stdout)
+	}
+	if !strings.Contains(lines[0], "[retrieval] happens here") {
+		t.Errorf("line = %q, want the match and its context", lines[0])
+	}
+}
+
+// A pipe gets plain, uncolored text with the snippet's marks left as brackets,
+// because that is what a caller can split and a downstream tool can read.
+func TestSearchCommandPlainWhenPiped(t *testing.T) {
+	root := searchTestKB(t)
+	code, stdout, stderr := run("search", "--kb", root, "retrieval")
+	if code != ExitOK {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+	if strings.Contains(stdout, "\x1b[") {
+		t.Errorf("a pipe got ANSI escapes:\n%q", stdout)
+	}
+	if !strings.Contains(stdout, "[retrieval]") {
+		t.Errorf("the plain form lost its marks:\n%q", stdout)
+	}
+}
+
+func TestRenderSnippetPlainKeepsBrackets(t *testing.T) {
+	parts := index.SplitSnippet("before [retrieval] after", []string{"retrieval"})
+	if got := renderSnippet(parts, false, 0); got != "before [retrieval] after" {
+		t.Errorf("plain snippet = %q", got)
+	}
+}
+
+func TestRenderSnippetColorReplacesBrackets(t *testing.T) {
+	parts := index.SplitSnippet("before [retrieval] after", []string{"retrieval"})
+	got := renderSnippet(parts, true, 0)
+	want := "before " + ansiMatch + "retrieval" + ansiReset + " after"
+	if got != want {
+		t.Errorf("colored snippet = %q, want %q", got, want)
+	}
+}
+
+// Clipping counts what a reader sees: escapes do not eat into the width, and a
+// mark's brackets do not either.
+func TestRenderSnippetClipsToWidth(t *testing.T) {
+	long := "start [retrieval] " + strings.Repeat("word ", 20)
+	parts := index.SplitSnippet(long, []string{"retrieval"})
+
+	for _, tc := range []struct {
+		name  string
+		color bool
+	}{
+		{"plain", false},
+		{"color", true},
+	} {
+		got := renderSnippet(parts, tc.color, 30)
+		if !strings.HasSuffix(got, "...") {
+			t.Errorf("%s: snippet = %q, want a trailing ellipsis", tc.name, got)
+		}
+		if n := len([]rune(stripANSI(got))); n > 30 {
+			t.Errorf("%s: snippet is %d columns, want at most 30: %q", tc.name, n, got)
+		}
+	}
+}
+
+// A term that does not fit is dropped whole rather than half-drawn, and the
+// line still ends with the ellipsis that says so.
+func TestRenderSnippetDoesNotSplitAMark(t *testing.T) {
+	parts := index.SplitSnippet(strings.Repeat("x", 40)+" [retrieval]", []string{"retrieval"})
+	got := stripANSI(renderSnippet(parts, true, 10))
+	if strings.Contains(got, "ret") {
+		t.Errorf("snippet = %q, want no partial mark", got)
+	}
+}
+
+func stripANSI(s string) string {
+	r := strings.NewReplacer(ansiPath, "", ansiMatch, "", ansiReset, "")
+	return r.Replace(s)
+}
+
+func TestColorDisabledOffATerminal(t *testing.T) {
+	var b bytes.Buffer
+	if colorEnabled(&b) {
+		t.Error("a buffer was treated as a terminal")
+	}
+	if terminalWidth(&b) != 0 {
+		t.Error("a buffer reported a terminal width")
 	}
 }
 

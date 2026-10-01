@@ -25,6 +25,20 @@ func TestSnippetKeepsTheOriginalSpelling(t *testing.T) {
 	}
 }
 
+// A snippet is cut from markdown, so the newlines, list markers and table
+// pipes around a match are collapsed: the result reads on one line in a
+// terminal, in a pipe and in JSON alike.
+func TestSnippetIsOneLine(t *testing.T) {
+	body := "intro line\n\nsecond line with retrieval\n\n- third line"
+	got := Snippet(body, []string{"retrieval"}, 0)
+	if strings.ContainsAny(got, "\n\r\t") {
+		t.Errorf("snippet = %q, want one line", got)
+	}
+	if !strings.Contains(got, "second line with [retrieval] - third line") {
+		t.Errorf("snippet = %q, want the words around the match kept", got)
+	}
+}
+
 func TestSnippetNoMatch(t *testing.T) {
 	if got := Snippet("nothing here", []string{"absent"}, 0); got != "" {
 		t.Errorf("snippet = %q, want empty", got)

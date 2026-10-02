@@ -41,8 +41,11 @@ var citeCommand = &command{
 //
 // It is the one command that writes to the bibliography, and it is the seam
 // where the two halves of the source subsystem meet: an identifier goes out to
-// an authoritative resolver, a person's fields stay at home, and both produce
-// the same kind of entry and go through the same duplicate check.
+// an authoritative resolver, a person's fields build a record or correct a
+// resolved one, and both produce the same kind of entry and go through the same
+// duplicate check. An identifier flag (`--doi`, `--arxiv`, `--isbn`, `--url`,
+// `--path`) is the hand-entered alternative to a positional identifier, so the
+// two together are refused; the descriptive flags may stand beside either.
 //
 // The check is the point. A work reaches a bibliography more than once under
 // more than one key — a DOI export mints keys differently from an arXiv export,
@@ -52,7 +55,7 @@ var citeCommand = &command{
 // deliberate way to say "yes, I meant a separate copy".
 var citeAddCommand = &command{
 	name:    "add",
-	summary: "add a source, resolving an identifier or taking fields by hand",
+	summary: "add a source by identifier, or enter and correct its fields",
 	args:    "[IDENTIFIER]",
 	setup: func(fs *flag.FlagSet, o *options) runFunc {
 		typ := fs.String("type", "", "the entry type; inferred when not given")
@@ -61,20 +64,20 @@ var citeAddCommand = &command{
 		dryRun := fs.Bool("dry-run", false, "report what would be written without writing it")
 		force := fs.Bool("force", false, "append a second copy even when the work is already there")
 
-		title := fs.String("title", "", "the title, for a record entered by hand")
-		authors := listFlag(fs, "author", "an author, repeatable, for a record entered by hand")
-		year := fs.String("year", "", "the year, for a record entered by hand")
+		title := fs.String("title", "", "the title")
+		authors := listFlag(fs, "author", "an author, repeatable")
+		year := fs.String("year", "", "the year")
 		container := fs.String("container", "", "the journal, or the book a chapter is in")
 		publisher := fs.String("publisher", "", "the publisher")
 		volume := fs.String("volume", "", "the volume")
 		issue := fs.String("issue", "", "the issue or number")
 		pages := fs.String("pages", "", "the page range")
 		edition := fs.String("edition", "", "the edition")
-		doi := fs.String("doi", "", "a DOI")
-		arxiv := fs.String("arxiv", "", "an arXiv identifier")
-		isbn := fs.String("isbn", "", "an ISBN")
-		url := fs.String("url", "", "a URL")
-		path := fs.String("path", "", "a path to a local file")
+		doi := fs.String("doi", "", "a DOI, for a record entered by hand")
+		arxiv := fs.String("arxiv", "", "an arXiv identifier, for a record entered by hand")
+		isbn := fs.String("isbn", "", "an ISBN, for a record entered by hand")
+		url := fs.String("url", "", "a URL, for a record entered by hand")
+		path := fs.String("path", "", "a path to a local file, for a record entered by hand")
 		o.registerKB(fs)
 
 		return func(c *command, w *output, args []string) int {
@@ -98,10 +101,15 @@ var citeAddCommand = &command{
 				Volume: *volume, Issue: *issue, Pages: *pages, Edition: *edition,
 				DOI: *doi, ArXiv: *arxiv, ISBN: *isbn, URL: *url, Path: *path,
 			}
-			handEntered := *title != "" || len(*authors) > 0 || *year != "" ||
+			// The identifier flags and the metadata flags are two different
+			// things, and only the metadata flags can stand beside a resolved
+			// identifier: an identifier is what gets resolved, and passing one as
+			// a field would be asking for two records at once.
+			identifier := *doi != "" || *arxiv != "" || *isbn != "" || *url != "" || *path != ""
+			metadata := *title != "" || len(*authors) > 0 || *year != "" ||
 				*container != "" || *publisher != "" || *volume != "" || *issue != "" ||
-				*pages != "" || *edition != "" || *doi != "" || *arxiv != "" || *isbn != "" ||
-				*url != "" || *path != ""
+				*pages != "" || *edition != ""
+			handEntered := identifier || metadata
 
 			k, code := o.load(w)
 			if k == nil {
@@ -113,17 +121,19 @@ var citeAddCommand = &command{
 
 			var entry *kb.BibEntry
 			var record []byte
+			resolved := false
 
 			switch {
-			case len(args) == 1 && handEntered:
+			case len(args) == 1 && identifier:
 				return w.fail(fmt.Errorf(
-					"an identifier carries its own metadata; drop the field flags and use them only for a record entered by hand"))
+					"an identifier carries its own metadata; drop --doi, --arxiv, --isbn, --url and --path, " +
+						"which are only for a record entered by hand"))
 			case len(args) == 1:
 				result, err := res.ResolveResult(context.Background(), args[0])
 				if err != nil {
 					return failResolution(w, args[0], err)
 				}
-				entry, record = result.Entry, result.Record
+				entry, record, resolved = result.Entry, result.Record, true
 			default:
 				if !handEntered {
 					return w.fail(fmt.Errorf(
@@ -138,12 +148,21 @@ var citeAddCommand = &command{
 
 			// --key and --type apply to either path: they say how the record
 			// should be filed, which is the author's choice and not a fact a
-			// resolver owns.
+			// resolver owns. They land before the fields do, because --type
+			// decides which field a --container belongs in.
 			if *key != "" {
 				entry.SetKey(*key)
 			}
 			if *typ != "" {
 				entry.SetType(*typ)
+			}
+			// A resolver knows a record but not every reader's view of it, and a
+			// raw document can carry no title at all. A field given beside a
+			// resolved identifier is a correction, so it is written over what the
+			// resolver said. A hand-entered record was built from the same fields
+			// already, which is why this runs only for a resolution.
+			if resolved {
+				source.ApplyFields(entry, fields)
 			}
 			if len(record) > 0 {
 				entry.Set(kb.FieldContentHash, "{"+kb.HashOf(record)+"}")

@@ -91,6 +91,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D65 | A source pointer is compared by **what it names, not how it is typed**, and there is **one normalisation rule per identifier in `kb`**, shared by duplicate detection and by resolution so the two cannot disagree. DOI folds case and drops the URL wrapper, query and fragment; ISBN keeps digits only; arXiv **keeps the version to fetch and drops it to identify**. Names are read by **one shared reader** for the same reason. | review    |
 | D74 | A local file is pointed at with **`path`**, kept exactly as written and read relative to the working directory, not with `url`; **`url` stays an address**. The two are separate fields because a path is not an address and cannot be typed into a browser. | review    |
 | D76 | A source that is a file on this machine has its **original document copied into `sources/`** beside the extracted text, under the source's own extension; `stemma-vendored-hash` covers the original when there is one and the extracted text otherwise. | review    |
+| D78 | `cite add` resolves a **positional** identifier only. The identifier flags (`--doi`, `--arxiv`, `--isbn`, `--url`, `--path`) name a **record entered by hand** and are refused beside a positional one; the descriptive flags build a hand-entered record or **correct a resolved one**. | review    |
 
 ### Ingest
 
@@ -663,6 +664,32 @@ archived pages would grow a node that the picture shows as small.
 
 **Provenance.** Asked of the tool author, who wanted a retired page to stop
 cluttering the map.
+
+### The flags of `cite add`. `D78` added.
+
+**Decision.** `cite add` resolves a **positional** identifier. The identifier
+flags (`--doi`, `--arxiv`, `--isbn`, `--url`, `--path`) are the hand-entered way
+to name a source, not a second way to resolve one, and a positional identifier
+beside one of them is refused as contradictory. The descriptive flags
+(`--title`, `--author`, `--year`, `--container`, `--publisher`, `--volume`,
+`--issue`, `--pages`, `--edition`) may stand beside either: with a positional
+identifier they correct the resolved record, and without one they build a
+hand-entered record.
+
+**Why the flags do not resolve.** `D37` puts resolution in one place, an
+authoritative service, and `sources-bibliography.md` Task 3 decided the positional
+form is the one that reaches it. A flag that means "resolve this" and a field
+that means "this is what it says" are different jobs wearing the same shape; the
+flag names the field, so it enters the field. The help text and the research
+skill said otherwise, and that was the defect, so they were rewritten rather than
+the code.
+
+**Why a resolved record takes corrections.** A resolver is authoritative about a
+work but not omniscient: a raw URL carries no title at all, and a person may
+disagree with a machine about which year a paper appeared. Refusing every field
+beside an identifier meant a resolved raw document could never be titled. The
+correction is deliberate and explicit, so it is written over what the resolver
+said; a field the person did not mention is left exactly as resolved.
 
 ### U5 — rewriting inbound links. `D19` stands.
 

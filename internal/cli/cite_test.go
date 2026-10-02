@@ -264,14 +264,53 @@ func TestCiteAddNeedsSomethingToAdd(t *testing.T) {
 	}
 }
 
-func TestCiteAddRefusesAnIdentifierAndFieldsTogether(t *testing.T) {
+func TestCiteAddRefusesTwoIdentifiers(t *testing.T) {
 	root := kbWithPages(t)
-	code, _, stderr := run("cite", "add", "--kb", root, "10.1145/x", "--title", "Both")
+	code, _, stderr := run("cite", "add", "--kb", root, "10.1145/x", "--doi", "10.1145/y")
 	if code != ExitError {
 		t.Errorf("exit = %d, want %d", code, ExitError)
 	}
 	if !strings.Contains(stderr, "identifier") {
 		t.Errorf("stderr = %q", stderr)
+	}
+}
+
+// A descriptor beside a resolved identifier is a correction, not a conflict:
+// a raw document can carry no title, and a resolver's record is not always the
+// reader's last word on the work.
+func TestCiteAddAppliesFieldsToAResolvedIdentifier(t *testing.T) {
+	const record = `@article{Chen_2020,
+  title = {Attention in Practice},
+  doi = {10.1145/3375637},
+}
+`
+	withResolver(t, sourceResolver(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(record))
+	})))
+
+	root := kbWithPages(t)
+	code, _, stderr := run("cite", "add", "--kb", root, "10.1145/3375637",
+		"--title", "A Corrected Title", "--year", "2021")
+	if code != ExitOK {
+		t.Fatalf("exit = %d: %s", code, stderr)
+	}
+
+	e, ok := readBib(t, root, "bibliography.bib").Entry("Chen_2020")
+	if !ok {
+		t.Fatal("the resolved entry is missing")
+	}
+	if got := e.Title(); got != "A Corrected Title" {
+		t.Errorf("title = %q, want the correction", got)
+	}
+	if got := e.Year(); got != "2021" {
+		t.Errorf("year = %q, want the correction", got)
+	}
+	if got, _ := e.Value("doi"); got != "10.1145/3375637" {
+		t.Errorf("doi = %q, want the resolver's", got)
+	}
+	// Correcting the record does not throw away what resolution recorded.
+	if got, _ := e.Raw(kb.FieldRetrieved); got != "{2026-09-28}" {
+		t.Errorf("retrieved = %q", got)
 	}
 }
 

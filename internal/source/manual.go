@@ -71,21 +71,7 @@ func Manual(f Fields) (*kb.BibEntry, error) {
 	}
 
 	e := kb.NewBibEntry(typ, key)
-	setIf(e, "title", title)
-	if len(f.Authors) > 0 {
-		e.Set("author", bibValue(strings.Join(f.Authors, " and ")))
-	}
-	if typ == "article" {
-		setIf(e, "journal", f.Container)
-	} else {
-		setIf(e, "booktitle", f.Container)
-	}
-	setIf(e, "year", kb.YearOf(f.Year))
-	setIf(e, "publisher", f.Publisher)
-	setIf(e, "volume", f.Volume)
-	setIf(e, "number", f.Issue)
-	setIf(e, "pages", f.Pages)
-	setIf(e, "edition", f.Edition)
+	ApplyFields(e, f)
 	setIf(e, "doi", kb.NormalizeDOI(f.DOI))
 	setIf(e, "isbn", kb.NormalizeISBN(f.ISBN))
 
@@ -96,4 +82,30 @@ func Manual(f Fields) (*kb.BibEntry, error) {
 	setIf(e, "url", f.URL)
 	setIf(e, "path", f.Path)
 	return e, nil
+}
+
+// ApplyFields writes the metadata a person supplied onto an entry, overwriting
+// what is there. It is the same mapping Manual uses, split out so that a record
+// the resolver produced can take a person's correction without being rebuilt.
+//
+// Only the descriptive fields are written. An identifier is not metadata: it is
+// what gets resolved, and a resolved record already carries its own.
+func ApplyFields(e *kb.BibEntry, f Fields) {
+	setIf(e, "title", strings.TrimSpace(f.Title))
+	if len(f.Authors) > 0 {
+		e.Set("author", bibValue(strings.Join(f.Authors, " and ")))
+	}
+	if strings.TrimSpace(f.Container) != "" {
+		if e.Type() == "article" {
+			setIf(e, "journal", f.Container)
+		} else {
+			setIf(e, "booktitle", f.Container)
+		}
+	}
+	setIf(e, "year", kb.YearOf(f.Year))
+	setIf(e, "publisher", f.Publisher)
+	setIf(e, "volume", f.Volume)
+	setIf(e, "number", f.Issue)
+	setIf(e, "pages", f.Pages)
+	setIf(e, "edition", f.Edition)
 }

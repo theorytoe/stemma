@@ -36,18 +36,26 @@ a citation key. Your judgement is in deciding what is worth recording.
    stemma cite cited-by KEY        # which pages rely on it
    ```
 
-2. **Resolve the identifier, or enter fields by hand.** `cite add` resolves DOI,
-   arXiv ID, ISBN, and URL against an authoritative source, then mints a key.
-   Prefer this over entering fields yourself.
+2. **Resolve the identifier, or enter fields by hand.** `cite add` resolves a
+   **positional** DOI, arXiv ID, ISBN, or URL against an authoritative source,
+   then mints a key. Prefer this over entering fields yourself.
 
    ```sh
    stemma cite add 10.1145/3290605.3300233
-   stemma cite add --arxiv 2401.12345
-   stemma cite add --isbn 9780262033848
-   stemma cite add --url https://example.org/paper
+   stemma cite add 2401.12345
+   stemma cite add 9780262033848
+   stemma cite add https://example.org/paper
+   stemma cite add 10.1145/3290605.3300233 --title "A Corrected Title"
    stemma cite add --path ./downloads/paper.pdf --title "A Local Paper"
    stemma cite add --title "A Work Entered By Hand" --year 2024 --container "A Journal"
    ```
+
+   The flags `--doi`, `--arxiv`, `--isbn`, `--url`, and `--path` **do not
+   resolve**: they name an identifier for a record entered by hand, and are the
+   hand-entered alternative to the positional form. The descriptive flags
+   (`--title`, `--author`, `--year`, `--container`, `--publisher`, `--volume`,
+   `--issue`, `--pages`, `--edition`) may stand beside either: with a positional
+   identifier they correct the resolved record, and without one they build it.
 
    Useful flags: `--key` to name the entry, `--type` for the BibTeX entry type,
    `--dry-run` to see what would be written, `--offline` to refuse the network.
@@ -74,6 +82,11 @@ a citation key. Your judgement is in deciding what is worth recording.
    ```sh
    stemma cite vendor KEY
    ```
+
+   The reader reduces HTML pages and reads PDFs. A raw text URL -- a `.md` file
+   on a code host, say -- is refused as a non-HTML response, so it cannot be
+   captured; to vendor one, download the file and record it with `--path`
+   instead of `--url`.
 
    A vendored capture is committed. When the source is a file on this machine,
    the original is copied into `sources/` beside the extracted text, and `build`

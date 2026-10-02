@@ -301,6 +301,28 @@ a {
   margin-bottom: 0.6rem;
 }
 
+/* A reference points at two places: the work, through the pointer in its text,
+   and the KB's source page, through this button. The button is small because it
+   repeats down the list, and outlined rather than filled so the pointer keeps
+   the weight. */
+.ref-source {
+  margin-left: 0.25rem;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ref-source:hover,
+.ref-source:focus {
+  border-color: var(--link);
+  color: var(--link);
+}
+
 .page-list,
 .type-list,
 .tag-list,

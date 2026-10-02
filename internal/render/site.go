@@ -94,9 +94,11 @@ type TagLink struct {
 	Count int
 }
 
-// ReferenceData is one entry in a page's reference list.
+// ReferenceData is one entry in a page's reference list: the formatted citation,
+// and the URL of the source page it belongs to.
 type ReferenceData struct {
 	Text string
+	URL  string
 }
 
 // PageData is a page rendered as a whole document.
@@ -591,7 +593,7 @@ func (r *Renderer) pageData(pagePath string, page *kb.Page, refs []kb.Reference)
 		Title:      page.Title(),
 		Meta:       r.meta(page, docURL),
 		Body:       template.HTML(r.bodyHTML(page, refs, docURL)),
-		References: r.referenceData(refs),
+		References: r.referenceData(refs, docURL),
 		Backlinks:  r.backlinks(pagePath, docURL),
 		Graph:      graphSVG(g),
 		GraphJSON:  graphJSON(g),
@@ -630,10 +632,13 @@ func (r *Renderer) meta(page *kb.Page, docURL string) []MetaItem {
 	return out
 }
 
-func (r *Renderer) referenceData(refs []kb.Reference) []ReferenceData {
+func (r *Renderer) referenceData(refs []kb.Reference, docURL string) []ReferenceData {
 	out := make([]ReferenceData, 0, len(refs))
 	for i, ref := range refs {
-		out = append(out, ReferenceData{Text: r.formatter.Entry(ref, i+1)})
+		out = append(out, ReferenceData{
+			Text: r.formatter.Entry(ref, i+1),
+			URL:  rel(docURL, SourceURL(ref.Entry.Key())),
+		})
 	}
 	return out
 }

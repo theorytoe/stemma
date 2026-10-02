@@ -125,6 +125,7 @@ func TestPageDocumentHasChrome(t *testing.T) {
 		`<a href="tags.html">Tags</a>`,
 		`<h1>Sample</h1>`,
 		`<section class="references">`,
+		`<a class="ref-source" href="sources/vaswani2017.html">source page</a>`,
 		`Built with stemma.`,
 	} {
 		if !strings.Contains(string(got), want) {

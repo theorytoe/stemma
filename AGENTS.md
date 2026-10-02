@@ -13,13 +13,17 @@ planned but not built.
 - Module path: `github.com/theorytoe/stemma`. The checkout directory may be
   named differently (it is `agentic-wiki` here); always use the module path from
   `go.mod`, not the directory name.
-- Canonical format specification: [FORMAT.md](FORMAT.md).
+- Canonical format specification: [FORMAT.md](FORMAT.md). `README.md` is the
+  short user-facing entry; keep it true, but leave the format rules to
+  `FORMAT.md`.
 - The `wiki/` directory is the project's own documentation, written in the
   format the tool defines and built by the tool itself. It doubles as a test
   fixture.
-- Design intent lives in `.ctx/`: `.ctx/design/decisions.md` is the register of
-  principles `P1..P10` and decisions; `.ctx/design/qa-session.md` is the source
-  interview; the initial plan and its delegates are archived under
+- Design intent lives in `.ctx/`; `.ctx/index.md` lists every file and the
+  reading order. The register is `.ctx/design/decisions.md` — principles
+  `P1..P10` and the decisions. `.ctx/design/qa-session.md` is the source
+  interview, `.ctx/design/shim-contract.md` fixes the Go-to-Python interface,
+  the initial plan and its delegates are archived under
   `.ctx/archive/plans/initial/`, and `.ctx/plans/mcp/planfile.md` is the MCP
   plan. **Read the relevant decision before changing a settled behaviour.** If a
   task appears to contradict a decision, raise it rather than working around it.
@@ -72,11 +76,11 @@ surface over it (`P3`, `D10`).
 | `cmd/stemma`         | `main` only: `os.Exit(cli.Run(...))`                                                                                            |
 | `internal/kb`        | Core: manifest, page model, frontmatter, link and citation resolution, lint invariants, preservation                            |
 | `internal/cli`       | Command surface. Dispatch, help, and the generated CLI reference all derive from **one** command table in `internal/cli/cli.go` |
-| `internal/source`    | Identifier (DOI/arXiv/ISBN/URL) to bibliography entry; never invents prose or metadata                                          |
+| `internal/source`    | A DOI, arXiv ID, ISBN, URL, or local file path to a bibliography entry; never invents prose or metadata                         |
 | `internal/citestyle` | Two named citation styles and nothing else (deliberately not CSL)                                                               |
 | `internal/extract`   | Go side of the Python text-extraction shim; `extract.py` is embedded and written into each KB                                   |
 | `internal/index`     | Tier-1 SQLite FTS5 cache, plus the Tier-0/Tier-1 `Source` interface used by search and graph                                    |
-| `internal/render`    | markdown to HTML, resolving wikilinks and citations through the same scan `lint` reads                                          |
+| `internal/render`    | markdown to HTML, the site's templates and assets, resolving wikilinks and citations through the same scan `lint` reads         |
 | `internal/serve`     | Local HTTP server over the rendered KB, with server-side search and live reload                                                 |
 | `internal/build`     | Static-site writer; the offline entry point of the renderer                                                                     |
 | `internal/export`    | Machine-readable JSON dump and scoped KB extract                                                                                |
@@ -103,6 +107,10 @@ reference follow automatically; do not hand-write either.
 - **Blackfriday is deliberate** (custom renderer for wikilinks/citations). Do
   not migrate to goldmark.
 - **Git is optional** (`P5`). Every command must work in a plain directory.
+- **A source is pointed at by an address or a path** (`D74`). `url` is an
+  address; a local file is `path`, kept as written and read relative to the
+  working directory. A capture vendored under `sources/` is a local source's
+  provenance and stands in for a fetched hash in the provenance check (`D79`).
 - Generated artifacts live under `.stemma/` and are never committed (`P8`).
 - Exit codes are fixed: `0` clean, `1` validation findings, `2` operational
   error. Every command supports `--json` with one envelope (`command`, `ok`,
@@ -132,9 +140,9 @@ make bench       # Tier-0 vs Tier-1 timing; measures, never passes/fails
   If a change legitimately alters output, regenerate the golden and inspect the
   diff rather than loosening the assertion.
 - The exhaustive extract/round-trip gate is `internal/export/gate_test.go`; the
-- Tests should be ran with `env -u STEMMA_KB` to prevent any existing knowledge
-  bases from interacting with the test suite.
   `make extract` target exercises the same path through the shipped binary.
+- Run the suite with `env -u STEMMA_KB`, so an existing KB in the environment
+  cannot reach into a test run.
 - `make test-shim` skips (not fails) without `python3`. The Go suite must pass on
   a machine with no interpreter at all. Do not make Python a build prerequisite.
 - `make lint-wiki` failing means the project's own documentation no longer
@@ -160,6 +168,8 @@ make bench       # Tier-0 vs Tier-1 timing; measures, never passes/fails
 
 - `FORMAT.md` is the **canonical, self-contained** format spec. Change it when
   the format changes; do not fork its rules into prose elsewhere.
+- `README.md` is the short user-facing entry: install, a first KB, and the build
+  targets. Keep it current when a command or setup step changes.
 - `wiki/pages/*.md` are real KB pages: they need `title` and `type` frontmatter,
   use `[[wikilinks]]` and `[@key]` citations, and must pass `lint --strict`.
   Cite an entry from `wiki/bibliography.bib`; running `make check` catches a
@@ -182,26 +192,29 @@ make bench       # Tier-0 vs Tier-1 timing; measures, never passes/fails
 - `__pycache__/` (from running the shim's tests).
 - `skills/stemma/references/`.
 
-`internal/extract/extract.py` is the source of truth for the shim. `init` copies
-it to `<kb>/.stemma/shim/extract.py` and rewrites it when it differs, so an edit
-in a KB is lost; change the repository copy.
+`internal/extract/extract.py` is the source of truth for the shim: the binary
+embeds it and writes it to `<kb>/.stemma/shim/extract.py`, rewriting it whenever
+it differs. An edit in a KB is therefore lost; change the repository copy.
+
+One directory in a KB is the opposite. `sources/` holds vendored captures; it is
+committed, not generated (`D76`).
 
 ## Commit and Pull Request Guidelines
 
 Commit subjects are lowercase, imperative, type-prefixed, and **no colon** —
 e.g. `add scoped extract`, `fix serve on escaped page names`,
 `tweak site typeface to work sans`. Allowed types: `add`, `rm`, `fix`, `update`,
-`tweak`, `bump`, `doc`, `fmt`, `release`, `revert`. Keep the subject at or under
-55 characters and one concern per commit; add a body only to justify a change
-that would otherwise look wrong or read as a regression. See the `commit-style`
-skill for the full rule set.
+`tweak`, `bump`, `doc`, `fmt`, `release`, `revert`. Keep the subject at 55
+characters or fewer (favour 40) and one concern per commit; add a body only to
+justify a change that would otherwise look wrong or read as a regression. See
+the `commit-style` skill for the full rule set.
 
 Before submitting or asking for review:
 
 1. `make check` passes.
 2. `gofmt -l .` prints nothing.
-3. New behavior has a test; docs and `FORMAT.md` are updated when the format
-   changes.
+3. New behavior has a test; a settled behaviour change is recorded in
+   `.ctx/design/decisions.md`; `FORMAT.md` is updated when the format changes.
 4. No generated file is staged.
 
 ## Troubleshooting
@@ -216,5 +229,8 @@ Before submitting or asking for review:
   Run `make skills`.
 - **Index seems stale:** it is stamped by content hash, not mtime; delete
   `.stemma/` and rebuild. The index is a cache and never a source of truth.
+- **`cite vendor` refuses a URL:** the reader reduces HTML and reads PDFs, so a
+  raw text response is a reported failure. Download it and record it with
+  `--path` instead.
 - **A round-trip or golden test fails after a writer change:** the preservation
   invariant was broken. Fix the writer; do not update the golden to accept it.

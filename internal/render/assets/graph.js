@@ -53,8 +53,15 @@
 
   var NS = "http://www.w3.org/2000/svg";
   var hasSelf = nodes.some(function (n) { return n.self; });
-  var W = hasSelf ? 640 : 760;
-  var H = hasSelf ? Math.max(260, 150 + nodes.length * 26) : 760;
+
+  // The whole-KB graph grows with the page count, so a large KB spreads out
+  // instead of piling up against the edge. The local graph has at most a
+  // handful of neighbours, so it gets a fixed frame with room to spare.
+  function allSize(n) {
+    return Math.min(2400, Math.round(820 * Math.sqrt(Math.max(1, n) / 17)));
+  }
+  var W = hasSelf ? 880 : allSize(nodes.length);
+  var H = hasSelf ? Math.max(500, 180 + nodes.length * 34) : W;
 
   // In the whole-KB graph a node's size is its degree -- backlinks plus
   // outgoing links -- square-rooted into a fixed range so one hub cannot dwarf
@@ -71,15 +78,21 @@
   }
 
   // Springs and charge. The numbers are a balance rather than a derivation:
-  // enough repulsion that dots do not overlap, enough spring that connected
-  // dots stay near each other, and damping so the web settles instead of
-  // humming forever.
-  var REPULSION = 9000;
-  var SPRING = 0.02;
-  var REST = 92;
-  var DAMPING = 0.88;
-  var CENTER_PULL = 0.004;
+  // more repulsion and a longer rest length keep the web loose, a slack spring
+  // lets it drift instead of snapping, and light damping lets it glide toward
+  // rest rather than stopping on a dime.
+  var REPULSION = 17000;
+  var SPRING = 0.012;
+  var REST = 132;
+  var DAMPING = 0.9;
+  var CENTER_PULL = 0.0026;
   var MAX_SPEED = 16;
+
+  // Floaty, but not forever. A graph too big or too regular to settle would
+  // otherwise run the O(n^2) step on every frame for good, so a frame budget
+  // ends the drift whatever the energy says. A fresh interaction buys a new
+  // budget, so a drag always feels alive.
+  var MAX_FRAMES = 720;
 
   // A little irregularity, so the web does not settle into a symmetric ring:
   // every spring gets its own rest length, and every node starts a little off
@@ -88,7 +101,7 @@
   var edgeRest = edges.map(function () {
     return REST * (0.8 + Math.random() * 0.4);
   });
-  var JITTER = 0.12;
+  var JITTER = 0.18;
 
   function clamp(v, lo, hi) {
     return v < lo ? lo : v > hi ? hi : v;
@@ -271,6 +284,7 @@
   }
 
   var running = false;
+  var frameCount = 0;
   var drag = -1;
   var moved = false;
 
@@ -283,7 +297,8 @@
     if (hovered >= 0) {
       positionTip();
     }
-    if (energy < 0.05 && drag < 0) {
+    frameCount++;
+    if ((energy < 0.05 && drag < 0) || frameCount > MAX_FRAMES) {
       running = false;
       return;
     }
@@ -295,6 +310,7 @@
       running = true;
       requestAnimationFrame(frame);
     }
+    frameCount = 0;
   }
 
   nodeEls.forEach(function (el, index) {
@@ -349,8 +365,10 @@
   svg.addEventListener("pointerup", release);
   svg.addEventListener("pointercancel", release);
 
-  // Seed the layout, then let it settle before the first paint.
-  for (var settle = 0; settle < 200; settle++) {
+  // Seed the layout, then let it settle most of the way before the first paint.
+  // Stopping short of rest leaves a little visible drift, which is the float:
+  // the web eases into place rather than appearing already still.
+  for (var settle = 0; settle < 120; settle++) {
     step();
   }
   draw();

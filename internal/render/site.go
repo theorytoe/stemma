@@ -114,8 +114,8 @@ type PageData struct {
 	GraphJSON  template.JS
 }
 
-// PageAction is a prominent link at the top of a page, such as the full text of
-// a vendored source. An authored page has none.
+// PageAction is a link at the top of a page, such as the full text of a
+// vendored source. An authored page has none.
 type PageAction struct {
 	Text string
 	URL  string
@@ -378,7 +378,7 @@ func (r *Renderer) Source(key string) ([]byte, error) {
 		Graph:     graphSVG(g),
 		GraphJSON: graphJSON(g),
 	}
-	// A capture the KB holds is a prominent link, not a line in the meta: it is
+	// A capture the KB holds is a link under the title, not a line of meta: it is
 	// the reason a reader opened the record. A capture that is claimed but missing
 	// is not linked at all, because `cite check` reports it and the site should not
 	// offer a page that is not there.

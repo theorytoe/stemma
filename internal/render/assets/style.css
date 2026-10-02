@@ -232,29 +232,37 @@ a {
   color: var(--muted);
 }
 
-/* The one prominent action a page can carry, such as reading a vendored
-   source's full text. It is a button rather than a line of meta because it is
-   the thing the reader came to do. */
+/* A pill that opens a source's record page or its full text: used by a
+   reference list and by the action under a source's title. It repeats, so it
+   stays quiet -- a hairline rule and the muted ink, taking the link colour only
+   on hover. */
 .actions {
   margin: 0 0 1.75rem;
 }
 
+.ref-source,
 .page-action {
   display: inline-block;
-  padding: 0.45rem 0.9rem;
-  border: 1px solid var(--link);
-  border-radius: 4px;
-  color: var(--link);
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  color: var(--muted);
   font-family: var(--font-sans);
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.72rem;
   text-decoration: none;
+  white-space: nowrap;
 }
 
+.ref-source:hover,
+.ref-source:focus,
 .page-action:hover,
 .page-action:focus {
-  background: var(--link);
-  color: var(--paper);
+  border-color: var(--link);
+  color: var(--link);
+}
+
+.ref-source {
+  margin-left: 0.25rem;
 }
 
 .page-type,
@@ -299,28 +307,6 @@ a {
 
 .references li {
   margin-bottom: 0.6rem;
-}
-
-/* A reference points at two places: the work, through the pointer in its text,
-   and the KB's source page, through this button. The button is small because it
-   repeats down the list, and outlined rather than filled so the pointer keeps
-   the weight. */
-.ref-source {
-  margin-left: 0.25rem;
-  padding: 0.05rem 0.4rem;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  color: var(--muted);
-  font-family: var(--font-sans);
-  font-size: 0.72rem;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.ref-source:hover,
-.ref-source:focus {
-  border-color: var(--link);
-  color: var(--link);
 }
 
 .page-list,

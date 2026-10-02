@@ -85,13 +85,14 @@ func (r *Renderer) sourceGraph(key, title, docURL string) *GraphData {
 
 // graphFrom assembles a graph from the centre's neighbours. self seeds the
 // seen set so a page is never drawn twice, and a page that is both a backlink
-// and an outgoing link is drawn once, on the backlink side.
+// and an outgoing link is drawn once, on the backlink side. An archived
+// neighbour is left out, so a local graph agrees with the whole-KB one.
 func (r *Renderer) graphFrom(self, title, docURL string, centerBacklinks int, backPaths, linkPaths []string) *GraphData {
 	data := &GraphData{Center: GraphNode{Title: title, URL: docURL, Backlinks: centerBacklinks}}
 	seen := map[string]bool{self: true}
 
 	add := func(path string, dst *[]GraphNode, more *int) {
-		if seen[path] {
+		if seen[path] || r.archived[path] {
 			return
 		}
 		seen[path] = true
@@ -244,17 +245,19 @@ type GraphJSON struct {
 	MaxDegree int         `json:"max_degree"`
 }
 
-// allGraph builds the whole-KB graph: every page, and every resolved wikilink
-// between two of them. A link written twice is one edge, and a page linking to
-// itself is no edge at all. An unresolved link has no node to point at, so it
-// is left to lint rather than drawn as a line to nowhere.
+// allGraph builds the whole-KB graph: every page that is not archived, and
+// every resolved wikilink between two of them. A link written twice is one edge,
+// and a page linking to itself is no edge at all. An unresolved link has no
+// node to point at, so it is left to lint rather than drawn as a line to
+// nowhere. A link to or from an archived page is dropped with the page, because
+// an edge to a node the graph does not draw is a line to nowhere too.
 func (r *Renderer) allGraph(docURL string) GraphJSON {
 	paths := r.kb.Graph.Paths()
 	at := make(map[string]int, len(paths))
 	nodes := make([]GraphNode, 0, len(paths))
 	for _, p := range paths {
 		page, ok := r.kb.Graph.Page(p)
-		if !ok {
+		if !ok || r.archived[p] {
 			continue
 		}
 		at[p] = len(nodes)
@@ -297,6 +300,18 @@ func (r *Renderer) allGraph(docURL string) GraphJSON {
 	return GraphJSON{Nodes: nodes, Edges: edges, MaxDegree: r.topDegree}
 }
 
+// archivedPaths is the set of retired pages. The graph leaves them out: an
+// archived page is off the map, so neither it nor a link to it is drawn.
+func archivedPaths(k *kb.KB) map[string]bool {
+	out := map[string]bool{}
+	for _, p := range k.Graph.Paths() {
+		if page, ok := k.Graph.Page(p); ok && page.Status() == kb.StatusArchived {
+			out[p] = true
+		}
+	}
+	return out
+}
+
 // nodeCounts is the metric the whole-KB graph sizes its nodes by. A page's
 // degree is how many pages point at it plus how many distinct pages it points
 // at -- how connected it is, either way. It is computed once, when the renderer
@@ -304,26 +319,34 @@ func (r *Renderer) allGraph(docURL string) GraphJSON {
 //
 // Outgoing links are counted after resolution and deduplication, the way the
 // edges are drawn, so a link written twice or a link to nowhere does not make a
-// node look busier than the graph shows.
-func nodeCounts(k *kb.KB) (back, out map[string]int, topDegree int) {
+// node look busier than the graph shows. Archived pages are not counted on
+// either end, because the edges to them are not drawn either.
+func nodeCounts(k *kb.KB, archived map[string]bool) (back, out map[string]int, topDegree int) {
 	back = make(map[string]int, k.Graph.Len())
 	out = make(map[string]int, k.Graph.Len())
 	for _, p := range k.Graph.Paths() {
-		in := len(k.Graph.Backlinks(p))
+		in := 0
+		for _, b := range k.Graph.Backlinks(p) {
+			if !archived[b] {
+				in++
+			}
+		}
 		back[p] = in
 
 		seen := map[string]bool{}
 		for _, l := range k.Graph.Links(p) {
 			res := k.Graph.Resolve(l.Name)
-			if res.Kind != kb.Resolved || res.Path == p || seen[res.Path] {
+			if res.Kind != kb.Resolved || res.Path == p || archived[res.Path] || seen[res.Path] {
 				continue
 			}
 			seen[res.Path] = true
 		}
 		out[p] = len(seen)
 
-		if d := in + len(seen); d > topDegree {
-			topDegree = d
+		if !archived[p] {
+			if d := in + len(seen); d > topDegree {
+				topDegree = d
+			}
 		}
 	}
 	return back, out, topDegree

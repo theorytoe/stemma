@@ -132,6 +132,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D72 | The site's home page is **generated** from what the KB holds — counts, browse by type and tag, the newest sources, and what needs attention — with the **entry document's body as its opening** when the KB has one. `pages/index.md` is **optional** and is not rendered as a page of its own. | review    |
 | D73 | The site's type is **Work Sans**, falling back to **Roboto** and then the reader's system UI face. The fonts are **named, not shipped**: the stylesheet declares the stack, the repo carries no font files, and a built site stays self-contained (`D3`). The body's serif stack is gone — everything but code reads in this face. | review    |
 | D75 | A **vendored capture is materialised into the site** at `sources/<key>-text.html` and linked from its source page: markdown is rendered, a PDF is embedded in the browser's viewer, anything else is shown as text, and the original bytes are always a download. A key with no capture gets no page. | review    |
+| D77 | An **archived page is off the graph**: the whole-KB graph and every local graph leave it out, along with every link to or from it, and it stops counting toward a node's degree. | review    |
 
 ---
 
@@ -638,6 +639,30 @@ changing.
 **Provenance.** Asked of the tool author, who chose to copy the original into the
 KB over streaming it from its path at serve time, because a capture that stops
 working when a file outside the KB moves is not a capture.
+
+### An archived page is off the graph. `D77` added.
+
+**Decision.** An archived page is not a node of the whole-KB graph, and no edge
+is drawn to or from it anywhere, in that graph or in a local one. It also stops
+counting toward a node's degree, so the sizes and the drawn shape agree.
+
+**Why archived means off the map.** `D47` retires a page without deleting it:
+the page stays, a reader can still reach it, and the tool never removes it. The
+graph's job is to show what the KB is about now, and a retired page is the one
+thing that is explicitly not. Retiring a page and unlinking it is the ordinary
+end of a page's life, and the orphan check already treats it as expected
+(`D47`); the graph should read the same way.
+
+**Why edges go with it.** A node the graph does not draw cannot be the end of a
+drawn edge. Leaving the edge would put a line on the map to nothing, which is
+the one thing the graph is careful never to do with an unresolved link.
+
+**Why the degree changes too.** The whole-KB graph sizes each node by its degree,
+and the drawing is only honest if the number matches the edges. Counting links to
+archived pages would grow a node that the picture shows as small.
+
+**Provenance.** Asked of the tool author, who wanted a retired page to stop
+cluttering the map.
 
 ### U5 — rewriting inbound links. `D19` stands.
 

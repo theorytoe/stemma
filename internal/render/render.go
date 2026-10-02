@@ -99,6 +99,10 @@ type Renderer struct {
 	backCounts map[string]int
 	outCounts  map[string]int
 	topDegree  int
+
+	// archived is the set of pages that have been retired. The graph leaves them
+	// out, so the whole-KB graph and every local graph agree on what the KB is.
+	archived map[string]bool
 }
 
 // New returns a renderer for k, using the citation style its manifest names. An
@@ -113,7 +117,8 @@ func New(k *kb.KB) (*Renderer, error) {
 	if err != nil {
 		return nil, err
 	}
-	back, out, top := nodeCounts(k)
+	archived := archivedPaths(k)
+	back, out, top := nodeCounts(k, archived)
 	return &Renderer{
 		kb:         k,
 		formatter:  f,
@@ -123,6 +128,7 @@ func New(k *kb.KB) (*Renderer, error) {
 		backCounts: back,
 		outCounts:  out,
 		topDegree:  top,
+		archived:   archived,
 	}, nil
 }
 

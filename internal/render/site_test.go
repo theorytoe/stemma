@@ -338,6 +338,57 @@ func TestWholeKBGraph(t *testing.T) {
 	}
 }
 
+// TestArchivedPagesLeaveTheGraph checks that retiring a page takes it off the
+// map: no node in the whole-KB graph, no edge to or from it, and no seat in the
+// local graph of a page that links to it.
+func TestArchivedPagesLeaveTheGraph(t *testing.T) {
+	g := kb.NewGraph()
+	add := func(name, raw string) {
+		p, err := kb.ParsePage([]byte(raw))
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		g.Add(name, p)
+	}
+	add("pages/live.md", "---\ntitle: Live\ntype: note\n---\nSee [[retired]].\n")
+	add("pages/other.md", "---\ntitle: Other\ntype: note\n---\nSee [[live]].\n")
+	add("pages/retired.md", "---\ntitle: Retired\ntype: note\nstatus: archived\n---\nSee [[live]].\n")
+
+	manifest := kb.DefaultManifest("test")
+	manifest.CitationStyle = "author-date"
+	r, err := New(&kb.KB{Graph: g, Manifest: manifest})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The whole-KB graph holds the two live pages and the one live link. The
+	// archived page is neither a node nor either end of an edge.
+	whole := r.allGraph(graphURL)
+	if len(whole.Nodes) != 2 {
+		t.Errorf("nodes = %d, want the 2 live pages: %+v", len(whole.Nodes), whole.Nodes)
+	}
+	for _, n := range whole.Nodes {
+		if n.Title == "Retired" {
+			t.Errorf("the whole-KB graph still draws the archived page: %+v", whole.Nodes)
+		}
+	}
+	if len(whole.Edges) != 1 {
+		t.Errorf("edges = %d, want only other -> live: %+v", len(whole.Edges), whole.Edges)
+	}
+
+	// A live page's local graph does not seat the archived neighbour, on either
+	// side.
+	local := r.localGraph("pages/live.md", PageURL("pages/live.md"))
+	if len(local.Links) != 0 {
+		t.Errorf("links = %+v, want the link to the archived page dropped", local.Links)
+	}
+	for _, n := range local.Backlinks {
+		if n.Title == "Retired" {
+			t.Errorf("the local graph still seats the archived page: %+v", local.Backlinks)
+		}
+	}
+}
+
 func TestTypeAndTagIndexes(t *testing.T) {
 	r := siteRenderer(t)
 

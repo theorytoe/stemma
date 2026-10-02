@@ -53,7 +53,8 @@ archived, retitled, or split is your judgement.
    - Move: `stemma move "A Title" dir/` keeps the page's identity. Directories
      are organisational only; moving a page never changes what links to it.
    - Archive: `stemma archive "A Title" --reason "superseded by ..."` sets the
-     status and appends the reason. **The tool never deletes a page.**
+     status and appends the reason. **The tool never deletes a page.** An
+     archived page stays readable but leaves the graph.
 
 4. **Rebuild the search index when results look stale.** Tier 0 computes on
    demand, so this is a speed and consistency step, not a prerequisite.

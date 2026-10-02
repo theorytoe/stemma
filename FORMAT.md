@@ -147,7 +147,10 @@ cleaning, so `./notes/paper.pdf` and `notes/paper.pdf` are one pointer.
 
 The first two are on every entry the tool has fetched a record for. The third is
 optional: it is there exactly when the source's full text has been vendored, and
-its value is the hash of what is in `sources/`.
+its value is the hash of what is in `sources/`. A local file has no fetched
+record and so carries neither of the first two; a capture stands in for them,
+and `stemma cite check` holds the entry to the capture rather than asking for a
+hash a file on this machine can never have.
 
 These exist so that drift is detectable. Re-fetching a source and finding a
 different hash is a fact worth reporting, not a silent overwrite.

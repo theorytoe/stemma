@@ -92,6 +92,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D74 | A local file is pointed at with **`path`**, kept exactly as written and read relative to the working directory, not with `url`; **`url` stays an address**. The two are separate fields because a path is not an address and cannot be typed into a browser. | review    |
 | D76 | A source that is a file on this machine has its **original document copied into `sources/`** beside the extracted text, under the source's own extension; `stemma-vendored-hash` covers the original when there is one and the extracted text otherwise. | review    |
 | D78 | `cite add` resolves a **positional** identifier only. The identifier flags (`--doi`, `--arxiv`, `--isbn`, `--url`, `--path`) name a **record entered by hand** and are refused beside a positional one; the descriptive flags build a hand-entered record or **correct a resolved one**. | review    |
+| D79 | A valid `stemma-vendored-hash` **satisfies the provenance check**: a vendored entry is not also asked for `stemma-content-hash` and `stemma-retrieved`, because the capture is the evidence and `vendoredFindings` holds it to the hash. A malformed value is still reported. | review    |
 
 ### Ingest
 
@@ -690,6 +691,28 @@ disagree with a machine about which year a paper appeared. Refusing every field
 beside an identifier meant a resolved raw document could never be titled. The
 correction is deliberate and explicit, so it is written over what the resolver
 said; a field the person did not mention is left exactly as resolved.
+
+### A capture is its own provenance. `D79` added.
+
+**Decision.** An entry that records a valid `stemma-vendored-hash` is not also
+asked for `stemma-content-hash` and `stemma-retrieved`. `checkProvenance` skips
+the two *missing* findings when the vendored hash is well formed, leaving
+`vendoredFindings` to hold the capture to the hash on disk. A value that is
+present but malformed is a defect in any record and is still reported.
+
+**Why the check moved and not the record.** `bibtex.go` keeps the two hashes
+apart on purpose: a capture and the record a resolver produced are different
+artifacts, fetched at different times, and collapsing them would destroy the
+distinction. A local file has no resolver, so it can never carry the second hash;
+`cite vendor` could stamp one only by pretending the capture is a fetched record.
+The warning was also unactionable — no command could clear it — and `lint` did
+not surface it, so a KB could pass `lint --strict` while `cite check` reported it
+forever.
+
+**Why the capture still counts.** Suppressing the warning is not a loophole: the
+capture is stronger evidence than a format check, because the bytes are on disk
+and are compared against the recorded digest. An entry whose capture has drifted,
+or whose capture is missing, is still reported.
 
 ### U5 — rewriting inbound links. `D19` stands.
 

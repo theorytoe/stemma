@@ -164,22 +164,21 @@ func workIdentities(e *BibEntry) []string {
 // was fetched.
 //
 // A missing date or hash is not a defect in every record: a hand-entered source
-// never had one. But it is the one thing that makes drift undetectable, so it
-// is reported and a person decides.
+// never had one. But it is the one thing that makes drift undetectable, so it is
+// reported and a person decides.
+//
+// A vendored capture is the exception. It is evidence of its own, and it is
+// held to account by vendoredFindings against the bytes on disk, so the record
+// is not asked for a second hash and a date that a local file can never supply.
+// A value that is present but malformed is still a defect and is still reported.
 func checkProvenance(path, key string, e *BibEntry) []Finding {
 	var out []Finding
 
+	captured := hasCapture(e)
+
 	retrieved, hasRetrieved := e.Value(FieldRetrieved)
 	switch {
-	case !hasRetrieved:
-		out = append(out, Finding{
-			Severity: Warning,
-			Code:     CodeMissingRetrieved,
-			Path:     path,
-			Field:    FieldRetrieved,
-			Message:  quote(key) + " has no retrieval date",
-		})
-	case !validRetrieved(retrieved):
+	case hasRetrieved && !validRetrieved(retrieved):
 		out = append(out, Finding{
 			Severity: Warning,
 			Code:     CodeBadRetrieved,
@@ -187,19 +186,19 @@ func checkProvenance(path, key string, e *BibEntry) []Finding {
 			Field:    FieldRetrieved,
 			Message:  quote(key) + " has a retrieval date that is not YYYY-MM-DD",
 		})
+	case !hasRetrieved && !captured:
+		out = append(out, Finding{
+			Severity: Warning,
+			Code:     CodeMissingRetrieved,
+			Path:     path,
+			Field:    FieldRetrieved,
+			Message:  quote(key) + " has no retrieval date",
+		})
 	}
 
 	digest, hasHash := e.Value(FieldContentHash)
 	switch {
-	case !hasHash:
-		out = append(out, Finding{
-			Severity: Warning,
-			Code:     CodeMissingHash,
-			Path:     path,
-			Field:    FieldContentHash,
-			Message:  quote(key) + " has no content hash",
-		})
-	case !validHash(digest):
+	case hasHash && !validHash(digest):
 		out = append(out, Finding{
 			Severity: Warning,
 			Code:     CodeBadHash,
@@ -207,9 +206,25 @@ func checkProvenance(path, key string, e *BibEntry) []Finding {
 			Field:    FieldContentHash,
 			Message:  quote(key) + " has a content hash that is not <algorithm>:<hex>",
 		})
+	case !hasHash && !captured:
+		out = append(out, Finding{
+			Severity: Warning,
+			Code:     CodeMissingHash,
+			Path:     path,
+			Field:    FieldContentHash,
+			Message:  quote(key) + " has no content hash",
+		})
 	}
 
 	return out
+}
+
+// hasCapture reports whether an entry records a well-formed vendored hash, which
+// is what claims that a capture exists beside it. A malformed hash makes no such
+// claim, and vendoredFindings reports it on its own.
+func hasCapture(e *BibEntry) bool {
+	recorded, ok := e.Value(FieldVendored)
+	return ok && validHash(recorded)
 }
 
 // vendoredFindings checks a capture against the hash its entry recorded.

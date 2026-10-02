@@ -2,6 +2,8 @@ package kb
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -75,6 +77,60 @@ func TestCheckFindingsIsCleanOnAGoodRecord(t *testing.T) {
 
 	if got := k.CheckFindings(); len(got) != 0 {
 		t.Errorf("findings = %+v, want none", got)
+	}
+}
+
+// A vendored capture is evidence of its own. The entry is still held to the
+// capture by vendoredFindings, so it is not also asked for a content hash and a
+// retrieval date that a local file can never supply.
+func TestCheckFindingsTreatsACaptureAsProvenance(t *testing.T) {
+	root := t.TempDir()
+	text := []byte("the captured text\n")
+	if err := os.MkdirAll(filepath.Dir(VendoredPath(root, "local")), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(VendoredPath(root, "local"), text, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	b, err := ParseBibliography("b.bib", []byte(
+		"@misc{local, title = {A Local File}, path = {/tmp/none}, stemma-vendored-hash = {"+
+			HashOf(text)+"}}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	k := &KB{Root: root, Graph: NewGraph(), Bibliography: b}
+
+	for _, f := range k.CheckFindings() {
+		if f.Code == CodeMissingRetrieved || f.Code == CodeMissingHash {
+			t.Errorf("a vendored capture still asked for provenance: %+v", f)
+		}
+	}
+}
+
+// The suppression is for provenance a capture supplies, not for a value that is
+// present and wrong: a malformed hash or date is a defect in any record.
+func TestCheckFindingsStillReportsMalformedProvenance(t *testing.T) {
+	b, err := ParseBibliography("b.bib", []byte(
+		"@misc{bad, stemma-vendored-hash = {sha256:ab12}, "+
+			"stemma-retrieved = {yesterday}, stemma-content-hash = {sha256:zz}}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	k := &KB{Root: t.TempDir(), Graph: NewGraph(), Bibliography: b}
+
+	have := map[string]int{}
+	for _, f := range k.CheckFindings() {
+		have[f.Code]++
+	}
+	for _, code := range []string{CodeBadRetrieved, CodeBadHash, CodeMissingVendored} {
+		if have[code] == 0 {
+			t.Errorf("no %s finding in %v", code, have)
+		}
+	}
+	for _, code := range []string{CodeMissingRetrieved, CodeMissingHash} {
+		if have[code] != 0 {
+			t.Errorf("%s was reported for a vendored entry", code)
+		}
 	}
 }
 

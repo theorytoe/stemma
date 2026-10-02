@@ -293,6 +293,34 @@ func TestCiteVendorCopiesALocalOriginal(t *testing.T) {
 	}
 }
 
+// A local source has no resolver, so before it is captured it carries no
+// provenance. The capture is the evidence, and once it is there the record is
+// no longer asked for a hash and a date a local file cannot supply.
+func TestCiteVendorSatisfiesTheProvenanceCheck(t *testing.T) {
+	document := filepath.Join(t.TempDir(), "note.md")
+	if err := os.WriteFile(document, []byte("# Note\n\nsome text\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root := vendorPathKB(t, document)
+	shimReturning(t, "some text\n")
+
+	code, stdout, _ := run("cite", "check", "--kb", root)
+	if code != ExitFindings {
+		t.Fatalf("before vendoring: exit %d, want %d", code, ExitFindings)
+	}
+	if !strings.Contains(stdout, "no content hash") {
+		t.Fatalf("before vendoring, check said %q", stdout)
+	}
+
+	if code, _, stderr := run("cite", "vendor", "--kb", root, "bush1945"); code != ExitOK {
+		t.Fatalf("vendor: exit %d: %s", code, stderr)
+	}
+
+	if code, stdout, stderr := run("cite", "check", "--kb", root); code != ExitOK {
+		t.Errorf("after vendoring: exit %d, stdout %q, stderr %q", code, stdout, stderr)
+	}
+}
+
 // The one test here that reads a real document. Text needs no library, so this
 // works wherever Python does.
 func TestCiteVendorThroughTheRealShim(t *testing.T) {

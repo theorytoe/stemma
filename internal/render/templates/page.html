@@ -8,7 +8,8 @@
 <main>
   <article class="page">
     <h1>{{.Title}}</h1>
-    {{if .Meta}}<p class="meta">{{range $i, $m := .Meta}}{{if $i}} · {{end}}{{template "meta-item" $m}}{{end}}</p>{{end}}
+    {{if .Meta}}<p class="meta">{{range $i, $m := .Meta}}{{if $i}} · {{end}}{{template "meta-item" $m}}{{end}}</p>{{end}}{{if .Action}}
+    <p class="actions"><a class="page-action" href="{{.Action.URL}}">{{.Action.Text}}</a></p>{{end}}
 {{.Body}}
   </article>
   {{if .References}}

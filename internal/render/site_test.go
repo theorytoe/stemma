@@ -512,6 +512,9 @@ func TestVendoredSourceIsServedAndLinked(t *testing.T) {
 	if !strings.Contains(string(record.Body), url) {
 		t.Errorf("the record page does not link to %s:\n%s", url, record.Body)
 	}
+	if !strings.Contains(string(record.Body), `class="page-action"`) || !strings.Contains(string(record.Body), "Read the full text") {
+		t.Errorf("the record page has no prominent link to the full text:\n%s", record.Body)
+	}
 }
 
 // TestVendoredTextIsEscaped checks that a capture is shown as text. An

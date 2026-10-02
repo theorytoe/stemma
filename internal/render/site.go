@@ -104,11 +104,19 @@ type PageData struct {
 	common
 	Title      string
 	Meta       []MetaItem
+	Action     *PageAction
 	Body       template.HTML
 	References []ReferenceData
 	Backlinks  []PageLink
 	Graph      template.HTML
 	GraphJSON  template.JS
+}
+
+// PageAction is a prominent link at the top of a page, such as the full text of
+// a vendored source. An authored page has none.
+type PageAction struct {
+	Text string
+	URL  string
 }
 
 // SourceTextData is a vendored capture rendered as a page: markdown as HTML, a
@@ -368,15 +376,15 @@ func (r *Renderer) Source(key string) ([]byte, error) {
 		Graph:     graphSVG(g),
 		GraphJSON: graphJSON(g),
 	}
-	// A capture the KB holds is one link away from the record it belongs to. A
-	// capture that is claimed but missing is not linked: `cite check` reports it,
-	// and the site should not offer a page that is not there.
+	// A capture the KB holds is a prominent link, not a line in the meta: it is
+	// the reason a reader opened the record. A capture that is claimed but missing
+	// is not linked at all, because `cite check` reports it and the site should not
+	// offer a page that is not there.
 	if _, ok := kb.FindOriginal(r.kb.Root, key); ok {
-		data.Meta = append(data.Meta, MetaItem{
-			Label: "full text",
-			Text:  "read the capture",
-			URL:   rel(docURL, SourceTextURL(key)),
-		})
+		data.Action = &PageAction{
+			Text: "Read the full text",
+			URL:  rel(docURL, SourceTextURL(key)),
+		}
 	}
 	return r.execute("page", data)
 }

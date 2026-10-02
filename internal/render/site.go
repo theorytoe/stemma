@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"html"
 	"html/template"
 	"io/fs"
 	"net/url"
@@ -110,15 +111,17 @@ type PageData struct {
 	GraphJSON  template.JS
 }
 
-// SourceTextData is a vendored capture rendered as a page. The text is shown
-// exactly as it was captured and never re-parsed, because a capture is evidence
-// rather than prose.
+// SourceTextData is a vendored capture rendered as a page: markdown as HTML, a
+// PDF in a frame, or anything else as text. The original bytes are always a link
+// away.
 type SourceTextData struct {
 	common
 	Title     string
 	Key       string
 	RecordURL string
-	Text      string
+	RawURL    string
+	PDFURL    string
+	Body      template.HTML
 }
 
 // ListingData is an index page: a heading and one list under it. A page list,
@@ -368,7 +371,7 @@ func (r *Renderer) Source(key string) ([]byte, error) {
 	// A capture the KB holds is one link away from the record it belongs to. A
 	// capture that is claimed but missing is not linked: `cite check` reports it,
 	// and the site should not offer a page that is not there.
-	if _, ok := r.vendoredText(key); ok {
+	if _, ok := kb.FindOriginal(r.kb.Root, key); ok {
 		data.Meta = append(data.Meta, MetaItem{
 			Label: "full text",
 			Text:  "read the capture",
@@ -378,36 +381,49 @@ func (r *Renderer) Source(key string) ([]byte, error) {
 	return r.execute("page", data)
 }
 
-// SourceText renders a vendored capture as a page: the text in a preformatted
-// block, with the record it belongs to one link away.
-func (r *Renderer) SourceText(key string, text []byte) ([]byte, error) {
+// SourceText renders a capture as a page: a PDF embedded, markdown rendered, and
+// anything else shown as text. Whatever it is, the original bytes stay a link
+// away, so the rendered view never replaces the evidence.
+func (r *Renderer) SourceText(key string, art kb.VendoredArtifact) ([]byte, error) {
 	page, err := r.sourcePage(key)
 	if err != nil {
 		return nil, err
 	}
+	data, err := os.ReadFile(art.Path)
+	if err != nil {
+		return nil, err
+	}
 	docURL := SourceTextURL(key)
-	data := SourceTextData{
+	view := SourceTextData{
 		common:    common{Site: r.siteFor(docURL), DocTitle: tabTitle(page.Title()+" (full text)", r.title)},
 		Title:     page.Title(),
 		Key:       key,
 		RecordURL: rel(docURL, SourceURL(key)),
-		Text:      string(text),
+		RawURL:    rel(docURL, SourceRawURL(key, art.Ext)),
 	}
-	return r.execute("source-text", data)
+	switch art.Ext {
+	case ".md", ".markdown":
+		view.Body = template.HTML(markdownHTML(data))
+	case ".pdf":
+		view.PDFURL = view.RawURL
+	default:
+		view.Body = template.HTML(`<pre class="capture">` + html.EscapeString(string(data)) + `</pre>`)
+	}
+	return r.execute("source-text", view)
 }
 
-// vendoredText reads a key's capture, and reports whether there is one to read.
-//
-// A capture that is missing or unreadable is treated as absent rather than as an
-// error: `cite check` is what reports a capture that has drifted from its
-// record, and a site should not refuse to build over provenance it cannot
-// repair.
-func (r *Renderer) vendoredText(key string) ([]byte, bool) {
-	text, err := os.ReadFile(kb.VendoredPath(r.kb.Root, key))
-	if err != nil {
-		return nil, false
+// captureType is the media type a captured original is served as. Only a PDF is
+// safe to serve as itself; markdown and text are read as text, and anything else
+// is a download rather than something the browser might execute.
+func captureType(ext string) string {
+	switch ext {
+	case ".pdf":
+		return "application/pdf"
+	case ".txt", ".md", ".markdown":
+		return "text/plain; charset=utf-8"
+	default:
+		return "application/octet-stream"
 	}
-	return text, true
 }
 
 // Documents returns every document in the site, in a stable order: the pages,
@@ -490,14 +506,22 @@ func (r *Renderer) Documents() ([]Document, error) {
 
 		// A vendored capture is a document of the site, so a reader who follows a
 		// citation to its source can go on to read what was captured. There is no
-		// document when the capture is absent, which is the ordinary case.
-		if text, ok := r.vendoredText(key); ok {
-			body, err := r.SourceText(key, text)
-			if err != nil {
-				return nil, err
-			}
-			addHTML(SourceTextURL(key), body)
+		// document when nothing was vendored, which is the ordinary case.
+		art, ok := kb.FindOriginal(r.kb.Root, key)
+		if !ok {
+			continue
 		}
+		body, err = r.SourceText(key, art)
+		if err != nil {
+			return nil, err
+		}
+		addHTML(SourceTextURL(key), body)
+
+		raw, err := os.ReadFile(art.Path)
+		if err != nil {
+			return nil, err
+		}
+		docs = append(docs, Document{URL: SourceRawURL(key, art.Ext), Body: raw, Type: captureType(art.Ext)})
 	}
 
 	assets, err := r.assets()

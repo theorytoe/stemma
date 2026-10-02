@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/theorytoe/stemma/internal/extract"
 	"github.com/theorytoe/stemma/internal/kb"
@@ -75,51 +76,113 @@ var citeVendorCommand = &command{
 					pointer, extract.DefaultLimit))
 			}
 
-			name := kb.VendoredName(key)
-			full := kb.VendoredPath(k.Root, key)
-			digest := kb.HashOf([]byte(result.Text))
+			// The extracted text is what the entry records a hash of, so it is always
+			// the capture. When the pointer is a file on this machine, the original is
+			// written beside it, so a reader can see the PDF or the markdown rather
+			// than only the text drawn out of it.
+			text := []byte(result.Text)
+			textName := kb.VendoredName(key)
+			textFull := kb.VendoredPath(k.Root, key)
+
+			var orig []byte
+			origName, origFull := "", ""
+			if info, statErr := os.Stat(pointer); statErr == nil && !info.IsDir() {
+				orig, err = os.ReadFile(pointer)
+				if err != nil {
+					return w.fail(err)
+				}
+				if ext := strings.ToLower(filepath.Ext(pointer)); ext != "" && ext != ".txt" {
+					origName = kb.OriginalName(key, ext)
+					origFull = kb.OriginalPath(k.Root, key, ext)
+				}
+			}
+
+			// The hash covers the capture a reader would open: the original when
+			// there is one, and the extracted text otherwise.
+			capture := text
+			if origName != "" {
+				capture = orig
+			}
+			digest := kb.HashOf(capture)
+
+			type target struct {
+				name string
+				full string
+				data []byte
+			}
+			targets := []target{{name: textName, full: textFull, data: text}}
+			if origName != "" {
+				targets = append(targets, target{name: origName, full: origFull, data: orig})
+			}
+
+			existing, err := kb.VendoredFiles(k.Root, key)
+			if err != nil {
+				return w.fail(err)
+			}
+			onDisk := map[string]string{}
+			for _, f := range existing {
+				raw, err := os.ReadFile(f.Path)
+				if err != nil {
+					return w.fail(err)
+				}
+				onDisk[f.Name] = kb.HashOf(raw)
+			}
+
 			report := vendorReport{
 				Key:       key,
-				Path:      name,
+				Path:      textName,
 				Pointer:   pointer,
 				Extractor: result.Extractor,
 				Hash:      digest,
-				Bytes:     len(result.Text),
+				Bytes:     len(capture),
 				Notes:     result.Notes,
 			}
 
-			have, readErr := os.ReadFile(full)
-			present := readErr == nil
-			if readErr != nil && !os.IsNotExist(readErr) {
-				return w.fail(readErr)
-			}
-			onDisk := ""
-			if present {
-				onDisk = kb.HashOf(have)
+			// A target already there with the same bytes needs no write. Any other
+			// difference is a decision about evidence, so it is asked for rather than
+			// assumed, and nothing is touched until it is.
+			var changed []target
+			for _, t := range targets {
+				sum := kb.HashOf(t.data)
+				have, present := onDisk[t.name]
+				if present && have == sum {
+					continue
+				}
+				if present && !*force {
+					return w.fail(fmt.Errorf(
+						"%s already holds a capture of %q and this is a different text (%s on disk, %s read now), "+
+							"so neither was touched; --force replaces it", t.name, key, have, sum))
+				}
+				changed = append(changed, t)
 			}
 			recorded, claimed := entry.Value(kb.FieldVendored)
-
-			needsText := !present || onDisk != digest
 			needsRecord := !claimed || recorded != digest
 
-			// What is in the KB is not what the source gives now. Replacing a
-			// capture is a decision about evidence, so it is asked for rather than
-			// assumed, and nothing is touched until it is.
-			if needsText && present && !*force {
-				return w.fail(fmt.Errorf(
-					"%s already holds a capture of %q and this is a different text (%s on disk, %s read now), "+
-						"so neither was touched; --force replaces it", name, key, onDisk, digest))
-			}
-			if !needsText && !needsRecord {
+			if len(changed) == 0 && !needsRecord {
 				report.Action = "unchanged"
-				return emitVendor(w, report, fmt.Sprintf("%s is already captured in %s, and nothing has changed", key, name))
+				return emitVendor(w, report, fmt.Sprintf("%s is already captured in %s, and nothing has changed", key, textName))
 			}
 
-			if needsText {
-				if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			for _, t := range changed {
+				if err := os.MkdirAll(filepath.Dir(t.full), 0o755); err != nil {
 					return w.fail(err)
 				}
-				if err := kb.WriteFileAtomic(full, []byte(result.Text)); err != nil {
+				if err := kb.WriteFileAtomic(t.full, t.data); err != nil {
+					return w.fail(err)
+				}
+			}
+			// A capture whose original changed extension leaves the old one behind, so
+			// remove whatever is not part of this capture. It is the only file a command
+			// is allowed to remove, and only because it wrote it.
+			keep := map[string]bool{}
+			for _, t := range targets {
+				keep[t.name] = true
+			}
+			for _, f := range existing {
+				if keep[f.Name] {
+					continue
+				}
+				if err := os.Remove(f.Path); err != nil && !os.IsNotExist(err) {
 					return w.fail(err)
 				}
 			}
@@ -129,12 +192,12 @@ var citeVendorCommand = &command{
 				}
 			}
 
-			if needsText {
+			if len(changed) > 0 {
 				report.Action = "captured"
-				return emitVendor(w, report, fmt.Sprintf("captured %s in %s", key, name))
+				return emitVendor(w, report, fmt.Sprintf("captured %s in %s", key, textName))
 			}
 			report.Action = "recorded"
-			return emitVendor(w, report, fmt.Sprintf("%s: recorded the capture already in %s", key, name))
+			return emitVendor(w, report, fmt.Sprintf("%s: recorded the capture already in %s", key, textName))
 		}
 	},
 }

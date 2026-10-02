@@ -518,7 +518,14 @@ func TestVendoredSourceIsServedAndLinked(t *testing.T) {
 // extraction can contain anything, including something that looks like markup.
 func TestVendoredTextIsEscaped(t *testing.T) {
 	r := vendoredRenderer(t)
-	got, err := r.SourceText("bush1945", []byte("<b>not markup</b>\n"))
+	art, ok := kb.FindOriginal(r.kb.Root, "bush1945")
+	if !ok {
+		t.Fatal("no capture to render")
+	}
+	if err := os.WriteFile(art.Path, []byte("<b>not markup</b>\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := r.SourceText("bush1945", art)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -527,6 +534,84 @@ func TestVendoredTextIsEscaped(t *testing.T) {
 	}
 	if strings.Contains(string(got), "<b>not markup</b>") {
 		t.Errorf("the capture was rendered as markup:\n%s", got)
+	}
+}
+
+// writeOriginal puts an original document beside the vendored key's extracted
+// text, which is what a capture made from a local file now has.
+func writeOriginal(t *testing.T, r *Renderer, ext string, body []byte) {
+	t.Helper()
+	full := kb.OriginalPath(r.kb.Root, "bush1945", ext)
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(full, body, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestVendoredMarkdownIsRendered checks that a markdown original is a document,
+// not a preformatted file; that its frontmatter is dropped as metadata; and that
+// raw HTML in it is dropped.
+func TestVendoredMarkdownIsRendered(t *testing.T) {
+	r := vendoredRenderer(t)
+	writeOriginal(t, r, ".md", []byte("---\ntitle: Meta\n---\n# Heading\n\nA [link](https://example.com) and <script>bad()</script>.\n"))
+
+	art, ok := kb.FindOriginal(r.kb.Root, "bush1945")
+	if !ok || art.Ext != ".md" {
+		t.Fatalf("FindOriginal = %+v, %v; want the markdown", art, ok)
+	}
+	got, err := r.SourceText("bush1945", art)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(got), "<h1>Heading</h1>") {
+		t.Errorf("the markdown was not rendered:\n%s", got)
+	}
+	if strings.Contains(string(got), "title: Meta") {
+		t.Errorf("the frontmatter was rendered as content:\n%s", got)
+	}
+	if !strings.Contains(string(got), `<a href="https://example.com">link</a>`) {
+		t.Errorf("a markdown link was not rendered:\n%s", got)
+	}
+	if strings.Contains(string(got), "<script>") {
+		t.Errorf("raw HTML in a capture reached the page:\n%s", got)
+	}
+}
+
+// TestVendoredPDFIsEmbeddedAndServed checks the PDF path: the view frames the
+// browser's own viewer, and the bytes are served as a PDF.
+func TestVendoredPDFIsEmbeddedAndServed(t *testing.T) {
+	r := vendoredRenderer(t)
+	writeOriginal(t, r, ".pdf", []byte("%PDF-1.4\nnot really a pdf\n"))
+
+	docs, err := r.Documents()
+	if err != nil {
+		t.Fatal(err)
+	}
+	byURL := map[string]Document{}
+	for _, d := range docs {
+		byURL[d.URL] = d
+	}
+
+	rawURL := SourceRawURL("bush1945", ".pdf")
+	raw, ok := byURL[rawURL]
+	if !ok {
+		t.Fatalf("Documents did not produce the raw PDF at %s", rawURL)
+	}
+	if raw.Type != "application/pdf" {
+		t.Errorf("raw type = %q, want application/pdf", raw.Type)
+	}
+
+	view, ok := byURL[SourceTextURL("bush1945")]
+	if !ok {
+		t.Fatal("Documents did not produce the view page")
+	}
+	if !strings.Contains(string(view.Body), `class="capture-pdf"`) {
+		t.Errorf("the PDF is not embedded:\n%s", view.Body)
+	}
+	if !strings.Contains(string(view.Body), rawURL) {
+		t.Errorf("the view does not point at the raw PDF:\n%s", view.Body)
 	}
 }
 

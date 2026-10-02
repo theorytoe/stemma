@@ -75,9 +75,11 @@ a citation key. Your judgement is in deciding what is worth recording.
    stemma cite vendor KEY
    ```
 
-   A vendored capture is committed, and `build` and `serve` publish it as a page
-   linked from the source page, so a reader can consult the text without leaving
-   the site.
+   A vendored capture is committed. When the source is a file on this machine,
+   the original is copied into `sources/` beside the extracted text, and `build`
+   and `serve` publish the capture for a reader: a PDF opens in the browser's
+   viewer, markdown is rendered, and text is shown as text, with the original
+   bytes always a click away.
 
 4. **Cite the key in a page.** Write `[@key]` in the prose, using the key the
    tool minted. Do not paraphrase the key or derive one from the title. The

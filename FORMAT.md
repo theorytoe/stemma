@@ -178,7 +178,10 @@ that wrote it, because an export that nothing else can open is not an export.
 ### `sources/`
 
 The full text of a source is not stored by default. Vendoring it is opt-in, and
-when it is asked for the text goes into `sources/` in the KB root.
+when it is asked for the text goes into `sources/` in the KB root. When the
+source is a file on this machine, the file itself is stored beside that text, so
+the PDF or the markdown can be read as what it is and not only as prose drawn out
+of it.
 
 A vendored file is a capture rather than a generated artifact, so unlike
 `.stemma/` it is committed. The directory is absent in a KB that has vendored
@@ -186,20 +189,25 @@ nothing, which is the ordinary case, so the default KB root is unchanged by its
 existence. Files in `sources/` are not pages, and no rule above applies to them
 beyond their location.
 
-The file is named from the key it belongs to, `sources/<name>-<digest>.txt`, so
-one source always lands on one file. Both halves are derived from the key, which
-is what the digest is for: two keys that reduce to one filename, such as
-`smith:2020` and `smith-2020`, would otherwise have to share a capture. The name
-is derived rather than stated because the entry records the capture's hash and
-not its path, so the key is what tells you where to look.
+The extracted text is named from the key it belongs to,
+`sources/<name>-<digest>.txt`, and an original beside it shares the name and
+carries the source's own extension, `sources/<name>-<digest>.<ext>`. Both halves
+are derived from the key, which is what the digest is for: two keys that reduce
+to one filename, such as `smith:2020` and `smith-2020`, would otherwise have to
+share a capture. The name is derived rather than stated because the entry records
+the capture's hash and not its path, so the key is what tells you where to look.
+The recorded hash covers the original when there is one, because that is what a
+reader opens, and the extracted text otherwise.
 
 A capture is part of the rendered site. `build` writes it and `serve` answers it
 at `sources/<key>-text.html`, and the key's source page links to it. That address
-is derived from the key and not from the capture's file name, so re-vendoring the
-text does not move it. The text is shown exactly as it was captured and is never
-re-parsed, because a capture is evidence rather than prose. A key with no capture
-gets no such page, and a KB that has vendored nothing is unchanged by any of
-this.
+is derived from the key and not from the capture's file name, so re-vendoring does
+not move it. The capture is shown by what it is: markdown is rendered as a
+document, a PDF is embedded in the browser's viewer, and anything else is shown as
+text. The original bytes are served unchanged at `sources/<key>-raw<ext>` and
+linked from the view, so a rendered capture never replaces the evidence. A key with
+no capture gets no such page, and a KB that has vendored nothing is unchanged by
+any of this.
 
 Capturing is the one thing a bibliography cannot do for itself: an address goes
 stale and a capture does not. It is therefore explicit, and it checks itself. When

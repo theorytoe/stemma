@@ -58,6 +58,12 @@ func SourceTextURL(key string) string {
 	return kb.SourcesDir + "/" + url.PathEscape(key) + "-text.html"
 }
 
+// SourceRawURL is the URL the captured original document is served at, so a PDF
+// can be embedded and any capture can be downloaded.
+func SourceRawURL(key, ext string) string {
+	return kb.SourcesDir + "/" + url.PathEscape(key) + "-raw" + ext
+}
+
 // FilePath is the unescaped form of a site URL: the name a build writes to
 // disk and the name a server matches a decoded request against. A URL carries
 // escapes and a file name does not — a page with a space in its name is served
@@ -140,20 +146,60 @@ func (r *Renderer) Body(mode kb.Mode, path string) ([]byte, []kb.Finding, error)
 
 // bodyHTML renders one page's body as an HTML fragment. docURL is the page's
 // own address, which every link in the fragment is written relative to.
-//
-// SmartypantsFractions is the one part of Smartypants turned off, because it
-// reads a run of digits around a slash as a fraction: the DOI
-// "10.1145/2568225" comes back with "1145" superscripted and "2568225"
-// subscripted, which is wrong for the identifiers a bibliography is full of.
-// Quotes and dashes still curl, because prose wants them.
 func (r *Renderer) bodyHTML(page *kb.Page, refs []kb.Reference, docURL string) []byte {
 	src := r.expand(page, refs, docURL)
-	renderer := blackfriday.NewHTMLRenderer(blackfriday.HTMLRendererParameters{
-		Flags: blackfriday.CommonHTMLFlags &^ blackfriday.SmartypantsFractions,
-	})
 	return blackfriday.Run(src,
 		blackfriday.WithExtensions(blackfriday.CommonExtensions),
-		blackfriday.WithRenderer(renderer))
+		blackfriday.WithRenderer(newHTMLRenderer(0)))
+}
+
+// markdownHTML renders captured markdown as a document. A capture is an external
+// document and not a KB page, so unlike a page body its [[...]] and [@...] are
+// left as the text they were written as, and raw HTML is dropped so a captured
+// page cannot put a script into the site. A leading frontmatter block is dropped
+// the way a page's own is, because it is metadata and not prose.
+func markdownHTML(src []byte) []byte {
+	src = stripFrontmatter(src)
+	return blackfriday.Run(src,
+		blackfriday.WithExtensions(blackfriday.CommonExtensions),
+		blackfriday.WithRenderer(newHTMLRenderer(blackfriday.SkipHTML)))
+}
+
+// stripFrontmatter drops a leading --- block from captured markdown. A document
+// that does not both open and close one is returned unchanged, because a leading
+// rule is ordinary markdown and a capture must not lose its first line to a
+// guess.
+func stripFrontmatter(src []byte) []byte {
+	body := src
+	switch {
+	case bytes.HasPrefix(body, []byte("---\r\n")):
+		body = body[len("---\r\n"):]
+	case bytes.HasPrefix(body, []byte("---\n")):
+		body = body[len("---\n"):]
+	default:
+		return src
+	}
+	for len(body) > 0 {
+		line, rest, _ := bytes.Cut(body, []byte("\n"))
+		body = rest
+		if bytes.Equal(bytes.TrimSuffix(line, []byte("\r")), []byte("---")) {
+			return body
+		}
+	}
+	return src
+}
+
+// newHTMLRenderer is the one HTML renderer every body is parsed with.
+//
+// SmartypantsFractions is turned off, because it reads a run of digits around a
+// slash as a fraction: the DOI "10.1145/2568225" comes back with "1145"
+// superscripted and "2568225" subscripted, which is wrong for the identifiers a
+// bibliography is full of. Quotes and dashes still curl, because prose wants
+// them. extra is a caller's own choice, such as dropping raw HTML in a capture.
+func newHTMLRenderer(extra blackfriday.HTMLFlags) *blackfriday.HTMLRenderer {
+	return blackfriday.NewHTMLRenderer(blackfriday.HTMLRendererParameters{
+		Flags: (blackfriday.CommonHTMLFlags &^ blackfriday.SmartypantsFractions) | extra,
+	})
 }
 
 // expand replaces every wikilink and citation in the page body with the HTML it

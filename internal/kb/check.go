@@ -223,7 +223,6 @@ func vendoredFindings(root, path, key string, e *BibEntry) []Finding {
 	if !claimed {
 		return nil
 	}
-	name := VendoredName(key)
 
 	finding := func(code, message string) []Finding {
 		return []Finding{{
@@ -240,22 +239,25 @@ func vendoredFindings(root, path, key string, e *BibEntry) []Finding {
 	}
 	if !strings.HasPrefix(recorded, "sha256:") {
 		return finding(CodeBadVendored,
-			quote(key)+" records a vendored hash this tool cannot compute, so "+name+" was not checked")
+			quote(key)+" records a vendored hash this tool cannot compute, so the capture was not checked")
 	}
 
-	have, err := os.ReadFile(VendoredPath(root, key))
-	switch {
-	case os.IsNotExist(err):
+	// The capture is the original document when one was kept beside the extracted
+	// text, and the text itself otherwise; the recorded hash covers whichever it is.
+	art, ok := FindOriginal(root, key)
+	if !ok {
 		return finding(CodeMissingVendored,
-			quote(key)+" claims a vendored copy, and "+name+" is not there")
-	case err != nil:
+			quote(key)+" claims a vendored copy, and "+VendoredName(key)+" is not there")
+	}
+	have, err := os.ReadFile(art.Path)
+	if err != nil {
 		return finding(CodeMissingVendored,
-			quote(key)+" claims a vendored copy, and "+name+" could not be read: "+err.Error())
+			quote(key)+" claims a vendored copy, and "+art.Name+" could not be read: "+err.Error())
 	}
 
 	if found := HashOf(have); found != recorded {
 		return finding(CodeVendoredDrift,
-			quote(key)+" has a vendored copy in "+name+" whose hash is "+found+", not the recorded "+recorded)
+			quote(key)+" has a vendored copy in "+art.Name+" whose hash is "+found+", not the recorded "+recorded)
 	}
 	return nil
 }

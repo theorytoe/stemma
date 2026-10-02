@@ -8,8 +8,8 @@
 <main>
   <article class="page source-text">
     <h1>{{.Title}}</h1>
-    <p class="meta">captured text of <a href="{{.RecordURL}}">{{.Key}}</a></p>
-    <pre class="capture">{{.Text}}</pre>
+    <p class="meta">captured text of <a href="{{.RecordURL}}">{{.Key}}</a> · <a href="{{.RawURL}}">original</a></p>
+    {{if .PDFURL}}<iframe class="capture-pdf" src="{{.PDFURL}}" title="{{.Title}}"></iframe>{{else}}{{.Body}}{{end}}
   </article>
 </main>
 {{template "footer" .}}

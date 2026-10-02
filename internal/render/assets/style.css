@@ -446,6 +446,14 @@ pre code {
   overflow-wrap: anywhere;
 }
 
+/* A PDF is read in the browser's own viewer, given as much room as the page. */
+.source-text .capture-pdf {
+  width: 100%;
+  height: 80vh;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+
 blockquote {
   margin-left: 0;
   padding-left: 1rem;

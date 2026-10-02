@@ -44,7 +44,8 @@ is never edited by hand and never committed to the KB's history.
 
    The output needs no server: every page, the home page, the index, the type
    and tag lists, the graph, a virtual page for every cited source, and the
-   captured text of every source that was vendored.
+   capture of every source that was vendored -- markdown rendered, a PDF in the
+   browser's viewer, or text, with the original file alongside.
 
 3. **Hand the whole KB to a program.**
 

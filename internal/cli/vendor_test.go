@@ -259,6 +259,40 @@ func TestCiteVendorReportsUnderJSON(t *testing.T) {
 	}
 }
 
+// TestCiteVendorCopiesALocalOriginal checks that a source which is a file on
+// this machine keeps the file itself beside the text drawn out of it, so the
+// site can serve the original format.
+func TestCiteVendorCopiesALocalOriginal(t *testing.T) {
+	document := filepath.Join(t.TempDir(), "paper.md")
+	body := "# A Paper\n\nThe body in markdown.\n"
+	if err := os.WriteFile(document, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root := vendorPathKB(t, document)
+	shimReturning(t, "the extracted text\n")
+
+	code, _, stderr := run("cite", "vendor", "--kb", root, "bush1945")
+	if code != ExitOK {
+		t.Fatalf("exited %d: %s", code, stderr)
+	}
+
+	// The extracted text is the capture the entry records a hash of.
+	if have, present := capture(t, root, "bush1945"); !present || have != "the extracted text\n" {
+		t.Errorf("the capture is %q (present %v)", have, present)
+	}
+	// The original is beside it, under the extension it was read from.
+	have, err := os.ReadFile(kb.OriginalPath(root, "bush1945", ".md"))
+	if err != nil {
+		t.Fatalf("the original was not captured: %v", err)
+	}
+	if string(have) != body {
+		t.Errorf("the original is %q, want %q", have, body)
+	}
+	if got := recorded(t, root, "bush1945"); got != kb.HashOf([]byte(body)) {
+		t.Errorf("recorded hash = %q, want the hash of the original", got)
+	}
+}
+
 // The one test here that reads a real document. Text needs no library, so this
 // works wherever Python does.
 func TestCiteVendorThroughTheRealShim(t *testing.T) {

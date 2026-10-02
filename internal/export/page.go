@@ -171,18 +171,22 @@ func Scoped(k *kb.KB, root string, depth int) (*Extract, error) {
 	}
 
 	// A capture is part of the source the extract carries, so a key whose text was
-	// vendored keeps that text here too: the extract's site offers the same full
-	// text the source KB does, and the extract stays self-contained (`D30`). A key
-	// with no capture contributes no file, which is the ordinary case.
+	// vendored keeps that text here too, and its original document beside it: the
+	// extract's site offers the same full text the source KB does, and the extract
+	// stays self-contained (`D30`). A key with no capture contributes no file,
+	// which is the ordinary case.
 	for _, key := range x.Sources {
-		text, err := os.ReadFile(kb.VendoredPath(k.Root, key))
+		files, err := kb.VendoredFiles(k.Root, key)
 		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
 			return nil, err
 		}
-		x.Files = append(x.Files, File{Path: kb.VendoredName(key), Body: text})
+		for _, f := range files {
+			data, err := os.ReadFile(f.Path)
+			if err != nil {
+				return nil, err
+			}
+			x.Files = append(x.Files, File{Path: f.Name, Body: data})
+		}
 	}
 
 	x.Files = append(x.Files, File{Path: kb.ManifestName, Body: manifestFor(k, page, depth)})

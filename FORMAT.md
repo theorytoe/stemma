@@ -348,7 +348,9 @@ by default, an error under `--strict`.
 
 Two types are reserved and tool-owned:
 
-- `index` — a navigation page. `new` will not create one.
+- `index` — a navigation page, when an author writes one. The tool reserves
+  the type but requires no index page anywhere: `new` will not create one, and
+  no page is checked for navigating anything.
 - `source` — a bibliography entry. A source page is **virtual**: it is
   materialised from its BibTeX entry at export and build time, and it is never
   committed.
@@ -688,7 +690,8 @@ is rather than what it says: it is the page every other page is reachable from,
 so nothing links to it by construction, and a finding that it has no inbound
 links says nothing an author could act on. A page linking to itself does not stop
 it being an orphan, and `index` needs no misuse rule of its own: an index page on
-disk is legitimate, and the tool simply never writes one on an author's behalf.
+disk is legitimate but never required, and the tool simply never writes one on an
+author's behalf.
 
 A row in that table is a page the tool can still read, show and repair. Some
 files are not, and they fail with exit code `2` instead:

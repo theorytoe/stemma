@@ -11,11 +11,13 @@ import (
 //
 // Help is generated from the command table rather than written beside it, so a
 // verb or a flag cannot be added without appearing here. --markdown emits the
-// whole reference in one document, which is what the skill suite consumes.
+// whole reference in one document, which is what the skill suite consumes. A
+// noun family's member is named in two words, so `help cite add` and
+// `stemma cite add` resolve alike.
 var helpCommand = &command{
 	name:    "help",
 	summary: "show help for a command",
-	args:    "[COMMAND]",
+	args:    "[COMMAND [MEMBER]]",
 	setup: func(fs *flag.FlagSet, o *options) runFunc {
 		markdown := fs.Bool("markdown", false, "write the whole command reference as markdown")
 		return func(c *command, w *output, args []string) int {
@@ -26,28 +28,61 @@ var helpCommand = &command{
 				fmt.Fprint(w.stdout, referenceMarkdown())
 				return ExitOK
 			}
-			switch len(args) {
-			case 0:
+			target, name, err := helpTarget(args)
+			if err != nil {
+				return w.fail(err)
+			}
+			if target == nil {
 				if w.json {
 					return w.emit(helpReport{Commands: surface()})
 				}
 				fmt.Fprint(w.stdout, topUsage())
 				return ExitOK
-			case 1:
-				target := find(args[0])
-				if target == nil {
-					return w.fail(fmt.Errorf("no command is called %q", args[0]))
-				}
-				if w.json {
-					return w.emit(describeCommand(target))
-				}
-				fmt.Fprint(w.stdout, commandHelp(target.name, target))
-				return ExitOK
-			default:
-				return w.fail(fmt.Errorf("help takes at most one command, got %d", len(args)))
 			}
+			if w.json {
+				info := describeCommand(target)
+				info.Name = name
+				return w.emit(info)
+			}
+			fmt.Fprint(w.stdout, commandHelp(name, target))
+			return ExitOK
 		}
 	},
+}
+
+// helpTarget resolves the positional arguments after `help` to the command they
+// name and the full name it is invoked by. A noun family is named by its first
+// two arguments, so the same resolution the dispatcher uses applies here, and
+// nil with no error means the arguments named nothing and the whole surface is
+// wanted. Naming a family without a member is not an error: the family is a
+// page of its own, listing what its members are.
+func helpTarget(args []string) (*command, string, error) {
+	switch len(args) {
+	case 0:
+		return nil, "", nil
+	case 1:
+		c := find(args[0])
+		if c == nil {
+			return nil, "", fmt.Errorf("no command is called %q", args[0])
+		}
+		return c, c.name, nil
+	case 2:
+		c := find(args[0])
+		if c == nil {
+			return nil, "", fmt.Errorf("no command is called %q", args[0])
+		}
+		if len(c.sub) == 0 {
+			return nil, "", fmt.Errorf("%s takes no member %q", c.name, args[1])
+		}
+		for _, s := range c.sub {
+			if s.name == args[1] {
+				return s, c.name + " " + s.name, nil
+			}
+		}
+		return nil, "", fmt.Errorf("%s has no %q; it has %s", c.name, args[1], subNames(c))
+	default:
+		return nil, "", fmt.Errorf("help takes at most one command, got %d", len(args))
+	}
 }
 
 // topUsage is the index of the surface.

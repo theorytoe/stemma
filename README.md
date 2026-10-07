@@ -1,5 +1,10 @@
 # stemma
 
+**WARNING:** this project is a personal experiment in 'oneshot' style ""vibe coding""
+I basically told the demon machine what to do and it did it, I had very little
+intervention in the architectural design of the project. Therefore there is a chance
+things are messy.
+
 A tool for authoring and maintaining a citation-bearing knowledge base on disk.
 Pages are markdown with a small frontmatter block, `[[wikilinks]]` and `[@key]`
 citations; sources live in BibTeX. The format is specified in

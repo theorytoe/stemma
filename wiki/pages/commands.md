@@ -62,4 +62,6 @@ A noun family is not a command on its own: naming `cite` without a member is a
 usage error rather than a guess at what you meant. `help` reads the same
 definition the dispatcher does, so the surface and its documentation cannot
 drift apart, and `help --markdown` writes the whole reference as one document.
+`help --man` writes the same surface as manual pages, one per command, which
+`make man` collects and `make install-man` puts where `man` looks for them.
 See [[Invoking the tool]] for how a command is run and what it returns.

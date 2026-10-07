@@ -41,9 +41,11 @@ everything else works without it.
 make build          # build bin/stemma (version-stamped from git describe)
 make install        # go install to GOBIN (or GOPATH/bin)
 make install-skills # copy skills/ into ~/.agents/skills (override SKILLS_DIR)
+make man            # write the manual pages to man/ (override MAN)
+make install-man    # copy them to share/man/man1 (override MANPREFIX)
 make tidy           # go mod tidy
 make fmt            # go fmt ./...
-make clean          # rm -r bin
+make clean          # rm -r bin man
 ```
 
 `make build` writes `bin/stemma`. The version is injected with
@@ -92,8 +94,9 @@ setup; Tier 1 is the `.stemma/index.sqlite` cache built by `stemma index`. No
 command may require the index; a KB with no `.stemma/` is fully usable.
 
 **Adding a CLI verb means editing the command table** in `internal/cli/cli.go`.
-A verb that is not in the table does not exist. Help text and the generated
-reference follow automatically; do not hand-write either.
+A verb that is not in the table does not exist. Help text, the generated
+reference, and the manual pages all follow automatically; do not hand-write any
+of them.
 
 ### Hard constraints
 
@@ -111,7 +114,8 @@ reference follow automatically; do not hand-write either.
   address; a local file is `path`, kept as written and read relative to the
   working directory. A capture vendored under `sources/` is a local source's
   provenance and stands in for a fetched hash in the provenance check (`D79`).
-- Generated artifacts live under `.stemma/` and are never committed (`P8`).
+- Generated artifacts are never committed (`P8`); a KB's own live under
+  `.stemma/`.
 - Exit codes are fixed: `0` clean, `1` validation findings, `2` operational
   error. Every command supports `--json` with one envelope (`command`, `ok`,
   `data`, and `findings` or `error`). Tools are lenient unless `--strict`.
@@ -131,6 +135,8 @@ make site        # bin/stemma build --kb wiki
 make extract     # scoped extract, then lint and build it as its own KB
 make skills      # regenerate skills/stemma/references/{cli.md,format.md}
 make check-skills
+make man         # regenerate the manual pages
+make check-man
 make check       # all of the above
 make bench       # Tier-0 vs Tier-1 timing; measures, never passes/fails
 ```
@@ -178,6 +184,10 @@ make bench       # Tier-0 vs Tier-1 timing; measures, never passes/fails
   `format.md` — are **generated** by `make skills` (from the command table and
   from `FORMAT.md`) and are gitignored. Never edit or commit them. Edit the
   source (the CLI table, or `FORMAT.md`) and regenerate.
+- The manual pages in `man/` are **generated** by `make man` from the same
+  command table and are gitignored. Never write or commit one; add the verb to
+  the table and regenerate. `make install-man` copies them into
+  `$(MANPREFIX)/share/man/man1`.
 - Skills follow the open Agent Skills standard; `make check-skills` validates
   name, description, and size. The suite is one umbrella (`skills/stemma`) plus
   five workflow skills (`stemma-research`, `stemma-author`, `stemma-maintain`,
@@ -191,6 +201,7 @@ make bench       # Tier-0 vs Tier-1 timing; measures, never passes/fails
 - `bin/`.
 - `__pycache__/` (from running the shim's tests).
 - `skills/stemma/references/`.
+- `man/` (the manual pages, written by `make man`).
 
 `internal/extract/extract.py` is the source of truth for the shim: the binary
 embeds it and writes it to `<kb>/.stemma/shim/extract.py`, rewriting it whenever

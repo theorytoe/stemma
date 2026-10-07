@@ -766,6 +766,50 @@ constantly, while giving up the property that reorganising `pages/` is free. A r
 on every operation is worse still: it pays this cost on every command rather than once, for
 the same result.
 
+### Manual pages are a third rendering of the command table. `D80` added.
+
+**Decision.** `stemma help --man` writes manual pages as roff for section 1: an
+index `stemma(1)`, one page per top-level verb, and one page per family member,
+named for both words so that `man stemma-cite-add` works. With a command named
+it renders that page — to standard output, or into a directory with `--out`;
+with nothing named it renders the index, and with `--out` it writes the whole
+set. The pages come from the command table like the help text and the markdown
+reference (`D10`, `D56`), so a verb added to the table gets a page, and they are
+written to a gitignored `man/` and never committed (`P8`, `D23`). `make man`
+writes them, `make check-man` checks the set the shipped binary wrote, and
+`make install-man` puts them in `$(MANPREFIX)/share/man/man1`.
+
+**Why the table and not the reference.** The markdown reference is already
+generated from the table, so a man page is a second format over one source
+rather than a second document to keep true. The flags are read back out of the
+flag sets the commands build, exactly as `flagsOf` does for `help`, so a flag
+cannot be documented on one surface and missing from another. Roff is a language
+with its own escapes, and two matter: a hyphen that means a name rather than a
+range, and a line that begins with a dot or an apostrophe and would be read as a
+request. Both are handled by one escaper and one paragraph writer, and both are
+tested directly, because a page that renders differently from the sentence it
+was built from is a wrong page.
+
+**Why one page per command.** `man stemma-lint` is what a person types, and a
+family member has no other spelling in the manual namespace, where a space is
+not available: `man stemma-cite-add` is the only way to name it. The set is the
+table's own shape and is derived from it, so the number of files is not a list
+anything maintains.
+
+**Why `help` grew a flag rather than a verb.** A verb is a command `D56` counts
+and every surface has to carry; rendering documentation is not something the
+tool does to a KB. `--man` and `--out` sit beside `--markdown`, which was
+already the precedent for a rendering flag on `help`. `--out` without `--man`,
+and `--man` together with `--markdown`, are usage errors rather than a
+preference silently applied.
+
+**What changed beside it.** `help cite add` now resolves the way the dispatcher
+resolves `stemma cite add`. The markdown reference always documented every
+family member, and the test that guards it says a person can ask for one at a
+prompt; the dispatcher accepted two words and `help` did not, so the reference
+promised what the command refused. The resolution moved into one function both
+paths call, which is also what `--man` uses to name a page.
+
 ## Deferred during implementation
 
 ### Portable-markdown export. The second clause of `D19` is deferred.

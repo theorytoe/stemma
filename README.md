@@ -23,7 +23,8 @@ everything else works without it.
 `make install` builds with the version stamp and puts `stemma` on `PATH` (it uses
 `go install`, so the binary lands in `GOBIN`, or in `GOPATH/bin` when that is
 unset). `make build` writes `bin/stemma` instead, if you would rather not install
-it. `make install-skills` copies the agent skills into `~/.agents/skills`.
+it. `make install-skills` copies the agent skills into `~/.agents/skills`, and
+`make install-man` puts the manual pages where `man` looks for them.
 
 ## A first knowledge base
 
@@ -42,6 +43,8 @@ walkthrough in full, with the real output of every command.
     make build          # build bin/stemma
     make install        # put stemma on PATH
     make install-skills # copy the agent skills into ~/.agents/skills
+    make man            # write the manual pages to man/
+    make install-man    # put the manual pages where man looks for them
     make check          # build, vet, test, the shim's tests, and lint the example wiki
     make bench          # measure the two retrieval tiers (below)
 

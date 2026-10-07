@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -11,16 +12,27 @@ import (
 //
 // Help is generated from the command table rather than written beside it, so a
 // verb or a flag cannot be added without appearing here. --markdown emits the
-// whole reference in one document, which is what the skill suite consumes. A
-// noun family's member is named in two words, so `help cite add` and
-// `stemma cite add` resolve alike.
+// whole reference in one document, which is what the skill suite consumes, and
+// --man emits the same surface as manual pages. A noun family's member is named
+// in two words, so `help cite add` and `stemma cite add` resolve alike.
 var helpCommand = &command{
 	name:    "help",
 	summary: "show help for a command",
 	args:    "[COMMAND [MEMBER]]",
 	setup: func(fs *flag.FlagSet, o *options) runFunc {
 		markdown := fs.Bool("markdown", false, "write the whole command reference as markdown")
+		man := fs.Bool("man", false, "write a manual page as roff; with --out, the pages named, or the whole set")
+		out := fs.String("out", "", "with --man, write the pages into this directory instead of stdout")
 		return func(c *command, w *output, args []string) int {
+			if *man && *markdown {
+				return w.fail(errors.New("--man and --markdown are two renderings; ask for one"))
+			}
+			if *man {
+				return runMan(w, args, *out)
+			}
+			if *out != "" {
+				return w.fail(errors.New("--out is only meaningful with --man"))
+			}
 			if *markdown {
 				if w.json {
 					return w.emit(map[string]string{"markdown": referenceMarkdown()})

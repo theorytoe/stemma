@@ -12,3 +12,7 @@ __pycache__/
 # The umbrella skill's references, written by `make skills` from the tool's own
 # command table and from FORMAT.md. Generated, so not committed (P8).
 skills/stemma/references/
+
+# The manual pages, written by `make man` from the same command table. Generated,
+# so not committed (P8).
+man/

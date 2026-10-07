@@ -244,7 +244,7 @@ func TestCiteAddJSON(t *testing.T) {
 	if code != ExitOK {
 		t.Fatalf("exit = %d: %s", code, stderr)
 	}
-	var got citeAddReport
+	var got CiteAddReport
 	e := decodeData(t, stdout, &got)
 	if e.Command != "cite add" {
 		t.Errorf("command = %q, want %q", e.Command, "cite add")

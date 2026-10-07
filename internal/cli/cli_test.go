@@ -46,7 +46,7 @@ type envelope struct {
 	Command  string          `json:"command"`
 	OK       bool            `json:"ok"`
 	Data     json.RawMessage `json:"data"`
-	Findings []jsonFinding   `json:"findings"`
+	Findings []JSONFinding   `json:"findings"`
 	Error    string          `json:"error"`
 }
 

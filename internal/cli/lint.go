@@ -30,24 +30,24 @@ var lintCommand = &command{
 
 			findings := k.Lint(o.mode())
 			if w.json {
-				return w.report(summarise(o.strict, findings), findings)
+				return w.report(SummariseLint(o.strict, findings), findings)
 			}
 			return reportText(w.stdout, w.stderr, findings)
 		}
 	},
 }
 
-// lintSummary is the payload of a --json lint, without the findings themselves.
+// LintSummary is the payload of a --json lint, without the findings themselves.
 // The findings travel in the envelope, where every consumer looks for them.
-type lintSummary struct {
+type LintSummary struct {
 	Strict   bool `json:"strict"`
 	Clean    bool `json:"clean"`
 	Warnings int  `json:"warnings"`
 	Errors   int  `json:"errors"`
 }
 
-func summarise(strict bool, findings []kb.Finding) lintSummary {
-	s := lintSummary{Strict: strict, Clean: len(findings) == 0}
+func SummariseLint(strict bool, findings []kb.Finding) LintSummary {
+	s := LintSummary{Strict: strict, Clean: len(findings) == 0}
 	for _, f := range findings {
 		if f.Severity == kb.Error {
 			s.Errors++

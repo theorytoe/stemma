@@ -21,7 +21,7 @@ type envReport struct {
 	Python     toolInfo    `json:"python"`
 	Extraction extraction  `json:"extraction"`
 	SQLite     bool        `json:"sqlite"`
-	Index      *indexState `json:"index,omitempty"`
+	Index      *IndexState `json:"index,omitempty"`
 }
 
 type goInfo struct {

@@ -96,7 +96,7 @@ var exportPageCommand = &command{
 			if k == nil {
 				return code
 			}
-			root, err := resolve(k, args[0])
+			root, err := Resolve(k, args[0])
 			if err != nil {
 				return w.fail(err)
 			}

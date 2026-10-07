@@ -11,8 +11,8 @@ import (
 	"github.com/theorytoe/stemma/internal/kb"
 )
 
-// promoteReport is what --json says about a promotion.
-type promoteReport struct {
+// PromoteReport is what --json says about a promotion.
+type PromoteReport struct {
 	From          string `json:"from"`
 	To            string `json:"to"`
 	Title         string `json:"title"`
@@ -48,7 +48,7 @@ var promoteCommand = &command{
 			if k == nil {
 				return code
 			}
-			from, page, err := resolveDraft(k, args[0])
+			from, page, err := ResolveDraft(k, args[0])
 			if err != nil {
 				return w.fail(err)
 			}
@@ -78,7 +78,7 @@ var promoteCommand = &command{
 			// Everything the inbox permitted is an error now.
 			if findings := page.Validate(k.Vocabulary, kb.Strict); len(findings) > 0 {
 				if w.json {
-					return w.report(promoteReport{From: from, Title: title, Type: pageType}, findings)
+					return w.report(PromoteReport{From: from, Title: title, Type: pageType}, findings)
 				}
 				return reportText(w.stdout, w.stderr, findings)
 			}
@@ -90,7 +90,7 @@ var promoteCommand = &command{
 			}
 
 			to := kb.PagePath(kb.PagesDir, title)
-			resolved := linksThatWillResolve(k, page)
+			resolved := LinksThatWillResolve(k, page)
 
 			if err := k.CreatePage(to, page); err != nil {
 				return w.fail(err)
@@ -99,7 +99,7 @@ var promoteCommand = &command{
 				return w.fail(fmt.Errorf("%s is now %s, but the draft could not be removed: %w", from, to, err))
 			}
 
-			report := promoteReport{
+			report := PromoteReport{
 				From:          from,
 				To:            to,
 				Title:         title,
@@ -117,10 +117,10 @@ var promoteCommand = &command{
 	},
 }
 
-// linksThatWillResolve counts the links in the pages that point at a name the
+// LinksThatWillResolve counts the links in the pages that point at a name the
 // draft answers to and do not resolve yet. They resolve the moment the draft
 // becomes a page, because resolution is by title and the title moves with it.
-func linksThatWillResolve(k *kb.KB, draft *kb.Page) int {
+func LinksThatWillResolve(k *kb.KB, draft *kb.Page) int {
 	n := 0
 	for _, p := range k.Graph.Paths() {
 		for _, l := range k.Graph.Links(p) {
@@ -135,13 +135,13 @@ func linksThatWillResolve(k *kb.KB, draft *kb.Page) int {
 	return n
 }
 
-// resolveDraft finds a draft by path, by filename, or by the title or alias it
+// ResolveDraft finds a draft by path, by filename, or by the title or alias it
 // answers to.
 //
 // A draft with no readable frontmatter cannot be one of the matches, but it
 // must not stop a different draft being found, so it is held back and named
 // only if nothing matched.
-func resolveDraft(k *kb.KB, name string) (string, *kb.Page, error) {
+func ResolveDraft(k *kb.KB, name string) (string, *kb.Page, error) {
 	paths, err := k.DraftPaths()
 	if err != nil {
 		return "", nil, err

@@ -8,21 +8,21 @@ import (
 	"github.com/theorytoe/stemma/internal/kb"
 )
 
-// showLink is one resolved link, and showCitation one resolved citation.
-type showLink struct {
+// ShowLink is one resolved link, and ShowCitation one resolved citation.
+type ShowLink struct {
 	Target     string   `json:"target"`
 	Resolved   string   `json:"resolved,omitempty"`
 	Matches    []string `json:"matches,omitempty"`
 	Unresolved bool     `json:"unresolved,omitempty"`
 }
 
-type showCitation struct {
+type ShowCitation struct {
 	Key       string `json:"key"`
 	Defined   bool   `json:"defined"`
 	DefinedIn string `json:"defined_in,omitempty"`
 }
 
-type showReport struct {
+type ShowReport struct {
 	Path          string         `json:"path"`
 	Title         string         `json:"title"`
 	Type          string         `json:"type"`
@@ -31,8 +31,8 @@ type showReport struct {
 	Tags          []string       `json:"tags,omitempty"`
 	ArchiveReason string         `json:"archive_reason,omitempty"`
 	Body          string         `json:"body"`
-	Links         []showLink     `json:"links"`
-	Citations     []showCitation `json:"citations"`
+	Links         []ShowLink     `json:"links"`
+	Citations     []ShowCitation `json:"citations"`
 }
 
 // showCommand implements `stemma show`.
@@ -61,7 +61,7 @@ var showCommand = &command{
 			if k == nil {
 				return code
 			}
-			p, err := resolve(k, args[0])
+			p, err := Resolve(k, args[0])
 			if err != nil {
 				return w.fail(err)
 			}
@@ -87,7 +87,7 @@ var showCommand = &command{
 				return ExitOK
 			}
 
-			report := describe(k, p, page)
+			report := Describe(k, p, page)
 			if w.json {
 				return w.emit(report)
 			}
@@ -97,10 +97,10 @@ var showCommand = &command{
 	},
 }
 
-// describe gathers everything the tool knows about a page, with its links and
+// Describe gathers everything the tool knows about a page, with its links and
 // citations resolved.
-func describe(k *kb.KB, p string, page *kb.Page) showReport {
-	r := showReport{
+func Describe(k *kb.KB, p string, page *kb.Page) ShowReport {
+	r := ShowReport{
 		Path:          p,
 		Title:         page.Title(),
 		Type:          page.Type(),
@@ -109,12 +109,12 @@ func describe(k *kb.KB, p string, page *kb.Page) showReport {
 		Tags:          page.Tags(),
 		ArchiveReason: page.ArchiveReason(),
 		Body:          string(page.Body()),
-		Links:         []showLink{},
-		Citations:     []showCitation{},
+		Links:         []ShowLink{},
+		Citations:     []ShowCitation{},
 	}
 	for _, l := range k.Graph.Links(p) {
 		res := k.Graph.Resolve(l.Name)
-		link := showLink{Target: l.Target}
+		link := ShowLink{Target: l.Target}
 		switch res.Kind {
 		case kb.Resolved:
 			link.Resolved = res.Path
@@ -126,7 +126,7 @@ func describe(k *kb.KB, p string, page *kb.Page) showReport {
 		r.Links = append(r.Links, link)
 	}
 	for _, cite := range k.Graph.Citations(p) {
-		c := showCitation{Key: cite.Key, Defined: k.Bibliography.Has(cite.Key)}
+		c := ShowCitation{Key: cite.Key, Defined: k.Bibliography.Has(cite.Key)}
 		if c.Defined {
 			c.DefinedIn = k.Bibliography.PathOf(cite.Key)
 		}
@@ -137,7 +137,7 @@ func describe(k *kb.KB, p string, page *kb.Page) showReport {
 
 // text renders a report for a person: what the page says it is, what it says,
 // and where the things it names actually go.
-func (r showReport) text() string {
+func (r ShowReport) text() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s\n\n", r.Path)
 	field := func(name, value string) {
@@ -176,7 +176,7 @@ func (r showReport) text() string {
 	return b.String()
 }
 
-func (l showLink) where() string {
+func (l ShowLink) where() string {
 	switch {
 	case l.Resolved != "":
 		return l.Resolved

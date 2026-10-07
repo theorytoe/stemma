@@ -235,7 +235,7 @@ func (o *options) load(w *output) (*kb.KB, int) {
 	return k, ExitOK
 }
 
-// resolve turns a page name given on the command line into a path in the KB.
+// Resolve turns a page name given on the command line into a path in the KB.
 //
 // A name that matches nothing, or matches more than one page, is a failure of
 // the command rather than a finding about the KB: the tool was asked for one
@@ -246,7 +246,7 @@ func (o *options) load(w *output) (*kb.KB, int) {
 // this there would be no way to say which page a command meant, so the tool
 // would be unable to repair a collision it had found. A name never contains a
 // slash, so there is no doubt about which of the two was given.
-func resolve(k *kb.KB, name string) (string, error) {
+func Resolve(k *kb.KB, name string) (string, error) {
 	if _, ok := k.Graph.Page(name); ok {
 		return name, nil
 	}

@@ -8,7 +8,7 @@ import (
 	"github.com/theorytoe/stemma/internal/kb"
 )
 
-// response is the envelope every --json run writes.
+// Response is the envelope every --json run writes.
 //
 // There is one shape for the whole surface, so a consumer learns it once:
 //
@@ -21,18 +21,18 @@ import (
 // ok is true only for a clean run. Validation findings leave it false and set
 // exit code 1; an operational failure leaves it false and sets Error and exit
 // code 2. Data is the command's own payload, and is absent for a failure.
-type response struct {
+type Response struct {
 	Command  string        `json:"command"`
 	OK       bool          `json:"ok"`
 	Data     any           `json:"data,omitempty"`
-	Findings []jsonFinding `json:"findings,omitempty"`
+	Findings []JSONFinding `json:"findings,omitempty"`
 	Error    string        `json:"error,omitempty"`
 }
 
-// jsonFinding is one finding as it appears in --json output. Field and Line are
+// JSONFinding is one finding as it appears in --json output. Field and Line are
 // omitted rather than zeroed when they do not apply, so a consumer can tell
 // "no line" from "line 0".
-type jsonFinding struct {
+type JSONFinding struct {
 	Severity string `json:"severity"`
 	Code     string `json:"code"`
 	Path     string `json:"path"`
@@ -58,7 +58,7 @@ func (w *output) emit(data any) int {
 	if !w.json {
 		return ExitOK
 	}
-	return w.write(response{Command: w.cmd, OK: true, Data: data})
+	return w.write(Response{Command: w.cmd, OK: true, Data: data})
 }
 
 // report writes findings and the payload they are about, returning exit code 1
@@ -70,11 +70,11 @@ func (w *output) report(data any, findings []kb.Finding) int {
 		}
 		return ExitFindings
 	}
-	resp := response{Command: w.cmd, OK: len(findings) == 0, Data: data}
+	resp := Response{Command: w.cmd, OK: len(findings) == 0, Data: data}
 	if len(findings) > 0 {
-		resp.Findings = make([]jsonFinding, 0, len(findings))
+		resp.Findings = make([]JSONFinding, 0, len(findings))
 		for _, f := range findings {
-			resp.Findings = append(resp.Findings, jsonFindingOf(f))
+			resp.Findings = append(resp.Findings, JSONFindingOf(f))
 		}
 	}
 	if code := w.write(resp); code != ExitOK {
@@ -92,7 +92,7 @@ func (w *output) report(data any, findings []kb.Finding) int {
 // writes one.
 func (w *output) fail(err error) int {
 	if w.json {
-		if code := w.write(response{Command: w.cmd, OK: false, Error: err.Error()}); code != ExitOK {
+		if code := w.write(Response{Command: w.cmd, OK: false, Error: err.Error()}); code != ExitOK {
 			return code
 		}
 		return ExitError
@@ -103,7 +103,7 @@ func (w *output) fail(err error) int {
 
 // write encodes one envelope. It never re-enters itself on a write failure,
 // because a broken pipe would then fail forever.
-func (w *output) write(resp response) int {
+func (w *output) write(resp Response) int {
 	enc := json.NewEncoder(w.stdout)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(resp); err != nil {
@@ -113,8 +113,8 @@ func (w *output) write(resp response) int {
 	return ExitOK
 }
 
-func jsonFindingOf(f kb.Finding) jsonFinding {
-	return jsonFinding{
+func JSONFindingOf(f kb.Finding) JSONFinding {
+	return JSONFinding{
 		Severity: string(f.Severity),
 		Code:     f.Code,
 		Path:     f.Path,

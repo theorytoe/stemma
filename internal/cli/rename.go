@@ -55,7 +55,7 @@ var renameCommand = &command{
 			if k == nil {
 				return code
 			}
-			start, err := resolve(k, from)
+			start, err := Resolve(k, from)
 			if err != nil {
 				return w.fail(err)
 			}

@@ -168,13 +168,17 @@ var citeAddCommand = &command{
 				entry.Set(kb.FieldContentHash, "{"+kb.HashOf(record)+"}")
 			}
 
-			return writeEntry(w, k, entry, *force, *dryRun)
+			report, err := ApplyEntry(k, entry, *force, *dryRun)
+			if err != nil {
+				return w.fail(err)
+			}
+			return emitCiteAdd(w, report)
 		}
 	},
 }
 
-// citeAddReport is the payload of `cite add --json`.
-type citeAddReport struct {
+// CiteAddReport is the payload of `cite add --json`.
+type CiteAddReport struct {
 	Action string `json:"action"`
 	Key    string `json:"key"`
 	Type   string `json:"type"`
@@ -183,12 +187,14 @@ type citeAddReport struct {
 	DryRun bool   `json:"dry_run,omitempty"`
 }
 
-// writeEntry finds the entry's work in the bibliography and updates it, or
-// appends the entry when it is new or --force says so.
-func writeEntry(w *output, k *kb.KB, entry *kb.BibEntry, force, dryRun bool) int {
+// ApplyEntry finds the entry's work in the bibliography and updates it, or
+// appends the entry when it is new or force says so, and returns the report.
+// The bibliography is written unless dryRun, in which case nothing on disk
+// changes and the report says what would have happened.
+func ApplyEntry(k *kb.KB, entry *kb.BibEntry, force, dryRun bool) (CiteAddReport, error) {
 	sources, err := k.BibSources()
 	if err != nil {
-		return w.fail(err)
+		return CiteAddReport{}, err
 	}
 	type loaded struct {
 		name string
@@ -198,7 +204,7 @@ func writeEntry(w *output, k *kb.KB, entry *kb.BibEntry, force, dryRun bool) int
 	for _, name := range sources {
 		f, err := k.ReadBibliography(name)
 		if err != nil {
-			return w.fail(err)
+			return CiteAddReport{}, err
 		}
 		files = append(files, loaded{name, f})
 	}
@@ -231,7 +237,7 @@ func writeEntry(w *output, k *kb.KB, entry *kb.BibEntry, force, dryRun bool) int
 	} else {
 		f, name, err := k.BibliographyFor(entry.Key())
 		if err != nil {
-			return w.fail(err)
+			return CiteAddReport{}, err
 		}
 		f.AddEntry(entry)
 		target, written, out = name, f, entry
@@ -239,27 +245,33 @@ func writeEntry(w *output, k *kb.KB, entry *kb.BibEntry, force, dryRun bool) int
 
 	if !dryRun {
 		if err := k.WriteBibliography(target, written); err != nil {
-			return w.fail(err)
+			return CiteAddReport{}, err
 		}
 	}
 
-	report := citeAddReport{
+	return CiteAddReport{
 		Action: action,
 		Key:    out.Key(),
 		Type:   out.Type(),
 		Path:   target,
 		Entry:  string(out.Bytes()),
 		DryRun: dryRun,
-	}
+	}, nil
+}
+
+// emitCiteAdd writes the report an entry application produced: under --json it
+// is the payload; in text mode it is one line, plus the entry itself on a dry
+// run, so a person can see what would have been written.
+func emitCiteAdd(w *output, report CiteAddReport) int {
 	if w.json {
 		return w.emit(report)
 	}
-	verb := action
-	if dryRun {
-		verb = "would " + action
+	verb := report.Action
+	if report.DryRun {
+		verb = "would " + verb
 	}
-	fmt.Fprintf(w.stdout, "%s %s in %s\n", verb, out.Key(), target)
-	if dryRun {
+	fmt.Fprintf(w.stdout, "%s %s in %s\n", verb, report.Key, report.Path)
+	if report.DryRun {
 		fmt.Fprint(w.stdout, report.Entry)
 	}
 	return ExitOK

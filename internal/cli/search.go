@@ -44,7 +44,7 @@ var searchCommand = &command{
 			if *limit < 0 {
 				return w.fail(fmt.Errorf("limit is %d; it is zero or more", *limit))
 			}
-			under, err := underDir(*dir)
+			under, err := UnderDir(*dir)
 			if err != nil {
 				return w.fail(err)
 			}
@@ -53,7 +53,7 @@ var searchCommand = &command{
 			if err != nil {
 				return w.fail(err)
 			}
-			src, extra, err := searchSource(root, *inbox)
+			src, extra, err := SearchSource(root, *inbox)
 			if err != nil {
 				return w.fail(err)
 			}
@@ -213,13 +213,13 @@ func runePrefix(s string, room int) string {
 	return string(rs[:room])
 }
 
-// searchSource returns a source for the KB, plus the drafts to search alongside
+// SearchSource returns a source for the KB, plus the drafts to search alongside
 // it when the caller asked for the inbox.
 //
 // The inbox path loads the KB, because reading drafts is a KB operation; the
 // source may still be the index, since the load is only for the drafts. The
 // plain path loads nothing when the index is fresh.
-func searchSource(root string, includeInbox bool) (index.Source, []index.Document, error) {
+func SearchSource(root string, includeInbox bool) (index.Source, []index.Document, error) {
 	if !includeInbox {
 		src, err := index.NewSourceAt(root, nil)
 		return src, nil, err

@@ -30,7 +30,7 @@ var moveCommand = &command{
 			if k == nil {
 				return code
 			}
-			from, err := resolve(k, args[0])
+			from, err := Resolve(k, args[0])
 			if err != nil {
 				return w.fail(err)
 			}

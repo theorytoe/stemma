@@ -68,13 +68,27 @@ CI, as it did for the skill suite in Task 7.
 
 ## Task 1:
 
-Status: Not started
+Status: Done
 
 Export the shared surface payloads. Move the envelope, the finding projection, the
 payload structs and the builders the tools need out of the realm of unexported
 `internal/cli` symbols, reshaping only what depends on the unexported `*output`.
 No behaviour change: every existing CLI test must pass untouched. Use `gopls` for
 the sweep and record each change to the earlier tasks' code as it is made.
+
+Done 2026-10-07. The gopls rename sweep exported the envelope (`Response`,
+`JSONFinding`, `JSONFindingOf`), the payloads (`LintSummary`, `ShowLink`,
+`ShowCitation`, `ShowReport`, `ListEntry`, `StatusReport`, `IndexState`,
+`PromoteReport`, `CiteAddReport`) and the builders (`SummariseLint`, `Describe`,
+`Resolve`, `ResolveDraft`, `LinksThatWillResolve`, `SearchSource`, `UnderDir`).
+The three reshapes: `list`'s filter loop became `ListEntries`, which never
+returns nil, so the JSON nil-guard moved into the builder; `status`'s survey
+became `GatherStatus`, returning `DraftPaths`' error; `cite add`'s `writeEntry`
+split into the pure `ApplyEntry` and the unexported `emitCiteAdd`. Left
+unexported on purpose: `discover` and KB loading, which Task 3's lazy KB
+resolution shapes, and the `*output` emitters of commands outside the curated
+subset (`graphListings`, `emitVendor`, `printExtract`, `unfinished`). No test
+changed and the CLI's `--json` output is byte-identical.
 
 ## Task 2:
 

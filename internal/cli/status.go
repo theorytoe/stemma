@@ -10,10 +10,10 @@ import (
 	"github.com/theorytoe/stemma/internal/kb"
 )
 
-// statusReport is the health summary. It is computed from what the KB holds
+// StatusReport is the health summary. It is computed from what the KB holds
 // rather than from anything generated, so it is correct on a fresh clone with
 // no index at all.
-type statusReport struct {
+type StatusReport struct {
 	Root           string         `json:"root"`
 	Title          string         `json:"title"`
 	Pages          int            `json:"pages"`
@@ -23,14 +23,14 @@ type statusReport struct {
 	Sources        int            `json:"sources"`
 	UncitedSources []string       `json:"uncited_sources"`
 	Drafts         int            `json:"drafts"`
-	Index          indexState     `json:"index"`
+	Index          IndexState     `json:"index"`
 }
 
-// indexState says whether the Tier-1 cache is there, and whether it is newer
+// IndexState says whether the Tier-1 cache is there, and whether it is newer
 // than the pages it was built from. It is deliberately name-agnostic: the index
 // is whatever the tool put in the generated directory, and the question worth
 // answering is whether anything has changed since.
-type indexState struct {
+type IndexState struct {
 	Present bool `json:"present"`
 	Fresh   bool `json:"fresh"`
 }
@@ -38,8 +38,7 @@ type indexState struct {
 // statusCommand implements `stemma status`.
 //
 // It answers "how is this KB doing" in one read-only pass, which is what an
-// agent wants before deciding what to do next. Nothing here writes, and nothing
-// requires an index.
+// agent wants before deciding what to do next.
 var statusCommand = &command{
 	name:    "status",
 	summary: "summarise the health of the KB",
@@ -54,32 +53,9 @@ var statusCommand = &command{
 			if k == nil {
 				return code
 			}
-			drafts, err := k.DraftPaths()
+			report, err := GatherStatus(k)
 			if err != nil {
 				return w.fail(err)
-			}
-
-			report := statusReport{
-				Root:           k.Root,
-				Title:          k.Manifest.Title,
-				Pages:          k.Graph.Len(),
-				ByType:         map[string]int{},
-				Orphans:        nonNil(k.Graph.Orphans()),
-				Ambiguous:      nonNil(ambiguousNames(k)),
-				Drafts:         len(drafts),
-				Index:          readIndexState(k),
-				UncitedSources: []string{},
-			}
-			for _, p := range k.Graph.Paths() {
-				if page, ok := k.Graph.Page(p); ok {
-					report.ByType[page.Type()]++
-				}
-			}
-			for _, key := range k.Bibliography.Keys() {
-				report.Sources++
-				if len(k.Graph.CitedBy(key)) == 0 {
-					report.UncitedSources = append(report.UncitedSources, key)
-				}
 			}
 
 			if w.json {
@@ -89,6 +65,42 @@ var statusCommand = &command{
 			return ExitOK
 		}
 	},
+}
+
+// GatherStatus surveys what the KB holds in one read-only pass: how many
+// pages, of what types, what is orphaned, ambiguous, or uncited, and whether
+// the Tier-1 index is there and current. It is computed from the KB rather
+// than from anything generated, so it is correct on a fresh clone with no
+// index at all. Nothing writes, and nothing requires an index.
+func GatherStatus(k *kb.KB) (StatusReport, error) {
+	drafts, err := k.DraftPaths()
+	if err != nil {
+		return StatusReport{}, err
+	}
+
+	report := StatusReport{
+		Root:           k.Root,
+		Title:          k.Manifest.Title,
+		Pages:          k.Graph.Len(),
+		ByType:         map[string]int{},
+		Orphans:        nonNil(k.Graph.Orphans()),
+		Ambiguous:      nonNil(ambiguousNames(k)),
+		Drafts:         len(drafts),
+		Index:          readIndexState(k),
+		UncitedSources: []string{},
+	}
+	for _, p := range k.Graph.Paths() {
+		if page, ok := k.Graph.Page(p); ok {
+			report.ByType[page.Type()]++
+		}
+	}
+	for _, key := range k.Bibliography.Keys() {
+		report.Sources++
+		if len(k.Graph.CitedBy(key)) == 0 {
+			report.UncitedSources = append(report.UncitedSources, key)
+		}
+	}
+	return report, nil
 }
 
 // ambiguousNames returns the names more than one page claims, sorted. Each is a
@@ -105,7 +117,7 @@ func ambiguousNames(k *kb.KB) []string {
 	return out
 }
 
-func (r statusReport) text() string {
+func (r StatusReport) text() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%-10s%s\n", "kb", r.Title)
 	fmt.Fprintf(&b, "%-10s%s\n", "root", r.Root)
@@ -140,16 +152,16 @@ func (r statusReport) text() string {
 // answers the question a cache is for and never trusts a timestamp: a file
 // touched without changing is not a change. A check that cannot run is not a
 // freshness claim, so the index is reported absent rather than guessed at.
-func readIndexState(k *kb.KB) indexState {
+func readIndexState(k *kb.KB) IndexState {
 	switch st, err := index.CheckKB(k); {
 	case err != nil:
-		return indexState{}
+		return IndexState{}
 	case st == index.Fresh:
-		return indexState{Present: true, Fresh: true}
+		return IndexState{Present: true, Fresh: true}
 	case st == index.Stale:
-		return indexState{Present: true}
+		return IndexState{Present: true}
 	default:
-		return indexState{}
+		return IndexState{}
 	}
 }
 

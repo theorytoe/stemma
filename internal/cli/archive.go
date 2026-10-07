@@ -37,7 +37,7 @@ var archiveCommand = &command{
 			if k == nil {
 				return code
 			}
-			p, err := resolve(k, args[0])
+			p, err := Resolve(k, args[0])
 			if err != nil {
 				return w.fail(err)
 			}

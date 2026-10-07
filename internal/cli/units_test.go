@@ -149,7 +149,7 @@ func TestUnderDir(t *testing.T) {
 		{"../escape", "", true},
 		{"/absolute", "", true},
 	} {
-		got, err := underDir(tc.in)
+		got, err := UnderDir(tc.in)
 		if tc.bad {
 			if err == nil {
 				t.Errorf("underDir(%q) = %q, want an error", tc.in, got)

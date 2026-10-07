@@ -408,6 +408,25 @@ def case_pdf_without_pymupdf():
 # These are served by a real HTTP server on a loopback port, because the failure
 # classes here are all about what a server does: a status code, a content type, a
 # body that will not stop. A fake response would only test the fake.
+#
+# Fetching needs both libraries, so the cases that fetch skip where either is
+# absent, the same way the PDF cases skip without pymupdf. The cases that only
+# check argument handling or the missing-library path fetch nothing, and so run
+# on a machine with neither library.
+
+
+def need_http_libraries(case):
+    missing = [
+        name for name in ("httpx", "bs4") if shim.import_any(shim.LIBRARIES[name]) is None
+    ]
+    if missing:
+        print(
+            "skip  %s: %s %s not installed"
+            % (case, " and ".join(missing), "are" if len(missing) > 1 else "is")
+        )
+        return False
+    return True
+
 
 PAGE = """<!doctype html>
 <html><head><title>A Test Page</title></head>
@@ -479,6 +498,8 @@ def free_port():
 
 
 def case_url_reads_the_main_content():
+    if not need_http_libraries("url reads the main content"):
+        return
     with serving() as base:
         out = shim.main(["url", base + "/page", "1000000", AGENT])
         check("url is ok", out["ok"], True)
@@ -493,12 +514,16 @@ def case_url_reads_the_main_content():
 
 
 def case_url_sends_the_user_agent_it_was_given():
+    if not need_http_libraries("url sends the user agent it was given"):
+        return
     with serving() as base:
         shim.main(["url", base + "/page", "1000000", AGENT])
     check("url sends the user agent it was given", LAST_REQUEST.get("user-agent"), AGENT)
 
 
 def case_url_notes_a_page_with_no_article():
+    if not need_http_libraries("url notes a page with no article"):
+        return
     with serving() as base:
         out = shim.main(["url", base + "/plain", "1000000", AGENT])
         check("a page with no main element is still ok", out["ok"], True)
@@ -510,6 +535,8 @@ def case_url_notes_a_page_with_no_article():
 
 
 def case_url_reports_a_page_that_needs_javascript():
+    if not need_http_libraries("url reports a page that needs javascript"):
+        return
     with serving() as base:
         out = shim.main(["url", base + "/scripted", "1000000", AGENT])
         check("a page with no server-rendered text is empty", out["error"]["class"], "empty")
@@ -518,6 +545,8 @@ def case_url_reports_a_page_that_needs_javascript():
 
 
 def case_url_refuses_a_response_that_is_not_html():
+    if not need_http_libraries("url refuses a response that is not html"):
+        return
     with serving() as base:
         out = shim.main(["url", base + "/data", "1000000", AGENT])
         check("a JSON response is unsupported", out["error"]["class"], "unsupported")
@@ -526,6 +555,8 @@ def case_url_refuses_a_response_that_is_not_html():
 
 
 def case_url_reports_a_bad_status():
+    if not need_http_libraries("url reports a bad status"):
+        return
     with serving() as base:
         out = shim.main(["url", base + "/absent", "1000000", AGENT])
         check("a 404 is a network failure", out["error"]["class"], "network")
@@ -534,22 +565,31 @@ def case_url_reports_a_bad_status():
 
 
 def case_url_refuses_a_page_past_the_limit():
+    if not need_http_libraries("url refuses a page past the limit"):
+        return
     with serving() as base:
         out = shim.main(["url", base + "/huge", "1024", AGENT])
         check("a page past the limit is too_large", out["error"]["class"], "too_large")
 
 
 def case_url_reports_a_connection_that_fails():
+    if not need_http_libraries("url reports a connection that fails"):
+        return
     out = shim.main(["url", "http://127.0.0.1:%d/" % free_port(), "1000000", AGENT])
     check("a refused connection is a network failure", out["error"]["class"], "network")
 
 
 def case_url_without_its_libraries():
     # No server needed: the libraries are checked before anything is fetched, which
-    # is also what keeps this case runnable on a machine that has neither.
+    # is also what keeps this case runnable on a machine that has neither. The
+    # library that is not under test is stubbed with a module that always imports,
+    # so the message names the one under test rather than whichever happens to be
+    # missing on this machine.
     for missing in ("httpx", "bs4"):
+        other = "bs4" if missing == "httpx" else "httpx"
         saved = dict(shim.LIBRARIES)
         shim.LIBRARIES[missing] = ()
+        shim.LIBRARIES[other] = ("sys",)
         try:
             out = shim.main(["url", "http://127.0.0.1:1/", "1024", AGENT])
         finally:

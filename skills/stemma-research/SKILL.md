@@ -8,6 +8,7 @@ description: >-
   the bibliography for duplicates and uncited entries. Operates `stemma cite`
   and `stemma fetch`. Reading pages that already exist is stemma-query, not
   this.
+license: CC-BY-NC-SA-4.0
 ---
 
 # Stemma research

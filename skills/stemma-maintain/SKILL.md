@@ -7,6 +7,7 @@ description: >-
   so inbound links follow, or rebuilding the search index. Operates `stemma
   lint`, `status`, `archive`, `rename`, `move`, `index`, and `graph`. Writing new
   content is stemma-author.
+license: CC-BY-NC-SA-4.0
 ---
 
 # Stemma maintain

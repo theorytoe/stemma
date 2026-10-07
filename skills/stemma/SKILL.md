@@ -9,6 +9,7 @@ description: >-
   stemma-research, stemma-author, stemma-maintain, stemma-query, or
   stemma-publish. Never compute a page path, link target, or citation key by
   hand; ask the tool.
+license: CC-BY-NC-SA-4.0
 ---
 
 # Stemma

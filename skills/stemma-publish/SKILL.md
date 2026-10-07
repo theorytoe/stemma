@@ -7,6 +7,7 @@ description: >-
   exporting the bibliography as BibTeX or CSL-JSON. Operates `stemma serve`,
   `build`, `export json`, `export page`, and `cite export`. This is output and
   sharing, not authoring or source-gathering.
+license: CC-BY-NC-SA-4.0
 ---
 
 # Stemma publish

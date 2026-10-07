@@ -8,6 +8,7 @@ description: >-
   pages and sources the answer rests on. Do not answer from memory while a
   relevant page is unread. For sources not yet in the bibliography, use
   stemma-research.
+license: CC-BY-NC-SA-4.0
 ---
 
 # Stemma query

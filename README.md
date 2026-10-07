@@ -87,3 +87,13 @@ searches, at a thousand pages and at ten thousand alike — worth it when the KB
 queried many times between edits, not above a particular size. The numbers are
 machine-specific; re-run `make bench` to get the ones that matter. The full table
 and the reasoning are in [FORMAT.md](FORMAT.md#tiers-and-scale).
+
+## License
+
+GNU General Public License v3.0 (GPL-3.0). The full text is in [LICENSE](LICENSE);
+the copyright notice is `Copyright (C) 2026 theorytoe`.
+
+The agent skills under `skills/` are licensed separately, under Creative
+Commons Attribution-NonCommercial-ShareAlike 4.0 International
+(CC BY-NC-SA 4.0): each `SKILL.md` declares it in its frontmatter, and the full
+text is in [skills/LICENSE](skills/LICENSE).

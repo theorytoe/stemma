@@ -7,6 +7,7 @@ description: >-
   retitling a page, or moving it between directories. Operates `stemma new`,
   `promote`, `rename`, `move`, and `show`. Repairing pages that already exist is
   stemma-maintain.
+license: CC-BY-NC-SA-4.0
 ---
 
 # Stemma author

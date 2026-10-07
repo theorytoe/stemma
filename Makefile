@@ -42,8 +42,11 @@ install-skills: skills
 		echo "installed $$name to $(SKILLS_DIR)"; \
 	done
 
+# The suite runs with STEMMA_KB unset: tests build their own KBs, and a KB
+# exported in the caller's shell would otherwise answer the discovery some of
+# them exercise. Running `go test ./...` by hand needs the same guard.
 test:
-	$(GO) test ./...
+	env -u STEMMA_KB $(GO) test ./...
 
 # The extraction script's own tests, run with plain python3: no framework, and
 # skipped rather than failed when there is no interpreter, because the core has

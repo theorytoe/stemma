@@ -147,8 +147,9 @@ make bench       # Tier-0 vs Tier-1 timing; measures, never passes/fails
   diff rather than loosening the assertion.
 - The exhaustive extract/round-trip gate is `internal/export/gate_test.go`; the
   `make extract` target exercises the same path through the shipped binary.
-- Run the suite with `env -u STEMMA_KB`, so an existing KB in the environment
-  cannot reach into a test run.
+- `make test` and `make check` unset `STEMMA_KB` themselves, so an existing KB
+  in the environment cannot reach into a run; a bare `go test ./...` still
+  needs `env -u STEMMA_KB`.
 - `make test-shim` skips (not fails) without `python3`. The Go suite must pass on
   a machine with no interpreter at all. Do not make Python a build prerequisite.
 - `make lint-wiki` failing means the project's own documentation no longer

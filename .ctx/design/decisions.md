@@ -93,6 +93,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D76 | A source that is a file on this machine has its **original document copied into `sources/`** beside the extracted text, under the source's own extension; `stemma-vendored-hash` covers the original when there is one and the extracted text otherwise. | review    |
 | D78 | `cite add` resolves a **positional** identifier only. The identifier flags (`--doi`, `--arxiv`, `--isbn`, `--url`, `--path`) name a **record entered by hand** and are refused beside a positional one; the descriptive flags build a hand-entered record or **correct a resolved one**. | review    |
 | D79 | A valid `stemma-vendored-hash` **satisfies the provenance check**: a vendored entry is not also asked for `stemma-content-hash` and `stemma-retrieved`, because the capture is the evidence and `vendoredFindings` holds it to the hash. A malformed value is still reported. | review    |
+| D80 | The MCP surface curates **ten tools** — `status`, `list`, `search`, `show`, `graph`, `new`, `promote`, `cite add`, `cite show`, `lint` — the read core plus the four mutations of `D58`. Every other verb is a **named omission with a reason**, held beside the tools in one registry, and the tool reference is **generated** from it. | mcp T2    |
 
 ### Ingest
 
@@ -809,6 +810,38 @@ family member, and the test that guards it says a person can ask for one at a
 prompt; the dispatcher accepted two words and `help` did not, so the reference
 promised what the command refused. The resolution moved into one function both
 paths call, which is also what `--man` uses to name a page.
+
+### The curated MCP tool set. `D80` added.
+
+**Decision.** The MCP surface carries exactly ten tools: the read core —
+status, list, search, show, graph — joined by cite show, because an agent that
+sees a citation key needs the entry it names, and its result already answers
+cited-by; and the four mutations of `D58` — new, promote, cite add, with lint
+as the guard. Every other verb is an omission with a stated reason, held in
+the registry beside the tools, and the tool reference is generated from that
+registry, so the curation and its documentation are one artifact. Two
+behaviours are narrowed rather than omitted: show carries no --path/--raw
+modes, because the report already holds the body, and graph carries no
+--orphans/--dead-ends, because status reports orphans and a walk shows the
+dead ends. cite add keeps `D78`'s contract: a positional identifier, or an
+identifier field for a record entered by hand, never both.
+
+**Why.** `D58` fixed "about ten, not a mirror" but not the members. The test
+for membership is whether an agent answering questions or writing pages needs
+the verb to finish a turn: reading (status, list, search, show, graph, cite
+show), writing (new, promote), sourcing (cite add), guarding (lint).
+Maintenance and publishing verbs restructure or export a KB for people to
+review; they stay on the command line, and the omissions say so per verb, so
+an agent that reaches for a missing verb reads a decision instead of an
+absence.
+
+**Provenance.** Chosen in the MCP plan's Task 2. The registry
+(internal/mcp/tools.go) is the artifact of record, its drift tests hold every
+tool and omission against the command table, and the generator writes
+docs/mcp-tools.json through `make mcp-schema`, which the documentation task
+renders. The four CLI payloads that were anonymous maps became named structs —
+ListReport, SearchReport, GraphReport, NewReport — so a schema could name
+them, with `--json` output parsed-shape identical.
 
 ## Deferred during implementation
 

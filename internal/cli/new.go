@@ -8,6 +8,15 @@ import (
 	"github.com/theorytoe/stemma/internal/kb"
 )
 
+// NewReport is the payload of a --json new: where the page lives, and the
+// title and type it carries. Under --strict with findings it names the page
+// that was not written.
+type NewReport struct {
+	Path  string `json:"path"`
+	Title string `json:"title"`
+	Type  string `json:"type"`
+}
+
 // newCommand implements `stemma new`.
 var newCommand = &command{
 	name:    "new",
@@ -82,7 +91,7 @@ var newCommand = &command{
 					findings[i].Path = name
 				}
 			}
-			data := map[string]string{"path": name, "title": title, "type": pageType}
+			data := NewReport{Path: name, Title: title, Type: pageType}
 			if o.strict && len(findings) > 0 {
 				if w.json {
 					return w.report(data, findings)

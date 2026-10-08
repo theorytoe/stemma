@@ -13,7 +13,7 @@ LDFLAGS  = -X github.com/theorytoe/stemma/internal/version.Version=$(VERSION)
 # tool defines and checked by the tool itself.
 WIKI   ?= wiki
 
-.PHONY: all build install install-skills test test-shim vet check lint-wiki site extract skills check-skills man check-man install-man bench tidy fmt clean
+.PHONY: all build install install-skills test test-shim vet check lint-wiki site extract mcp-schema skills check-skills man check-man install-man bench tidy fmt clean
 
 all: build
 
@@ -64,7 +64,7 @@ vet:
 # What CI runs. Further gates (the static site, the export) belong in this
 # target rather than in the workflow, so that a local run and a CI run check the
 # same things.
-check: build vet test test-shim lint-wiki site extract check-skills check-man
+check: build vet test test-shim lint-wiki site extract mcp-schema check-skills check-man
 
 # The documentation is a KB, so it has to lint clean under --strict. If the
 # project's own documentation cannot pass its own checks, the release is not
@@ -86,6 +86,14 @@ site: build
 # exhaustive half -- every extract of every page, at both depths, plus the round
 # trip -- is internal/export's gate test, which `test` runs.
 EXTRACT = .stemma/extract/gate
+
+# The curated MCP surface, written by the mcp package's generator from the
+# registry the server will serve: each tool with its input schema and result
+# shape, the envelope every result uses, and the commands deliberately left on
+# the CLI. The MCP documentation renders its tool reference from this file, so
+# a schema and its description cannot drift. Generated, so not committed (P8).
+mcp-schema:
+	$(GO) run ./internal/mcp/gen -out docs/mcp-tools.json
 
 # The agent skill suite: one directory per skill, following the open Agent Skills
 # standard. The umbrella skill's two references are generated, not committed

@@ -9,6 +9,13 @@ import (
 	"github.com/theorytoe/stemma/internal/kb"
 )
 
+// ListReport is the payload of a --json list: the pages answering the
+// filters, and how many there are.
+type ListReport struct {
+	Pages []ListEntry `json:"pages"`
+	Count int         `json:"count"`
+}
+
 // ListEntry is one page as --json reports it. The text form is path and title
 // only, because that is what a person reads and a script splits; the JSON form
 // carries everything the KB knows.
@@ -56,10 +63,7 @@ var listCommand = &command{
 			entries := ListEntries(k, *typ, *status, under, *tags)
 
 			if w.json {
-				return w.emit(map[string]any{
-					"pages": entries,
-					"count": len(entries),
-				})
+				return w.emit(ListReport{Pages: entries, Count: len(entries)})
 			}
 			for _, e := range entries {
 				fmt.Fprintf(w.stdout, "%s\t%s\n", e.Path, e.Title)

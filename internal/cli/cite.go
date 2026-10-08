@@ -438,12 +438,12 @@ var citeShowCommand = &command{
 				return w.fail(fmt.Errorf("the bibliography has no entry for %q", key))
 			}
 
-			report := citeShowReport{
+			report := CiteShowReport{
 				Key:     key,
 				Type:    e.Type(),
 				Path:    k.Bibliography.PathOf(key),
 				Entry:   string(e.Bytes()),
-				Fields:  citeFields(e),
+				Fields:  CiteFields(e),
 				CitedBy: k.Graph.CitedBy(key),
 			}
 			if w.json {
@@ -461,27 +461,27 @@ var citeShowCommand = &command{
 	},
 }
 
-// citeShowField is one field as written and as read.
-type citeShowField struct {
+// CiteShowField is one field as written and as read.
+type CiteShowField struct {
 	Name  string `json:"name"`
 	Raw   string `json:"raw"`
 	Value string `json:"value"`
 }
 
-type citeShowReport struct {
+type CiteShowReport struct {
 	Key     string          `json:"key"`
 	Type    string          `json:"type"`
 	Path    string          `json:"path"`
 	Entry   string          `json:"entry"`
-	Fields  []citeShowField `json:"fields"`
+	Fields  []CiteShowField `json:"fields"`
 	CitedBy []string        `json:"cited_by"`
 }
 
-func citeFields(e *kb.BibEntry) []citeShowField {
-	out := []citeShowField{}
+func CiteFields(e *kb.BibEntry) []CiteShowField {
+	out := []CiteShowField{}
 	for _, f := range e.Fields() {
 		v, _ := e.Value(f.Name)
-		out = append(out, citeShowField{Name: f.Name, Raw: f.Raw, Value: v})
+		out = append(out, CiteShowField{Name: f.Name, Raw: f.Raw, Value: v})
 	}
 	return out
 }

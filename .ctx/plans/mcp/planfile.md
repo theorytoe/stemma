@@ -92,13 +92,31 @@ changed and the CLI's `--json` output is byte-identical.
 
 ## Task 2:
 
-Status: Not started
+Status: Done
 
 Tool curation and schema design. Choose the subset of about ten tools and define,
 for each, the input schema, the output payload and the error shapes, reusing the
 CLI's types rather than parallel ones. Document explicitly which commands are
 absent and why. Emit the schema set through a command or a make target so the
 documentation task consumes a generated artifact.
+
+Done 2026-10-07. The ten tools: status, list, search, show, graph, new, promote,
+cite add, cite show, and lint; cite show joined the read core at this task, and
+the set is recorded as `D80`. The registry is internal/mcp/tools.go: input
+schemas written by hand, payload shapes walked off the CLI's structs by
+internal/mcp/shape.go so they cannot drift, and an omission with a reason for
+every verb left behind. The generator internal/mcp/gen writes
+docs/mcp-tools.json through the Makefile's mcp-schema target, now part of
+check; the artifact carries the envelope, each tool's input and result, the
+error outcomes, and the omission table. Drift tests hold every tool and every
+omission against the command table, so a verb added to the CLI must land in
+one of the two lists.
+
+Changes to earlier tasks' code: the four payloads that were anonymous maps
+became exported structs — ListReport, SearchReport, GraphReport, NewReport —
+so a schema could name them (CLI --json output parsed-shape identical); the
+cite-show payload followed Task 1's sweep (CiteShowReport, CiteShowField,
+CiteFields); and CommandNames exposes the command table for the drift tests.
 
 ## Task 3:
 

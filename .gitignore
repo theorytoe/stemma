@@ -16,3 +16,7 @@ skills/stemma/references/
 # The manual pages, written by `make man` from the same command table. Generated,
 # so not committed (P8).
 man/
+
+# The MCP tool set's artifact, written by `make mcp-schema` from the registry
+# in internal/mcp. Generated, so not committed (P8).
+docs/

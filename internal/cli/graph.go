@@ -7,6 +7,16 @@ import (
 	"github.com/theorytoe/stemma/internal/index"
 )
 
+// GraphReport is the payload of a --json graph walk: the page the walk
+// started from, how far it went, which retrieval answered, and the pages
+// reached, each with its distance in hops.
+type GraphReport struct {
+	Start     string           `json:"start"`
+	Depth     int              `json:"depth"`
+	Tier      string           `json:"tier"`
+	Neighbors []index.Neighbor `json:"neighbors"`
+}
+
 // graphCommand implements `stemma graph`.
 //
 // It is the traversal view of what lint reports as facts: backlinks are folded
@@ -71,11 +81,11 @@ var graphCommand = &command{
 			}
 
 			if w.json {
-				return w.emit(map[string]any{
-					"start":     start,
-					"depth":     *depth,
-					"tier":      src.Tier().String(),
-					"neighbors": nonNil(neighbors),
+				return w.emit(GraphReport{
+					Start:     start,
+					Depth:     *depth,
+					Tier:      src.Tier().String(),
+					Neighbors: nonNil(neighbors),
 				})
 			}
 			for _, n := range neighbors {

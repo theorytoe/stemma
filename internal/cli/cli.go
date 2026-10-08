@@ -235,6 +235,24 @@ func (o *options) load(w *output) (*kb.KB, int) {
 	return k, ExitOK
 }
 
+// CommandNames lists every verb the table defines, families flattened to
+// their full two-word names, in help order. It is how another surface checks
+// its own curation against the CLI's: a tool that mirrors a verb, and an
+// omission that names one, are both measured against this list.
+func CommandNames() []string {
+	var names []string
+	for _, c := range commands {
+		if len(c.sub) > 0 {
+			for _, s := range c.sub {
+				names = append(names, c.name+" "+s.name)
+			}
+			continue
+		}
+		names = append(names, c.name)
+	}
+	return names
+}
+
 // Resolve turns a page name given on the command line into a path in the KB.
 //
 // A name that matches nothing, or matches more than one page, is a failure of

@@ -134,7 +134,7 @@ func TestCiteShowJSON(t *testing.T) {
 	if code != ExitOK {
 		t.Fatalf("exit = %d: %s", code, stderr)
 	}
-	var got citeShowReport
+	var got CiteShowReport
 	decodeData(t, stdout, &got)
 	if got.Key != "bush1945" || got.Type != "article" || got.Path != "bibliography.bib" {
 		t.Errorf("report = %+v", got)

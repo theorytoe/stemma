@@ -12,6 +12,16 @@ import (
 	"github.com/theorytoe/stemma/internal/kb"
 )
 
+// SearchReport is the payload of a --json search. Tier says which retrieval
+// answered — the index cache or the KB itself — because a caller gets the same
+// results either way but may still care which machinery ran.
+type SearchReport struct {
+	Query   string      `json:"query"`
+	Tier    string      `json:"tier"`
+	Count   int         `json:"count"`
+	Results []index.Hit `json:"results"`
+}
+
 // searchCommand implements `stemma search`.
 //
 // It answers from the index when one is fresh and from the KB otherwise, and a
@@ -72,11 +82,11 @@ var searchCommand = &command{
 			}
 
 			if w.json {
-				return w.emit(map[string]any{
-					"query":   query,
-					"tier":    src.Tier().String(),
-					"count":   len(hits),
-					"results": hits,
+				return w.emit(SearchReport{
+					Query:   query,
+					Tier:    src.Tier().String(),
+					Count:   len(hits),
+					Results: hits,
 				})
 			}
 			writeSearchResults(w.stdout, hits, index.Tokenize(query),

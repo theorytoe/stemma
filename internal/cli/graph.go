@@ -46,7 +46,7 @@ var graphCommand = &command{
 				return w.fail(fmt.Errorf("depth is %d; it is zero or more", *depth))
 			}
 
-			root, err := discover(o.kb)
+			root, err := Discover(o.kb)
 			if err != nil {
 				return w.fail(err)
 			}

@@ -86,7 +86,7 @@ var envCommand = &command{
 			// A KB is optional here: env reports on the environment first, and adds
 			// the shim's own location and the index state when it can find one.
 			root := ""
-			if found, err := discover(o.kb); err == nil {
+			if found, err := Discover(o.kb); err == nil {
 				root = found
 				report.KB = found
 				if k, err := kb.Load(root); err == nil {

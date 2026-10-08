@@ -224,7 +224,7 @@ func outputPath(root, out, name string) string {
 // load finds and reads the KB, reporting the failure itself. A nil KB means the
 // caller should return the code alongside it.
 func (o *options) load(w *output) (*kb.KB, int) {
-	root, err := discover(o.kb)
+	root, err := Discover(o.kb)
 	if err != nil {
 		return nil, w.fail(err)
 	}

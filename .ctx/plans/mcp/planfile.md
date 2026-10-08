@@ -120,13 +120,27 @@ CiteFields); and CommandNames exposes the command table for the drift tests.
 
 ## Task 3:
 
-Status: Not started
+Status: Done
 
 The stdio server, hand-rolled on the standard library. JSON-RPC 2.0 framing over
 newline-delimited stdio, protocol-version handling, `initialize` and
 `initialized`, `tools/list` and `tools/call`. Stdout carries protocol traffic
 only; logs go to stderr. KB resolution is lazy, so a call may name a root or
 discover one. No daemon, port or global state.
+
+Done 2026-10-07, with the protocol choice the plan's open risks called for:
+the server speaks protocol 2026-07-28 and nothing else, recorded as `D81`.
+The task's wording named `initialize` and `initialized`; the 2026-07-28
+revision retired the handshake, so the server answers `server/discover`,
+`tools/list`, `tools/call` and `ping`, refuses batches as invalid requests,
+and answers a legacy `initialize` with the supported versions in the error's
+data. Every request names its version in `_meta`; tools/call holds arguments
+to the registry's input schema (internal/mcp/args.go) before a handler runs,
+and everything after that gate is an envelope result with `isError` mirroring
+`ok`. A call names a KB root in `_meta` as `stemma/kb`, else `cli.Discover`
+runs per call — the export Task 1 deferred for exactly this. The handlers map
+is a parameter of `Serve`; Task 4 wires the ten, and the tests prove the
+machinery with handlers of their own.
 
 ## Task 4:
 

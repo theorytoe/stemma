@@ -94,6 +94,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D78 | `cite add` resolves a **positional** identifier only. The identifier flags (`--doi`, `--arxiv`, `--isbn`, `--url`, `--path`) name a **record entered by hand** and are refused beside a positional one; the descriptive flags build a hand-entered record or **correct a resolved one**. | review    |
 | D79 | A valid `stemma-vendored-hash` **satisfies the provenance check**: a vendored entry is not also asked for `stemma-content-hash` and `stemma-retrieved`, because the capture is the evidence and `vendoredFindings` holds it to the hash. A malformed value is still reported. | review    |
 | D80 | The MCP surface curates **ten tools** — `status`, `list`, `search`, `show`, `graph`, `new`, `promote`, `cite add`, `cite show`, `lint` — the read core plus the four mutations of `D58`. Every other verb is a **named omission with a reason**, held beside the tools in one registry, and the tool reference is **generated** from it. | mcp T2    |
+| D81 | The server speaks **protocol 2026-07-28** and nothing else: stateless, every request naming its version in `_meta`, `server/discover` instead of the retired handshake, a legacy `initialize` answered with the versions this server supports. A call names a KB root in `_meta` as `stemma/kb`, else discovery runs as on the CLI (`D41`). | mcp T3    |
 
 ### Ingest
 
@@ -842,6 +843,35 @@ docs/mcp-tools.json through `make mcp-schema`, which the documentation task
 renders. The four CLI payloads that were anonymous maps became named structs —
 ListReport, SearchReport, GraphReport, NewReport — so a schema could name
 them, with `--json` output parsed-shape identical.
+
+### The MCP protocol version. `D81` added.
+
+**Decision.** The server speaks the 2026-07-28 specification and only that:
+stateless, with every request carrying `io.modelcontextprotocol/protocolVersion`
+in its `_meta` — a request without one is invalid params, one naming an
+unsupported version gets the version error naming what is supported.
+`server/discover` advertises the surface; the `initialize` handshake is
+retired, and a client that sends it is answered method-not-found with the
+supported versions in the error's data, which is what the specification asks
+of a modern-only server. A call names its KB root in `_meta` as `stemma/kb`;
+without one, discovery runs exactly as the CLI's does — named root,
+`STEMMA_KB`, then a walk up from the working directory (`D41`) — lazily, per
+call, because a long-lived client should see the KB that is on disk now. Tool
+arguments are held to the input schema before a handler runs; everything
+after that gate is a result in the envelope's terms, with `isError` mirroring
+`ok`.
+
+**Why.** The plan's Task 3 named `initialize` and `initialized`, which was the
+right shape of the older protocol; the 2026-07-28 revision removed them
+(SEP-2575) and made the protocol stateless, which suits a server that already
+refused to keep state (`D41`). Hand-rolling means the tracking is ours: the
+version is one constant, every refusal names it, and adopting a newer
+revision is a deliberate edit — which is how the four-dependency allowlist
+survives the protocol.
+
+**Provenance.** Chosen in the MCP plan's Task 3 after reading the published
+2026-07-28 specification, its changelog, and its schema. The task's original
+wording described the handshake era and is superseded by this decision.
 
 ## Deferred during implementation
 

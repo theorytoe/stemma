@@ -8,7 +8,7 @@ import (
 	"github.com/theorytoe/stemma/internal/kb"
 )
 
-// discover finds the KB root.
+// Discover finds the KB root.
 //
 // The order is fixed (D41): an explicit path, then the environment, then
 // walking up from the working directory. Walking up prefers a directory holding
@@ -20,7 +20,7 @@ import (
 // wins, and if no manifest exists anywhere above, the nearest pages/ directory
 // does. A manifest further up still beats a nearer pages/, because the manifest
 // is what marks a KB deliberately rather than coincidentally.
-func discover(explicit string) (string, error) {
+func Discover(explicit string) (string, error) {
 	if explicit != "" {
 		return asDirectory(explicit, "")
 	}

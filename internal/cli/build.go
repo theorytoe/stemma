@@ -25,7 +25,7 @@ var buildCommand = &command{
 			if len(args) > 0 {
 				return w.fail(fmt.Errorf("build takes no arguments, got %q", args[0]))
 			}
-			root, err := discover(o.kb)
+			root, err := Discover(o.kb)
 			if err != nil {
 				return w.fail(err)
 			}

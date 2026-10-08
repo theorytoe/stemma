@@ -59,7 +59,7 @@ var searchCommand = &command{
 				return w.fail(err)
 			}
 
-			root, err := discover(o.kb)
+			root, err := Discover(o.kb)
 			if err != nil {
 				return w.fail(err)
 			}

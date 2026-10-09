@@ -191,7 +191,8 @@ make bench       # Tier-0 vs Tier-1 timing; measures, never passes/fails
   source (the CLI table, or `FORMAT.md`) and regenerate.
 - The manual pages in `man/` are **generated** by `make man` from the same
   command table and are gitignored. Never write or commit one; add the verb to
-  the table and regenerate. `make install-man` copies them into
+  the table and regenerate. The MCP server's page is generated the same way
+  from its own registry, by the same target. `make install-man` copies them into
   `$(MANPREFIX)/share/man/man1`.
 - Skills follow the open Agent Skills standard; `make check-skills` validates
   name, description, and size. The suite is one umbrella (`skills/stemma`) plus

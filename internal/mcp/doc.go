@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/theorytoe/stemma/internal/version"
 )
@@ -239,4 +240,59 @@ func sortedKeys(m map[string]any) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// ManBytes renders the server's manual page in roff, the way the command
+// surface's pages are rendered from the command table, so `make man` writes a
+// page for the second binary without anyone hand-writing one. Like those
+// pages it is generated and never committed.
+func ManBytes() ([]byte, error) {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, ".TH STEMMA-MCP 1 %q "+"\"stemma %s\" \"stemma Manual\"\n",
+		time.Now().Format("2006-01-02"), roff(version.Version))
+	sb.WriteString(".SH NAME\n")
+	sb.WriteString("stemma\\-mcp \\- serve a knowledge base to agents over the Model Context Protocol\n")
+	sb.WriteString(".SH SYNOPSIS\n")
+	sb.WriteString("\\fBstemma\\-mcp\\fR [\\fB\\-\\-kb\\fR \\fIpath\\fR]\n")
+	sb.WriteString(".SH DESCRIPTION\n")
+	sb.WriteString("stemma\\-mcp serves a knowledge base to agents as native tools on the\n")
+	sb.WriteString("Model Context Protocol. It reads newline\\-delimited JSON\\-RPC from\n")
+	sb.WriteString("standard input and writes every response to standard output; its own\n")
+	sb.WriteString("working goes to standard error, which a harness may capture or ignore.\n")
+	sb.WriteString("The protocol is the 2026\\-07\\-28 specification: stateless, with every\n")
+	sb.WriteString("request naming its version, and server/discover advertising the surface.\n\n")
+	sb.WriteString("The tools are a curated subset of the command surface: the read core\n")
+	sb.WriteString("(status, list, search, show, graph, cite_show) plus the mutations new,\n")
+	sb.WriteString("promote and cite_add, and lint as the guard. Every result is the matching\n")
+	sb.WriteString("verb's \\-\\-json envelope, with the payload the command would print and the\n")
+	sb.WriteString("findings the command would report; a refusal on the command line is a\n")
+	sb.WriteString("result here, never a protocol error. The commands deliberately left on the\n")
+	sb.WriteString("CLI are named, with reasons, in the generated reference.\n\n")
+	sb.WriteString("A call may name the knowledge base it wants in _meta as stemma/kb; with\n")
+	sb.WriteString("neither that nor \\-\\-kb, the KB is found as the CLI finds one: STEMMA_KB,\n")
+	sb.WriteString("then a walk up from the working directory.\n")
+	sb.WriteString(".SH OPTIONS\n")
+	sb.WriteString(".TP\n")
+	sb.WriteString(".B \\-\\-kb \fIpath\fR\n")
+	sb.WriteString("the KB root; when not given, STEMMA_KB, else discovered by walking up\n")
+	sb.WriteString(".SH EXIT STATUS\n")
+	sb.WriteString(".TP\n")
+	sb.WriteString(".B 0\n")
+	sb.WriteString("the session ended cleanly\n")
+	sb.WriteString(".TP\n")
+	sb.WriteString(".B 2\n")
+	sb.WriteString("the server itself failed; findings travel inside tool results, never as\n")
+	sb.WriteString("an exit code\n")
+	sb.WriteString(".SH SEE ALSO\n")
+	sb.WriteString("\\fBstemma\\fR(1)\n\n")
+	sb.WriteString("The full tool reference, generated from the same registry, is\n")
+	sb.WriteString("docs/mcp\\-tools.md, written by make mcp\\-docs.\n")
+	return []byte(sb.String()), nil
+}
+
+// roff escapes a string for roff running text: a hyphen reads as a minus
+// sign unless it is escaped, and a literal backslash starts an escape.
+func roff(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	return strings.ReplaceAll(s, "-", "\\-")
 }

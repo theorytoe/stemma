@@ -97,7 +97,7 @@ EXTRACT = .stemma/extract/gate
 # rendered from that schema set, so a schema and its documentation cannot
 # drift. Generated, so not committed (P8).
 mcp-docs:
-	$(GO) run ./internal/mcp/gen -json docs/mcp-tools.json -reference docs/mcp-tools.md
+	$(GO) run ./internal/mcp/gen -json docs/mcp-tools.json -reference docs/mcp-tools.md -man man/stemma-mcp.1
 
 # The MCP server answers on the wire the way its tests say it does. This
 # holds a two-turn conversation with the shipped binary — a discover, then a
@@ -158,6 +158,7 @@ MANPREFIX ?= /usr/local
 
 man: build
 	@$(BIN) help --man --out $(MAN) >/dev/null
+	@$(GO) run -ldflags "$(LDFLAGS)" ./internal/mcp/gen -man $(MAN)/stemma-mcp.1
 	@echo "wrote $$(ls $(MAN)/*.1 | wc -l | tr -d ' ') manual pages to $(MAN)"
 
 # A page that is empty, or written by something other than the shipped binary,
@@ -166,6 +167,7 @@ man: build
 # internal/cli; this target proves the binary can write what it claims.
 check-man: man
 	test -s $(MAN)/stemma.1
+	test -s $(MAN)/stemma-mcp.1
 	test -s $(MAN)/stemma-lint.1
 	test -s $(MAN)/stemma-cite-add.1
 

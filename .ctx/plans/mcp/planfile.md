@@ -200,7 +200,35 @@ tested with the rest.
 
 ## Task 6:
 
-Status: Not started
+Status: Done
+
+Parity and integration tests. Assert that each tool returns the same payload as
+the corresponding CLI command under `--json` on one corpus, and that both
+surfaces agree on validation failures. Exercise the server from at least two
+harnesses to confirm the absence of harness-specific assumptions; that check
+stays out of CI.
+
+Done 2026-10-07. The CI half is internal/mcp/parity_test.go: eleven cases run
+each surface over one corpus — a KB with resolved, unresolved, and ambiguous-adjacent links, a defined and a dangling citation, tags, and two drafts — and
+hold the envelopes to DeepEqual, with the CLI's exit code asserted against its
+twin each time; seven more cases assert the surfaces refuse identically
+(promote's draft-validation refusal is the exit-1 twin, the rest exit 2), and
+the one refusal whose words differ by design is held to "both refuse with a
+message". internal/mcp/binary_test.go drives the built binary as a subprocess
+over real pipes — discover, list, call, clean exit — and skips when the binary
+has not been built, the way the shim tests skip without python3.
+
+The out-of-CI half: `make mcp-probe` runs internal/mcp/probe, a raw stdio
+client that walks the curated set — discover, list, new, status, promote,
+status, strict lint, cite add dry run then written, cite show — against its
+own scratch KB and reports each turn. It found two real answers while being
+written: a promoted draft's orphan counts under strict lint, and a dry run
+writes nothing, so the record must be entered before it can be shown. The
+second harness is a real client and stays manual: point any MCP client at
+`bin/stemma-mcp --kb <root>` through its own configuration file, confirm the
+ten tools are offered, and run one call per family. What to look for is the
+absence of harness-specific assumptions: nothing in the protocol exchange
+names a client, and the payloads are the CLI's own.
 
 Parity and integration tests. Assert that each tool returns the same payload as
 the corresponding CLI command under `--json` on one corpus, and that both surfaces

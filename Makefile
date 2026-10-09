@@ -13,7 +13,7 @@ LDFLAGS  = -X github.com/theorytoe/stemma/internal/version.Version=$(VERSION)
 # tool defines and checked by the tool itself.
 WIKI   ?= wiki
 
-.PHONY: all build install install-skills test test-shim vet check lint-wiki site extract mcp-schema check-mcp skills check-skills man check-man install-man bench tidy fmt clean
+.PHONY: all build install install-skills test test-shim vet check lint-wiki site extract mcp-schema check-mcp mcp-probe skills check-skills man check-man install-man bench tidy fmt clean
 
 all: build
 
@@ -110,6 +110,15 @@ check-mcp: build
 		'{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}}' \
 		| $(BIN)-mcp 2>/dev/null | grep -q '"name":"status"'
 	@echo "mcp server held the conversation"
+
+# The probe drives the shipped binary the way a harness does — one message at
+# a time over stdio, a full turn of the curated set against its own scratch
+# KB — without speaking for any real client. It is the repeatable half of the
+# two-harness exercise the MCP plan asks for; the other half, running the
+# server from a real client, stays out of CI. Run this before touching the
+# surface.
+mcp-probe: build
+	$(GO) run ./internal/mcp/probe -bin $(BIN)-mcp
 
 # The agent skill suite: one directory per skill, following the open Agent Skills
 # standard. The umbrella skill's two references are generated, not committed

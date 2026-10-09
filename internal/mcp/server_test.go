@@ -17,10 +17,16 @@ import (
 // writes, decoded in order, alongside what it logged. The handlers are the
 // caller's, so a test can watch what a tool call delivered.
 func serve(t *testing.T, handlers Handlers, lines ...string) ([]map[string]any, []string) {
+	return serveAt(t, "", handlers, lines...)
+}
+
+// serveAt is serve with the server launched with a root, the way the binary
+// launches it with --kb.
+func serveAt(t *testing.T, root string, handlers Handlers, lines ...string) ([]map[string]any, []string) {
 	t.Helper()
 	var out, log strings.Builder
-	err := Serve(strings.NewReader(strings.Join(lines, "\n")+"\n"), &out, &log, handlers)
-	if err != nil {
+	srv := &Server{In: strings.NewReader(strings.Join(lines, "\n") + "\n"), Out: &out, Log: &log, Handlers: handlers, Root: root}
+	if err := srv.Serve(); err != nil {
 		t.Fatalf("serve: %v", err)
 	}
 	var responses []map[string]any
@@ -246,8 +252,8 @@ func TestToolCallArgumentsAreHeldToTheSchema(t *testing.T) {
 
 func TestToolCallNamesARootOrDiscoversOne(t *testing.T) {
 	// A KB the call names by path is used as-is when it is one, and a call
-	// that names nothing discovers from the working directory, the way the
-	// CLI does (D41).
+	// that names nothing discovers from the working directory or falls back
+	// to the root the server was launched with, the way the CLI does (D41).
 	root := t.TempDir()
 	manifest := filepath.Join(root, "stemma.toml")
 	if err := os.WriteFile(manifest, []byte("title = \"Test KB\"\n"), 0o644); err != nil {
@@ -278,10 +284,27 @@ func TestToolCallNamesARootOrDiscoversOne(t *testing.T) {
 		t.Errorf("discovery did not find the KB: got %q", got.Root)
 	}
 
+	// The root the server was launched with answers a call that names none,
+	// ahead of discovery: from a directory with no KB of its own, only the
+	// launch root can answer.
+	launched := t.TempDir()
+	if err := os.WriteFile(filepath.Join(launched, "stemma.toml"), []byte("title = \"Launched\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(launched, "pages"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(t.TempDir())
+	serveAt(t, launched, handlers, ask(3, "tools/call",
+		`{"_meta":{"io.modelcontextprotocol/protocolVersion":"`+ProtocolVersion+`"},"name":"status"}`))
+	if got.Root != launched {
+		t.Errorf("the launch root was not used: got %q", got.Root)
+	}
+
 	// A KB that is nowhere to be found is the tool's finding, a result in the
 	// envelope's terms, not a protocol error.
 	elsewhere := filepath.Join(t.TempDir(), "nowhere")
-	responses, _ := serve(t, handlers, ask(3, "tools/call",
+	responses, _ := serve(t, handlers, ask(4, "tools/call",
 		`{"_meta":{"io.modelcontextprotocol/protocolVersion":"`+ProtocolVersion+`","stemma/kb":"`+elsewhere+`"},"name":"status"}`))
 	result := responses[0]["result"].(map[string]any)
 	if result["isError"] != true {

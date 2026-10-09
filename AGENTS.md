@@ -76,6 +76,7 @@ surface over it (`P3`, `D10`).
 | Path                 | Role                                                                                                                            |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `cmd/stemma`         | `main` only: `os.Exit(cli.Run(...))`                                                                                            |
+| `cmd/stemma-mcp`     | `main` only: the MCP server's process shell over the curated surface in `internal/mcp`                                        |
 | `internal/kb`        | Core: manifest, page model, frontmatter, link and citation resolution, lint invariants, preservation                            |
 | `internal/cli`       | Command surface. Dispatch, help, and the generated CLI reference all derive from **one** command table in `internal/cli/cli.go` |
 | `internal/source`    | A DOI, arXiv ID, ISBN, URL, or local file path to a bibliography entry; never invents prose or metadata                         |

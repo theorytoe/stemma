@@ -94,7 +94,7 @@ Distilled state of the design. Source transcript: [`qa-session.md`](qa-session.m
 | D78 | `cite add` resolves a **positional** identifier only. The identifier flags (`--doi`, `--arxiv`, `--isbn`, `--url`, `--path`) name a **record entered by hand** and are refused beside a positional one; the descriptive flags build a hand-entered record or **correct a resolved one**. | review    |
 | D79 | A valid `stemma-vendored-hash` **satisfies the provenance check**: a vendored entry is not also asked for `stemma-content-hash` and `stemma-retrieved`, because the capture is the evidence and `vendoredFindings` holds it to the hash. A malformed value is still reported. | review    |
 | D80 | The MCP surface curates **ten tools** — `status`, `list`, `search`, `show`, `graph`, `new`, `promote`, `cite add`, `cite show`, `lint` — the read core plus the four mutations of `D58`. Every other verb is a **named omission with a reason**, held beside the tools in one registry, and the tool reference is **generated** from it. | mcp T2    |
-| D81 | The server speaks **protocol 2026-07-28** and nothing else: stateless, every request naming its version in `_meta`, `server/discover` instead of the retired handshake, a legacy `initialize` answered with the versions this server supports. A call names a KB root in `_meta` as `stemma/kb`, else discovery runs as on the CLI (`D41`). | mcp T3    |
+| D81 | The server speaks **protocol 2026-07-28** and nothing else: stateless, every request naming its version in `_meta`, `server/discover` instead of the retired handshake, a legacy `initialize` answered with the versions this server supports. A call names a KB root in `_meta` as `stemma/kb`, else the launch-time `--kb` answers, else discovery runs as on the CLI (`D41`). | mcp T3    |
 
 ### Ingest
 
@@ -872,6 +872,9 @@ survives the protocol.
 **Provenance.** Chosen in the MCP plan's Task 3 after reading the published
 2026-07-28 specification, its changelog, and its schema. The task's original
 wording described the handshake era and is superseded by this decision.
+Amended in Task 5, when the binary arrived: `--kb` gives a launch-time root
+between the per-call name and the environment, so a harness pins the KB in
+its own configuration and a call can still name another.
 
 ## Deferred during implementation
 

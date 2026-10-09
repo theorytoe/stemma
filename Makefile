@@ -13,12 +13,13 @@ LDFLAGS  = -X github.com/theorytoe/stemma/internal/version.Version=$(VERSION)
 # tool defines and checked by the tool itself.
 WIKI   ?= wiki
 
-.PHONY: all build install install-skills test test-shim vet check lint-wiki site extract mcp-schema skills check-skills man check-man install-man bench tidy fmt clean
+.PHONY: all build install install-skills test test-shim vet check lint-wiki site extract mcp-schema check-mcp skills check-skills man check-man install-man bench tidy fmt clean
 
 all: build
 
 build:
 	$(GO) build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/stemma
+	$(GO) build -ldflags "$(LDFLAGS)" -o $(BIN)-mcp ./cmd/stemma-mcp
 
 # Put the binary on PATH with the same version stamp the build uses. `go
 # install` writes to $(go env GOBIN), or to $(go env GOPATH)/bin when GOBIN is
@@ -26,6 +27,7 @@ build:
 #   make build && install -m 0755 bin/stemma /usr/local/bin/stemma
 install:
 	$(GO) install -ldflags "$(LDFLAGS)" ./cmd/stemma
+	$(GO) install -ldflags "$(LDFLAGS)" ./cmd/stemma-mcp
 
 # Install the skill suite into the user's agent-skills directory, so every
 # harness on this machine can load it. The umbrella's references are generated
@@ -64,7 +66,7 @@ vet:
 # What CI runs. Further gates (the static site, the export) belong in this
 # target rather than in the workflow, so that a local run and a CI run check the
 # same things.
-check: build vet test test-shim lint-wiki site extract mcp-schema check-skills check-man
+check: build vet test test-shim lint-wiki site extract mcp-schema check-mcp check-skills check-man
 
 # The documentation is a KB, so it has to lint clean under --strict. If the
 # project's own documentation cannot pass its own checks, the release is not
@@ -94,6 +96,20 @@ EXTRACT = .stemma/extract/gate
 # a schema and its description cannot drift. Generated, so not committed (P8).
 mcp-schema:
 	$(GO) run ./internal/mcp/gen -out docs/mcp-tools.json
+
+# The MCP server answers on the wire the way its tests say it does. This
+# holds a two-turn conversation with the shipped binary — a discover, then a
+# tools/list — and fails when the answers stop matching. The protocol tests
+# and the parity work live in internal/mcp; this gate proves the binary a
+# harness would launch is the one that can hold the conversation.
+check-mcp: build
+	@printf '%s\n' \
+		'{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}}' \
+		| $(BIN)-mcp 2>/dev/null | grep -q supportedVersions
+	@printf '%s\n' \
+		'{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28"}}}' \
+		| $(BIN)-mcp 2>/dev/null | grep -q '"name":"status"'
+	@echo "mcp server held the conversation"
 
 # The agent skill suite: one directory per skill, following the open Agent Skills
 # standard. The umbrella skill's two references are generated, not committed

@@ -178,7 +178,21 @@ the same distinction the exit codes make.
 
 ## Task 5:
 
-Status: Not started
+Status: Done
+
+The `stemma-mcp` binary and the build gate. A second command under `cmd/`, built
+and installed alongside `stemma`, and a make gate that keeps it built, vetted
+and tested with the rest.
+
+Done 2026-10-07. `cmd/stemma-mcp` is main-only: flags, the server wiring, and
+an exit code — 0 when the session ends, 2 when the server itself fails;
+findings stay inside tool results. `--kb` pins the KB the way `stemma`'s does,
+which put a launch-time root between the per-call `_meta` name and the
+environment, so `Serve` became a `Server` with fields (Task 3's tests moved
+with it) and `D81` records the amended precedence. The build and install
+targets build and install both binaries under the same version stamp, and
+`make check` gained `check-mcp`, which holds a discover-and-list conversation
+with the shipped binary and fails when the answers stop matching.
 
 The `stemma-mcp` binary and the build gate. A second command under `cmd/`, built
 and installed alongside `stemma`, and a make gate that keeps it built, vetted and

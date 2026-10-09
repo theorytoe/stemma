@@ -101,13 +101,37 @@ type rpcError struct {
 // Stdout carries protocol traffic and nothing else: every byte written there
 // is one marshalled response. Anything the server has to say about itself
 // goes to log, which a harness may capture, forward, or ignore.
-func Serve(in io.Reader, out, log io.Writer, handlers Handlers) error {
-	r := bufio.NewReader(in)
-	logf(log, "stemma-mcp %s serving protocol %s", version.Version, ProtocolVersion)
+// Server is one session's wiring: where requests come from, where responses
+// and logs go, which handlers run, and the KB a call works on when it names
+// none. A session is constructed, served, and done; nothing survives it.
+type Server struct {
+	In       io.Reader
+	Out      io.Writer
+	Log      io.Writer
+	Handlers Handlers
+
+	// Root is the KB root a call works on when it names none — what the
+	// binary's --kb handed the server, empty when there was no flag. A call
+	// that names a root in _meta overrides it; with neither, discovery runs
+	// from the environment and the working directory, as on the CLI (D41).
+	Root string
+}
+
+// Serve runs one session: it reads newline-delimited JSON-RPC from In,
+// answers each request on Out, and reports its own working on Log. Requests
+// are answered in order, one at a time — the protocol allows more, and one
+// invocation working one KB has no reason to race itself (D41).
+//
+// Stdout carries protocol traffic and nothing else: every byte written there
+// is one marshalled response. Anything the server has to say about itself
+// goes to Log, which a harness may capture, forward, or ignore.
+func (s *Server) Serve() error {
+	r := bufio.NewReader(s.In)
+	logf(s.Log, "stemma-mcp %s serving protocol %s", version.Version, ProtocolVersion)
 	for {
 		line, err := r.ReadString('\n')
 		if trimmed := strings.TrimSpace(line); trimmed != "" {
-			serveLine(out, log, handlers, trimmed)
+			s.serveLine(trimmed)
 		}
 		if err != nil {
 			if err == io.EOF {
@@ -122,11 +146,11 @@ func Serve(in io.Reader, out, log io.Writer, handlers Handlers) error {
 // object, or an object that is not one request, is refused the way JSON-RPC
 // prescribes: a parse error for undecodable text, an invalid-request error
 // for a batch, each with a null id.
-func serveLine(out, log io.Writer, handlers Handlers, line string) {
+func (s *Server) serveLine(line string) {
 	var probe any
 	if err := json.Unmarshal([]byte(line), &probe); err != nil {
-		logf(log, "undecodable message: %.80s", line)
-		write(out, response{ID: json.RawMessage("null"), Error: &rpcError{
+		logf(s.Log, "undecodable message: %.80s", line)
+		write(s.Out, response{ID: json.RawMessage("null"), Error: &rpcError{
 			Code:    codeParseError,
 			Message: "the message is not valid JSON",
 		}})
@@ -135,7 +159,7 @@ func serveLine(out, log io.Writer, handlers Handlers, line string) {
 	// A batch is well-formed JSON but not part of the protocol, so it is an
 	// invalid request rather than a parse failure, refused with a null id.
 	if _, batch := probe.([]any); batch {
-		write(out, response{ID: json.RawMessage("null"), Error: &rpcError{
+		write(s.Out, response{ID: json.RawMessage("null"), Error: &rpcError{
 			Code:    codeInvalidRequest,
 			Message: "batch requests are not part of the protocol",
 		}})
@@ -143,14 +167,14 @@ func serveLine(out, log io.Writer, handlers Handlers, line string) {
 	}
 	var req request
 	if err := json.Unmarshal([]byte(line), &req); err != nil {
-		write(out, response{ID: json.RawMessage("null"), Error: &rpcError{
+		write(s.Out, response{ID: json.RawMessage("null"), Error: &rpcError{
 			Code:    codeInvalidRequest,
 			Message: "not a JSON-RPC 2.0 request",
 		}})
 		return
 	}
 	if req.JSONRPC != "2.0" || req.Method == "" {
-		write(out, response{ID: req.ID, Error: &rpcError{
+		write(s.Out, response{ID: req.ID, Error: &rpcError{
 			Code:    codeInvalidRequest,
 			Message: "not a JSON-RPC 2.0 request",
 		}})
@@ -160,25 +184,25 @@ func serveLine(out, log io.Writer, handlers Handlers, line string) {
 	// it asks for. The stateless specification retired the one notification
 	// the handshake era had, so there is nothing to act on either.
 	if len(req.ID) == 0 || string(req.ID) == "null" {
-		logf(log, "ignoring notification %s", req.Method)
+		logf(s.Log, "ignoring notification %s", req.Method)
 		return
 	}
 
 	start := time.Now()
-	res, rpcErr := dispatch(log, handlers, &req)
+	res, rpcErr := s.dispatch(&req)
 	if rpcErr != nil {
-		logf(log, "%s refused: %s", req.Method, rpcErr.Message)
-		write(out, response{ID: req.ID, Error: rpcErr})
+		logf(s.Log, "%s refused: %s", req.Method, rpcErr.Message)
+		write(s.Out, response{ID: req.ID, Error: rpcErr})
 		return
 	}
-	logf(log, "%s answered in %s", req.Method, time.Since(start).Round(time.Microsecond))
-	write(out, response{ID: req.ID, Result: res})
+	logf(s.Log, "%s answered in %s", req.Method, time.Since(start).Round(time.Microsecond))
+	write(s.Out, response{ID: req.ID, Result: res})
 }
 
 // dispatch routes one request by method and runs the version check first:
 // under the stateless specification every request names its version, and one
 // that names another is refused before anything about the method is read.
-func dispatch(log io.Writer, handlers Handlers, req *request) (any, *rpcError) {
+func (s *Server) dispatch(req *request) (any, *rpcError) {
 	// The handshake was retired by the version this server speaks. A client
 	// that sends it is speaking an older revision, so the answer comes before
 	// the version check: the refusal names what this server does support,
@@ -212,7 +236,7 @@ func dispatch(log io.Writer, handlers Handlers, req *request) (any, *rpcError) {
 	case "tools/list":
 		return listTools(), nil
 	case "tools/call":
-		return callTool(log, handlers, req.Params)
+		return s.callTool(req.Params)
 	case "ping":
 		return map[string]any{}, nil
 	default:
@@ -273,7 +297,7 @@ func requestMeta(params json.RawMessage) (map[string]json.RawMessage, *rpcError)
 // unknown tool is a protocol error — the client asked for something this
 // server does not have — while everything the tool itself finds, including a
 // KB that is not there, is a result in the envelope's own terms.
-func callTool(log io.Writer, handlers Handlers, params json.RawMessage) (any, *rpcError) {
+func (s *Server) callTool(params json.RawMessage) (any, *rpcError) {
 	meta, rpcErr := requestMeta(params)
 	if rpcErr != nil {
 		return nil, rpcErr
@@ -298,7 +322,7 @@ func callTool(log io.Writer, handlers Handlers, params json.RawMessage) (any, *r
 			Message: fmt.Sprintf("unknown tool: %q", p.Name),
 		}
 	}
-	handler, wired := handlers[tool.Name]
+	handler, wired := s.Handlers[tool.Name]
 	if !wired {
 		return nil, &rpcError{
 			Code:    codeInternalError,
@@ -309,11 +333,12 @@ func callTool(log io.Writer, handlers Handlers, params json.RawMessage) (any, *r
 		return nil, &rpcError{Code: codeInvalidParams, Message: err.Error()}
 	}
 
-	// The root the call named, or the one discovery finds. A root that cannot
-	// be resolved is the tool's finding to report, not a protocol error: it
-	// becomes the envelope's error, the twin of the CLI's exit 2, with the
-	// same message the command would print.
-	var named string
+	// The root the call named, else the one the server was launched with,
+	// else the one discovery finds. A root that cannot be resolved is the
+	// tool's finding to report, not a protocol error: it becomes the
+	// envelope's error, the twin of the CLI's exit 2, with the same message
+	// the command would print.
+	named := s.Root
 	if raw, ok := meta[metaKB]; ok {
 		if err := json.Unmarshal(raw, &named); err != nil {
 			return nil, &rpcError{
@@ -324,7 +349,7 @@ func callTool(log io.Writer, handlers Handlers, params json.RawMessage) (any, *r
 	}
 	root, err := cli.Discover(named)
 	if err != nil {
-		logf(log, "tools/call %s: %v", tool.Name, err)
+		logf(s.Log, "tools/call %s: %v", tool.Name, err)
 		return toolResult(cli.Response{Command: tool.Command, Error: err.Error()}), nil
 	}
 

@@ -483,9 +483,9 @@ source it points at.
 
 Two styles are built in. `citation_style` names one of them, and nothing else.
 
-| Style         | In text                      | Reference list                          |
-| ------------- | ---------------------------- | --------------------------------------- |
-| `author-date` | `(Bush 1945)`, `Bush (1945)` | `Bush, Vannevar. 1945. As We May Think. The Atlantic Monthly, 176(1): 101--108.` |
+| Style         | In text                      | Reference list                                                                       |
+| ------------- | ---------------------------- | ------------------------------------------------------------------------------------ |
+| `author-date` | `(Bush 1945)`, `Bush (1945)` | `Bush, Vannevar. 1945. As We May Think. The Atlantic Monthly, 176(1): 101--108.`     |
 | `numeric`     | `[1]`, `[1; 2]`              | `[1] Bush, Vannevar. As We May Think. The Atlantic Monthly, 176(1): 101--108. 1945.` |
 
 Both styles render all five inline forms. A locator becomes `, p. 33` inside the
@@ -502,14 +502,14 @@ than a silent fallback. Those two styles are the whole vocabulary.
 `stemma.toml` is the manifest. It is optional-with-defaults, and it is the
 discovery marker. Unknown keys are preserved verbatim.
 
-| Key              | Type            | Default                      | Meaning                                   |
-| ---------------- | --------------- | ---------------------------- | ----------------------------------------- |
-| `title`          | string          | the KB root's directory name | the KB's title                            |
-| `description`    | string          | empty                        | a sentence or two about the KB            |
-| `default_type`   | string          | `topic`                      | the type `new` applies when none is given |
-| `types`          | list of strings | empty                        | types added to the built-in three         |
+| Key              | Type            | Default                      | Meaning                                          |
+| ---------------- | --------------- | ---------------------------- | ------------------------------------------------ |
+| `title`          | string          | the KB root's directory name | the KB's title                                   |
+| `description`    | string          | empty                        | a sentence or two about the KB                   |
+| `default_type`   | string          | `topic`                      | the type `new` applies when none is given        |
+| `types`          | list of strings | empty                        | types added to the built-in three                |
 | `citation_style` | string          | `numeric`                    | a built-in formatter: `author-date` or `numeric` |
-| `ignore`         | list of strings | empty                        | path globs, relative to the KB root       |
+| `ignore`         | list of strings | empty                        | path globs, relative to the KB root              |
 
 One table holds the export family's defaults. `default_depth` is how many hops a
 scoped export takes when the command line does not say. It is `1` unless the

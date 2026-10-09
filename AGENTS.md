@@ -77,13 +77,13 @@ surface over it (`P3`, `D10`).
 | Path                 | Role                                                                                                                            |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `cmd/stemma`         | `main` only: `os.Exit(cli.Run(...))`                                                                                            |
-| `cmd/stemma-mcp`     | `main` only: the MCP server's process shell over the curated surface in `internal/mcp`                                        |
+| `cmd/stemma-mcp`     | `main` only: the MCP server's process shell over the curated surface in `internal/mcp`                                          |
 | `internal/kb`        | Core: manifest, page model, frontmatter, link and citation resolution, lint invariants, preservation                            |
 | `internal/cli`       | Command surface. Dispatch, help, and the generated CLI reference all derive from **one** command table in `internal/cli/cli.go` |
 | `internal/source`    | A DOI, arXiv ID, ISBN, URL, or local file path to a bibliography entry; never invents prose or metadata                         |
 | `internal/citestyle` | Two named citation styles and nothing else (deliberately not CSL)                                                               |
 | `internal/extract`   | Go side of the Python text-extraction shim; `extract.py` is embedded and written into each KB                                   |
-| `internal/mcp`       | The curated MCP surface: the tool registry, the payload shapes, and the stateless stdio server over protocol 2026-07-28                |
+| `internal/mcp`       | The curated MCP surface: the tool registry, the payload shapes, and the stateless stdio server over protocol 2026-07-28         |
 | `internal/index`     | Tier-1 SQLite FTS5 cache, plus the Tier-0/Tier-1 `Source` interface used by search and graph                                    |
 | `internal/render`    | markdown to HTML, the site's templates and assets, resolving wikilinks and citations through the same scan `lint` reads         |
 | `internal/serve`     | Local HTTP server over the rendered KB, with server-side search and live reload                                                 |

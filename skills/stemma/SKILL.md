@@ -88,13 +88,13 @@ for the tool, or report the blocker.
 
 Load exactly one alongside this one:
 
-| The task is                                                     | Load               |
-| --------------------------------------------------------------- | ------------------ |
-| find or record an outside source, resolve a DOI/arXiv/ISBN/URL  | `stemma-research`  |
-| write or edit pages, draft, promote, retitle                    | `stemma-author`    |
-| audit, lint, repair, archive, or reorganise existing pages      | `stemma-maintain`  |
-| answer a question from what the KB already holds                | `stemma-query`     |
-| build, serve, export, or hand the KB to someone                 | `stemma-publish`   |
+| The task is                                                    | Load              |
+| -------------------------------------------------------------- | ----------------- |
+| find or record an outside source, resolve a DOI/arXiv/ISBN/URL | `stemma-research` |
+| write or edit pages, draft, promote, retitle                   | `stemma-author`   |
+| audit, lint, repair, archive, or reorganise existing pages     | `stemma-maintain` |
+| answer a question from what the KB already holds               | `stemma-query`    |
+| build, serve, export, or hand the KB to someone                | `stemma-publish`  |
 
 Do not load several at once. If a task genuinely spans two -- record a source,
 then write it up -- finish the first workflow, then load the second.

@@ -19,21 +19,21 @@ same core. A command is spelled `stemma <command> [flags]`, and a family such as
 
 **Pages**
 
-| Verb      | What it does                                             |
-| --------- | -------------------------------------------------------- |
-| `list`    | list the pages                                           |
-| `show`    | show one page with its links and citations resolved      |
-| `move`    | move a page to another directory                         |
-| `rename`  | retitle a page and rewrite every link that named it      |
-| `archive` | archive a page, recording why                            |
-| `promote` | move a draft from the inbox into the pages               |
+| Verb      | What it does                                        |
+| --------- | --------------------------------------------------- |
+| `list`    | list the pages                                      |
+| `show`    | show one page with its links and citations resolved |
+| `move`    | move a page to another directory                    |
+| `rename`  | retitle a page and rewrite every link that named it |
+| `archive` | archive a page, recording why                       |
+| `promote` | move a draft from the inbox into the pages          |
 
 **Sources**
 
-| Verb    | What it does                                                                             |
-| ------- | ---------------------------------------------------------------------------------------- |
-| `cite`  | the bibliography: `add`, `list`, `show`, `cited-by`, `vendor`, `export`, `check`          |
-| `fetch` | read a document's text into the scratch area                                             |
+| Verb    | What it does                                                                     |
+| ------- | -------------------------------------------------------------------------------- |
+| `cite`  | the bibliography: `add`, `list`, `show`, `cited-by`, `vendor`, `export`, `check` |
+| `fetch` | read a document's text into the scratch area                                     |
 
 **Retrieval**
 
@@ -45,8 +45,8 @@ same core. A command is spelled `stemma <command> [flags]`, and a family such as
 
 **Output**
 
-| Verb    | What it does                                          |
-| ------- | ----------------------------------------------------- |
+| Verb    | What it does                                           |
+| ------- | ------------------------------------------------------ |
 | `serve` | serve the KB as a local site; see [[Serving the site]] |
 
 **Checks and help**

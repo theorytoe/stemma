@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/theorytoe/stemma/internal/mcp"
 )
@@ -33,12 +34,27 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(*jsonOut, schema, 0o644); err != nil {
-		return err
-	}
 	reference, err := mcp.ReferenceBytes()
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(*referenceOut, reference, 0o644)
+	// The writer owns its outputs: docs/ is generated and never committed
+	// (P8), so a fresh checkout does not have the directory to write into.
+	for _, out := range []struct {
+		path string
+		data []byte
+	}{
+		{*jsonOut, schema},
+		{*referenceOut, reference},
+	} {
+		if dir := filepath.Dir(out.path); dir != "." {
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				return err
+			}
+		}
+		if err := os.WriteFile(out.path, out.data, 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
 }

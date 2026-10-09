@@ -144,7 +144,32 @@ machinery with handlers of their own.
 
 ## Task 4:
 
-Status: Not started
+Status: Done
+
+The tool handlers. Wire each curated tool to the shared builders over the core
+library, so validation, resolution and leniency behave identically on both
+surfaces. Map validation findings and operational failures onto MCP results
+with the same distinction the exit codes make.
+
+Done 2026-10-07. `ToolHandlers` (internal/mcp/handlers.go) wires all ten: each
+handler parses its arguments, loads the KB, and calls the builder the command
+calls — `GatherStatus`, `ListEntries`, `SearchSource` with `index.Search`,
+`Resolve` with `Describe`, the index walk, `CreatePage`, `Promote`,
+`source.New` with `ApplyEntry`, `CiteShowReport` from the bibliography, and
+`SummariseLint` with the findings. The cite-add resolver needed no export:
+`cli.newResolver` was already an alias for `source.New`.
+
+Changes to earlier tasks' code: `new` and `promote` carried their logic in the
+run closures, so the shared builders had to exist — `cli.CreatePage(k, title,
+pageType, draft, mode)` and `cli.Promote(k, name, pageType)` were extracted
+byte-identically, and the closures now call them; `cli.NonNil` was exported
+for the graph walk's neighbours; and `new`'s input schema gained `strict`, the
+only other verb besides lint where the flag changes behaviour, so the artifact
+was regenerated. One message was adapted rather than copied: cite add's
+refusal of an identifier beside identifier fields names the tool's arguments,
+not the CLI's flags. Findings and operational failures map exactly as the
+exit codes do: a finding is a result with `ok` false (exit 1), an
+operational failure an envelope error (exit 2), and `isError` mirrors `ok`.
 
 The tool handlers. Wire each curated tool to the shared builders over the core
 library, so validation, resolution and leniency behave identically on both

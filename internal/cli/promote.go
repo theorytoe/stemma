@@ -48,73 +48,89 @@ var promoteCommand = &command{
 			if k == nil {
 				return code
 			}
-			from, page, err := ResolveDraft(k, args[0])
+			report, findings, err := Promote(k, args[0], *typ)
 			if err != nil {
 				return w.fail(err)
 			}
-
-			title := page.Title()
-			if kb.Normalize(title) == "" {
-				return w.fail(fmt.Errorf("%s has no usable title, so nothing could link to the page it became", from))
-			}
-
-			pageType := *typ
-			if pageType != "" {
-				// A reserved type is the tool's own and is never assigned, so
-				// choosing one is a usage error. An unknown type is not: it is
-				// caught by validation below, as a finding about the draft (D55).
-				if kb.IsReservedType(pageType) {
-					return w.fail(fmt.Errorf("%q is a type the tool owns and does not assign", pageType))
-				}
-				if err := page.Set(kb.FieldType, pageType); err != nil {
-					return w.fail(err)
-				}
-			}
-			// The type the page will carry, which may be the draft's own. A
-			// missing or unknown one is caught by validation below, because
-			// everything the inbox permitted is an error now.
-			pageType = page.Type()
-
-			// Everything the inbox permitted is an error now.
-			if findings := page.Validate(k.Vocabulary, kb.Strict); len(findings) > 0 {
-				if w.json {
-					return w.report(PromoteReport{From: from, Title: title, Type: pageType}, findings)
-				}
-				return reportText(w.stdout, w.stderr, findings)
-			}
-
-			// A page may not take a name another page answers to: every link
-			// to that name would become ambiguous, which is a hard error.
-			if claimants := k.Graph.Claimants(title); len(claimants) > 0 {
-				return w.fail(fmt.Errorf("%q is already the name of %s", title, strings.Join(claimants, " and ")))
-			}
-
-			to := kb.PagePath(kb.PagesDir, title)
-			resolved := LinksThatWillResolve(k, page)
-
-			if err := k.CreatePage(to, page); err != nil {
-				return w.fail(err)
-			}
-			if err := os.Remove(k.Path(from)); err != nil {
-				return w.fail(fmt.Errorf("%s is now %s, but the draft could not be removed: %w", from, to, err))
-			}
-
-			report := PromoteReport{
-				From:          from,
-				To:            to,
-				Title:         title,
-				Type:          pageType,
-				LinksResolved: resolved,
-			}
 			if w.json {
+				if len(findings) > 0 {
+					return w.report(report, findings)
+				}
 				return w.emit(report)
 			}
-			fmt.Fprintf(w.stdout, "%s -> %s\n", from, to)
+			if len(findings) > 0 {
+				return reportText(w.stdout, w.stderr, findings)
+			}
+			fmt.Fprintf(w.stdout, "%s -> %s\n", report.From, report.To)
 			fmt.Fprintf(w.stdout, "promoted %q as %s; %s now resolve\n",
-				title, pageType, count(resolved, "link"))
+				report.Title, report.Type, count(report.LinksResolved, "link"))
 			return ExitOK
 		}
 	},
+}
+
+// Promote moves a draft from the inbox into the pages and returns its
+// report. A page is identified by its title, so the links that already point
+// at the draft resolve the moment the file moves; the report counts them. The
+// draft is held to the page format first — everything the inbox permitted is
+// an error now — and when validation fails the findings travel back with the
+// report and nothing is written. pageType, when given, replaces the draft's
+// own.
+func Promote(k *kb.KB, name, pageType string) (PromoteReport, []kb.Finding, error) {
+	from, page, err := ResolveDraft(k, name)
+	if err != nil {
+		return PromoteReport{}, nil, err
+	}
+
+	title := page.Title()
+	if kb.Normalize(title) == "" {
+		return PromoteReport{}, nil, fmt.Errorf("%s has no usable title, so nothing could link to the page it became", from)
+	}
+
+	if pageType != "" {
+		// A reserved type is the tool's own and is never assigned, so
+		// choosing one is a usage error. An unknown type is not: it is
+		// caught by validation below, as a finding about the draft (D55).
+		if kb.IsReservedType(pageType) {
+			return PromoteReport{}, nil, fmt.Errorf("%q is a type the tool owns and does not assign", pageType)
+		}
+		if err := page.Set(kb.FieldType, pageType); err != nil {
+			return PromoteReport{}, nil, err
+		}
+	}
+	// The type the page will carry, which may be the draft's own. A missing
+	// or unknown one is caught by validation below, because everything the
+	// inbox permitted is an error now.
+	pageType = page.Type()
+
+	// Everything the inbox permitted is an error now.
+	if findings := page.Validate(k.Vocabulary, kb.Strict); len(findings) > 0 {
+		return PromoteReport{From: from, Title: title, Type: pageType}, findings, nil
+	}
+
+	// A page may not take a name another page answers to: every link
+	// to that name would become ambiguous, which is a hard error.
+	if claimants := k.Graph.Claimants(title); len(claimants) > 0 {
+		return PromoteReport{}, nil, fmt.Errorf("%q is already the name of %s", title, strings.Join(claimants, " and "))
+	}
+
+	to := kb.PagePath(kb.PagesDir, title)
+	resolved := LinksThatWillResolve(k, page)
+
+	if err := k.CreatePage(to, page); err != nil {
+		return PromoteReport{}, nil, err
+	}
+	if err := os.Remove(k.Path(from)); err != nil {
+		return PromoteReport{}, nil, fmt.Errorf("%s is now %s, but the draft could not be removed: %w", from, to, err)
+	}
+
+	return PromoteReport{
+		From:          from,
+		To:            to,
+		Title:         title,
+		Type:          pageType,
+		LinksResolved: resolved,
+	}, nil, nil
 }
 
 // LinksThatWillResolve counts the links in the pages that point at a name the

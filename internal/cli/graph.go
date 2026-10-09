@@ -85,7 +85,7 @@ var graphCommand = &command{
 					Start:     start,
 					Depth:     *depth,
 					Tier:      src.Tier().String(),
-					Neighbors: nonNil(neighbors),
+					Neighbors: NonNil(neighbors),
 				})
 			}
 			for _, n := range neighbors {
@@ -114,10 +114,10 @@ func graphListings(src index.Source, w *output, orphans, deadEnds bool) int {
 	if w.json {
 		data := map[string]any{"tier": src.Tier().String()}
 		if orphans {
-			data["orphans"] = nonNil(o)
+			data["orphans"] = NonNil(o)
 		}
 		if deadEnds {
-			data["dead_ends"] = nonNil(d)
+			data["dead_ends"] = NonNil(d)
 		}
 		return w.emit(data)
 	}

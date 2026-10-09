@@ -130,9 +130,10 @@ var Tools = []Tool{
 			"default, a failure under strict — and the findings travel in the result " +
 			"either way.",
 		Input: obj(map[string]any{
-			"title": str("the page's title, which is how links name it"),
-			"type":  str("the page's type; the KB's default when omitted"),
-			"draft": boolean("create a draft in the inbox instead of a page"),
+			"title":  str("the page's title, which is how links name it"),
+			"type":   str("the page's type; the KB's default when omitted"),
+			"draft":  boolean("create a draft in the inbox instead of a page"),
+			"strict": boolean("treat validation warnings as errors, which leaves the page unwritten"),
 		}, "title"),
 		Payload: cli.NewReport{},
 	},

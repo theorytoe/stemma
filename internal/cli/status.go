@@ -83,8 +83,8 @@ func GatherStatus(k *kb.KB) (StatusReport, error) {
 		Title:          k.Manifest.Title,
 		Pages:          k.Graph.Len(),
 		ByType:         map[string]int{},
-		Orphans:        nonNil(k.Graph.Orphans()),
-		Ambiguous:      nonNil(ambiguousNames(k)),
+		Orphans:        NonNil(k.Graph.Orphans()),
+		Ambiguous:      NonNil(ambiguousNames(k)),
 		Drafts:         len(drafts),
 		Index:          readIndexState(k),
 		UncitedSources: []string{},
@@ -165,9 +165,9 @@ func readIndexState(k *kb.KB) IndexState {
 	}
 }
 
-// nonNil turns a nil slice into an empty one, so that --json always reports a
+// NonNil turns a nil slice into an empty one, so that --json always reports a
 // list rather than null and a consumer never special-cases an empty KB.
-func nonNil[T any](s []T) []T {
+func NonNil[T any](s []T) []T {
 	if s == nil {
 		return []T{}
 	}

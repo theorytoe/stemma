@@ -21,6 +21,7 @@ defines.
   directory to a built site.
 - [[Invoking the tool]] — how a command is spelled, and where it finds the KB.
 - [[The command surface]] — the verbs, by what they are for.
+- [[The MCP server]] — the curated tool surface harnesses speak to.
 - [[Search and ranking]] — how retrieval works, and what it does not do.
 - [[The rendered site]] — what the files become, and the pages no author
   wrote.

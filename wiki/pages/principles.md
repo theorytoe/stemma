@@ -19,8 +19,8 @@ the invariants live in one place, and a surface is a thin layer over it rather
 than a second implementation. A rule is not reimplemented per surface, because
 two implementations of one rule are two rules waiting to disagree — which is why
 the renderer and lint read the same scan. The surfaces are standard ones — the
-CLI, a curated MCP tool set, open-standard skills — with no harness-specific
-extension anywhere.
+CLI, a curated MCP tool set ([[The MCP server]]), open-standard skills — with
+no harness-specific extension anywhere.
 
 **The tool owns invariants; the author owns judgement.** The tool resolves,
 checks, rewrites links and reports. It never writes prose, and an agent working

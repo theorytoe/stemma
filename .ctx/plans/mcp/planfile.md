@@ -15,7 +15,7 @@ their output, and it settles protocol and packaging questions of its own. The
 top-level Task 8 now points here and tracks this plan's completion.
 
 Deferred by the author on 2026-09-29, in favour of finishing the main plan's
-Task 9 first. No task here has started.
+Task 9 first. All seven tasks are done as of 2026-10-08.
 
 ## Settled by the author, 2026-09-29
 
@@ -237,7 +237,32 @@ confirm the absence of harness-specific assumptions; that check stays out of CI.
 
 ## Task 7:
 
-Status: Not started
+Status: Done
+
+Documentation. Describe the server where it can be generated rather than written:
+the tool reference is emitted from the schema set Task 2 produces, so a schema and
+its documentation cannot drift. Cover the curated subset and the commands
+deliberately left on the CLI, the stdio invocation and how a harness is configured
+to run it, and the payload and error contracts that match the CLI's. Keep the
+harness instructions to the standard configuration file each client reads, with no
+harness-specific extension. Add a gate that regenerates the reference and fails
+when it is stale, the way the skill suite's references are handled.
+
+Done 2026-10-08. The renderer moved out of the generator and into
+internal/mcp/doc.go, so `BuildDoc`, `JSONBytes`, and `ReferenceBytes` are one
+thing the generator writes and the tests can render; the reference is rendered
+through a round trip of the schema set's own bytes, so it describes the
+artifact, not the registry's intentions. `make mcp-docs` (renamed from
+`mcp-schema`, which now writes both files) runs before the tests in `check`,
+and TestGeneratedDocsAreFresh holds both files to an in-memory rerender,
+skipping on a tree that has never generated them — proved to bite by editing
+the artifact and watching the suite fail. The committed prose is README's MCP
+section (what the server is, the standard `mcpServers` configuration shape,
+the `_meta` root), AGENTS.md's build line, workflow, target list, and
+generated-files list, and the reference itself carries the curated subset,
+the envelope and its outcomes, and the omission table. The main plan's Task 9
+consumes the JSON artifact for the project-level documentation, as the
+dependencies note planned.
 
 Documentation. Describe the server where it can be generated rather than written:
 the tool reference is emitted from the schema set Task 2 produces, so a schema and

@@ -60,6 +60,7 @@ reports its commit.
   bin/stemma lint --kb wiki --strict   # must print "clean"
   bin/stemma build --kb wiki           # writes wiki/.stemma/site
   bin/stemma serve --kb wiki           # local site (Ctrl-C to stop)
+  bin/stemma-mcp --kb wiki             # the MCP surface, over stdio
   ```
 - The example wiki sits **below** the repository root, while discovery only
   walks upward. From the repo root always pass `--kb wiki` (or `--kb
@@ -137,6 +138,7 @@ make site        # bin/stemma build --kb wiki
 make extract     # scoped extract, then lint and build it as its own KB
 make skills      # regenerate skills/stemma/references/{cli.md,format.md}
 make check-skills
+make mcp-docs    # regenerate docs/mcp-tools.{json,md}, the MCP tool reference
 make man         # regenerate the manual pages
 make check-man
 make check       # all of the above
@@ -205,6 +207,7 @@ make bench       # Tier-0 vs Tier-1 timing; measures, never passes/fails
 - `__pycache__/` (from running the shim's tests).
 - `skills/stemma/references/`.
 - `man/` (the manual pages, written by `make man`).
+- `docs/` (the MCP schema set and tool reference, written by `make mcp-docs`).
 
 `internal/extract/extract.py` is the source of truth for the shim: the binary
 embeds it and writes it to `<kb>/.stemma/shim/extract.py`, rewriting it whenever

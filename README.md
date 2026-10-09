@@ -20,11 +20,12 @@ everything else works without it.
     cd stemma
     make install
 
-`make install` builds with the version stamp and puts `stemma` on `PATH` (it uses
-`go install`, so the binary lands in `GOBIN`, or in `GOPATH/bin` when that is
-unset). `make build` writes `bin/stemma` instead, if you would rather not install
-it. `make install-skills` copies the agent skills into `~/.agents/skills`, and
-`make install-man` puts the manual pages where `man` looks for them.
+`make install` builds with the version stamp and puts `stemma` and `stemma-mcp`
+on `PATH` (it uses `go install`, so the binary lands in `GOBIN`, or in
+`GOPATH/bin` when that is unset). `make build` writes `bin/stemma` and
+`bin/stemma-mcp` instead, if you would rather not install it. `make
+install-skills` copies the agent skills into `~/.agents/skills`, and `make
+install-man` puts the manual pages where `man` looks for them.
 
 ## A first knowledge base
 
@@ -38,10 +39,37 @@ it. `make install-skills` copies the agent skills into `~/.agents/skills`, and
 [A first knowledge base, end to end](wiki/pages/worked-example.md) is that
 walkthrough in full, with the real output of every command.
 
+## The MCP server
+
+`stemma-mcp` serves a knowledge base to an agent over the Model Context
+Protocol: ten tools — the read core (`status`, `list`, `search`, `show`,
+`graph`, `cite show`) plus `new`, `promote`, `cite add`, and `lint` — and
+every result is the matching verb's `--json` envelope. The protocol is the
+2026-07-28 specification, stateless, over stdio; nothing listens on a port.
+
+Point a harness at the binary the way its configuration file asks. The
+standard shape is one `mcpServers` entry per server:
+
+    {
+      "mcpServers": {
+        "stemma": {
+          "command": "/path/to/stemma-mcp",
+          "args": ["--kb", "/path/to/kb"]
+        }
+      }
+    }
+
+A call may name another KB root in `_meta` as `stemma/kb`; with no `--kb`, the
+KB is found the way the CLI finds one — `STEMMA_KB`, then a walk up from the
+working directory. The full tool reference — arguments, payload shapes, the
+error outcomes, and the commands deliberately left on the CLI — is generated
+from the tool registry, so it cannot drift from the code: `make mcp-docs`
+writes it to `docs/mcp-tools.md`, and the tests fail when it is stale.
+
 ## Build and check
 
-    make build          # build bin/stemma
-    make install        # put stemma on PATH
+    make build          # build bin/stemma and bin/stemma-mcp
+    make install        # put stemma and stemma-mcp on PATH
     make install-skills # copy the agent skills into ~/.agents/skills
     make man            # write the manual pages to man/
     make install-man    # put the manual pages where man looks for them

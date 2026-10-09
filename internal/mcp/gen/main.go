@@ -1,17 +1,15 @@
-// Command gen writes the curated MCP tool set as one JSON document: each tool
-// with its input schema and the shape of its result, the envelope every result
-// uses, the outcomes an error maps to, and the commands deliberately left on
-// the CLI with their reasons. The Makefile's mcp-schema target regenerates the
-// artifact, and the documentation renders the tool reference from it, so a
-// schema and its description cannot drift.
+// Command gen writes the schema set and the tool reference the MCP
+// documentation is rendered from: the JSON document a program reads, and the
+// markdown reference a person reads, both projections of the registry in
+// internal/mcp. The Makefile's mcp-docs target runs this, and the freshness
+// test in internal/mcp fails when the files on disk no longer match what the
+// registry renders, so a schema and its documentation cannot drift.
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/theorytoe/stemma/internal/mcp"
 )
@@ -24,52 +22,23 @@ func main() {
 }
 
 func run() error {
-	out := flag.String("out", "", "write the artifact here instead of standard output")
+	jsonOut := flag.String("json", "", "write the schema set here")
+	referenceOut := flag.String("reference", "", "write the tool reference here")
 	flag.Parse()
-
-	tools := make([]map[string]any, 0, len(mcp.Tools))
-	for _, t := range mcp.Tools {
-		tools = append(tools, map[string]any{
-			"name":        t.Name,
-			"command":     t.Command,
-			"description": t.Description,
-			"input":       t.Input,
-			"result":      mcp.Envelope(mcp.Shape(t.Payload)),
-		})
+	if *jsonOut == "" || *referenceOut == "" {
+		return fmt.Errorf("give both -json and -reference")
 	}
 
-	omitted := make([]map[string]string, 0, len(mcp.Omissions))
-	for _, o := range mcp.Omissions {
-		omitted = append(omitted, map[string]string{"command": o.Command, "reason": o.Reason})
-	}
-
-	doc := map[string]any{
-		"contract": "every result is the CLI verb's --json envelope, carrying the CLI's own payload types (D57)",
-		"envelope": mcp.Envelope(map[string]any{}),
-		"errors": []map[string]string{
-			{"when": "the tool ran clean", "result": "ok true with data; the twin of exit code 0"},
-			{"when": "the KB has findings", "result": "ok false with findings; the twin of exit code 1, returned as a result rather than a protocol error"},
-			{"when": "the run could not complete", "result": "ok false with error; the twin of exit code 2, returned as a result rather than a protocol error"},
-			{"when": "the arguments do not match the input schema", "result": "a JSON-RPC invalid-params error, refused before the tool runs"},
-		},
-		"tools":   tools,
-		"omitted": omitted,
-	}
-
-	b, err := json.MarshalIndent(doc, "", "  ")
+	schema, err := mcp.JSONBytes()
 	if err != nil {
 		return err
 	}
-	b = append(b, '\n')
-
-	if *out == "" {
-		_, err = os.Stdout.Write(b)
+	if err := os.WriteFile(*jsonOut, schema, 0o644); err != nil {
 		return err
 	}
-	if dir := filepath.Dir(*out); dir != "." {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return err
-		}
+	reference, err := mcp.ReferenceBytes()
+	if err != nil {
+		return err
 	}
-	return os.WriteFile(*out, b, 0o644)
+	return os.WriteFile(*referenceOut, reference, 0o644)
 }

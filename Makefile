@@ -13,7 +13,7 @@ LDFLAGS  = -X github.com/theorytoe/stemma/internal/version.Version=$(VERSION)
 # tool defines and checked by the tool itself.
 WIKI   ?= wiki
 
-.PHONY: all build install install-skills test test-shim vet check lint-wiki site extract mcp-schema check-mcp mcp-probe skills check-skills man check-man install-man bench tidy fmt clean
+.PHONY: all build install install-skills test test-shim vet check lint-wiki site extract mcp-docs check-mcp mcp-probe skills check-skills man check-man install-man bench tidy fmt clean
 
 all: build
 
@@ -66,7 +66,10 @@ vet:
 # What CI runs. Further gates (the static site, the export) belong in this
 # target rather than in the workflow, so that a local run and a CI run check the
 # same things.
-check: build vet test test-shim lint-wiki site extract mcp-schema check-mcp check-skills check-man
+# The documentation artifacts are generated before the tests run, so the
+# freshness test compares against what this check just wrote rather than
+# against whatever the last one wrote.
+check: build vet mcp-docs test test-shim lint-wiki site extract check-mcp check-skills check-man
 
 # The documentation is a KB, so it has to lint clean under --strict. If the
 # project's own documentation cannot pass its own checks, the release is not
@@ -90,12 +93,11 @@ site: build
 EXTRACT = .stemma/extract/gate
 
 # The curated MCP surface, written by the mcp package's generator from the
-# registry the server will serve: each tool with its input schema and result
-# shape, the envelope every result uses, and the commands deliberately left on
-# the CLI. The MCP documentation renders its tool reference from this file, so
-# a schema and its description cannot drift. Generated, so not committed (P8).
-mcp-schema:
-	$(GO) run ./internal/mcp/gen -out docs/mcp-tools.json
+# registry the server serves: the schema set as JSON, and the tool reference
+# rendered from that schema set, so a schema and its documentation cannot
+# drift. Generated, so not committed (P8).
+mcp-docs:
+	$(GO) run ./internal/mcp/gen -json docs/mcp-tools.json -reference docs/mcp-tools.md
 
 # The MCP server answers on the wire the way its tests say it does. This
 # holds a two-turn conversation with the shipped binary — a discover, then a

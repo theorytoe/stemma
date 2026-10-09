@@ -224,12 +224,17 @@ flags -- so the generator was extended and the change recorded in
 
 ## Task 8:
 
-Status: Deferred
+Status: Done
 
 The MCP server. Deferred by the author on 2026-09-29 in favour of finishing Task 9.
 The work is planned in its own plan, `plans/mcp/planfile.md`, because it needs an
 enabling refactor of how the surfaces build their output and settles protocol and
 packaging questions of its own. This task tracks that plan.
+
+Done 2026-10-08: all seven tasks of the MCP plan are complete. The server lives
+in `internal/mcp` behind `cmd/stemma-mcp`, speaks protocol 2026-07-28 over
+stdio, curates ten tools whose payloads are the CLI's own, and documents
+itself from the registry.
 
 ## Task 9:
 
